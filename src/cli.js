@@ -1,9 +1,21 @@
 import { createGitHubClient } from './github.js';
+import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue> <owner> <repository> <number> [--page <number>]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>';
 
 /** Execute the read-only CLI command; dependencies are injectable for tests. */
-export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient } = {}) {
+export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, cwd = process.cwd() } = {}) {
+  if (args[0] === 'readiness') {
+    if (args.length !== 3) { output.error(usage); return 2; }
+    try {
+      const result = await inspect({ cwd, configPath: args[1], planPath: args[2] });
+      output.log(JSON.stringify(result, null, 2));
+      return result.ready ? 0 : 1;
+    } catch {
+      output.error('Unable to inspect readiness. Check the configuration, plan and Git repository.');
+      return 1;
+    }
+  }
   const validPage = args.length === 6 && args[0] === 'github-pr-context' && args[4] === '--page' && /^[1-9][0-9]*$/.test(args[5]) && Number.isSafeInteger(Number(args[5]));
   if ((args.length !== 4 && !validPage) || !['github-pr', 'github-pr-context', 'github-issue'].includes(args[0]) || !/^[1-9][0-9]*$/.test(args[3]) || !Number.isSafeInteger(Number(args[3]))) {
     output.error(usage);

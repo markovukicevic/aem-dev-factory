@@ -91,3 +91,13 @@ test('fetches the selected page for each paginated context component', async () 
   assert.equal(await runCli(['github-pr', 'team', 'site', '12', '--page', '2'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 2);
   assert.equal(await runCli(['github-pr-context', 'team', 'site', '12', '--page', '0'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 2);
 });
+
+
+test('runs configured readiness locally without a GitHub token', async () => {
+  const { messages, output } = capture();
+  let options;
+  const inspect = async input => { options = input; return { ready: false, blockers: ['Tests failed.'] }; };
+  assert.equal(await runCli(['readiness', 'config.json', 'implement.md'], { cwd: '/repo', env: {}, output, inspect }), 1);
+  assert.deepEqual(options, { cwd: '/repo', configPath: 'config.json', planPath: 'implement.md' });
+  assert.equal(JSON.parse(messages.logs[0]).ready, false);
+});
