@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { runTestCommand } from './command-runner.js';
 import { parseImplementationPlan } from './plan-parser.js';
 import { readGitState } from './git-state.js';
 import { evaluatePullRequestReadiness } from './pr-readiness.js';
@@ -21,4 +22,14 @@ export async function inspectPlanReadiness({ cwd, planPath, testsPassed, base },
   const text = await (dependencies.readPlan ?? readFile)(planPath, 'utf8');
   const plan = parseImplementationPlan(text);
   return inspectPullRequestReadiness({ cwd, ...plan, testsPassed, base }, dependencies);
+}
+
+/** Validate a plan, run the selected tests, then refresh plan and Git evidence. */
+export async function inspectPlanWithTests({ cwd, planPath, base, testCommand }, dependencies = {}) {
+  if (typeof planPath !== 'string' || !planPath.trim()) throw new TypeError('planPath is required');
+  const readPlan = dependencies.readPlan ?? readFile;
+  parseImplementationPlan(await readPlan(planPath, 'utf8'));
+  const testResult = await (dependencies.runTests ?? runTestCommand)({ ...testCommand, cwd });
+  const result = await inspectPlanReadiness({ cwd, planPath, testsPassed: testResult?.passed === true, base }, dependencies);
+  return { ...result, testResult };
 }
