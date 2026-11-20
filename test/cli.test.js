@@ -67,3 +67,10 @@ test('does not present incomplete context as successful if a request fails', asy
   assert.deepEqual(messages.logs, []);
   assert.deepEqual(messages.errors, ['GitHub request failed (403)']);
 });
+
+test('reads an issue independently of the pull request commands', async () => {
+  const { messages, output } = capture();
+  const makeClient = () => ({ getIssue: async number => ({ number, title: 'Example' }) });
+  assert.equal(await runCli(['github-issue', 'team', 'site', '31'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
+  assert.deepEqual(JSON.parse(messages.logs[0]), { number: 31, title: 'Example' });
+});

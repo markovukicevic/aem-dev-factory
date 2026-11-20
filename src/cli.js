@@ -1,10 +1,10 @@
 import { createGitHubClient } from './github.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context> <owner> <repository> <number>';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue> <owner> <repository> <number>';
 
 /** Execute the read-only CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient } = {}) {
-  if (args.length !== 4 || !['github-pr', 'github-pr-context'].includes(args[0]) || !/^[1-9][0-9]*$/.test(args[3])) {
+  if (args.length !== 4 || !['github-pr', 'github-pr-context', 'github-issue'].includes(args[0]) || !/^[1-9][0-9]*$/.test(args[3])) {
     output.error(usage);
     return 2;
   }
@@ -15,6 +15,10 @@ export async function runCli(args, { env = process.env, output = console, makeCl
   try {
     const number = Number(args[3]);
     const client = makeClient({ owner: args[1], repository: args[2], token: env.GITHUB_TOKEN });
+    if (args[0] === 'github-issue') {
+      output.log(JSON.stringify(await client.getIssue(number), null, 2));
+      return 0;
+    }
     const pullRequest = await client.getPullRequest(number);
     if (args[0] === 'github-pr') {
       output.log(JSON.stringify(pullRequest, null, 2));
@@ -30,7 +34,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     return 0;
   } catch (error) {
     // Remote response bodies and credentials are never printed.
-    output.error(Number.isInteger(error?.status) ? `GitHub request failed (${error.status})` : 'Could not read pull request. Check the arguments and connection.');
+    output.error(Number.isInteger(error?.status) ? `GitHub request failed (${error.status})` : 'Could not read GitHub data. Check the arguments and connection.');
     return 1;
   }
 }
