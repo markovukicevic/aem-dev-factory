@@ -12,15 +12,16 @@ Use Node.js 18 or newer:
 npm test
 ```
 
-## Read a GitHub pull request
+## Read a GitHub pull request or issue
 
-Set `GITHUB_TOKEN` in your environment using your preferred credential manager. For a private repository the token needs access to that repository and permission to read pull requests. Avoid putting credentials in files committed to Git.
+Set `GITHUB_TOKEN` in your environment using your preferred credential manager. For a private repository the token needs access to that repository and permission to read pull requests or issues, depending on the command. Avoid putting credentials in files committed to Git.
 
 ```sh
 node bin/aem-devflow.js github-pr OWNER REPOSITORY NUMBER
 node bin/aem-devflow.js github-pr-context OWNER REPOSITORY NUMBER
+node bin/aem-devflow.js github-issue OWNER REPOSITORY NUMBER
 ```
 
-These read-only commands print pull request JSON; the context command also reads review and conversation comments, check runs, and combined status for the PR head commit. Context includes only the first page of each paginated response, clearly marked in its output; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. The underlying client also supports creating a pull request and reading individual pages of review comments, conversation comments, check runs and combined commit status, but creation and explicit page selection are not yet exposed through the command or connected to a workflow. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
+These read-only commands print pull request or issue JSON; the context command also reads review and conversation comments, check runs, and combined status for the PR head commit. Context includes only the first page of each paginated response, clearly marked in its output; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. The underlying client also supports creating a pull request and reading individual pages of review comments, conversation comments, check runs and combined commit status, but creation and explicit page selection are not yet exposed through the command or connected to a workflow. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
 
-The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage so far consists of reading a public pull request and its context; other operations have only been tested with simulated responses.
+The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage so far consists of reading a public pull request, its context, and an issue; other operations have only been tested with simulated responses.
