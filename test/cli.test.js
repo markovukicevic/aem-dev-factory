@@ -36,3 +36,34 @@ test('reports failures without exposing credentials or server error messages', a
   assert.equal(code, 1);
   assert.equal(messages.errors[0].includes('secret'), false);
 });
+
+test('returns PR context with separate comments, check runs and commit status', async () => {
+  const { messages, output } = capture();
+  const makeClient = () => ({
+    getPullRequest: async number => ({ number, head: { sha: '123abcd' } }),
+    listReviewComments: async () => [{ id: 'review' }],
+    listIssueComments: async () => [{ id: 'conversation' }],
+    listCheckRuns: async sha => ({ sha, check_runs: [] }),
+    getCommitStatus: async sha => ({ sha, state: 'pending' }),
+  });
+  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
+  const result = JSON.parse(messages.logs[0]);
+  assert.equal(result.reviewComments[0].id, 'review');
+  assert.equal(result.conversationComments[0].id, 'conversation');
+  assert.equal(result.checkRuns.sha, '123abcd');
+  assert.equal(result.commitStatus.state, 'pending');
+  assert.match(result.pagination.note, /first page/);
+});
+
+test('does not present incomplete context as successful if a request fails', async () => {
+  const { messages, output } = capture();
+  const fail = async () => { throw Object.assign(new Error('private details'), { status: 403 }); };
+  const makeClient = () => ({
+    getPullRequest: async () => ({ head: { sha: '123abcd' } }),
+    listReviewComments: fail, listIssueComments: async () => [],
+    listCheckRuns: async () => ({}), getCommitStatus: async () => ({}),
+  });
+  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 1);
+  assert.deepEqual(messages.logs, []);
+  assert.deepEqual(messages.errors, ['GitHub request failed (403)']);
+});
