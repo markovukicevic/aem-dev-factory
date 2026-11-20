@@ -29,6 +29,8 @@ The client is an early component, not a replacement for AEM DevFlow's existing p
 
 ## PR readiness components
 
-The library can read a supported `implement.md` plan and inspect the current Git branch and whether the working tree is clean, then combine that with caller-provided test and base-branch evidence. A separate function can block PR creation when that evidence fails. These functions are building blocks only: they do not run tests, verify that a branch was pushed, refresh evidence automatically, or provide a full end-to-end PR flow. Do not treat caller-supplied evidence as automatically verified.
+The library can read a supported `implement.md` plan and inspect the current Git branch and whether the working tree is clean, then combine that with test results and a caller-provided base branch. An optional inspection runs an explicitly supplied executable and argument list before refreshing the plan and Git state. A separate function can block PR creation when that evidence fails. These functions are building blocks only: they do not discover test commands or base branches, verify that a branch was pushed, or provide a full end-to-end PR flow. Do not treat caller-supplied evidence as automatically verified.
 
 The plan parser accepts a restricted form of the reference template: numbered `Step N:` headings with one `**Status:**` line per step, and optional simple provenance frontmatter. Unsupported YAML or ambiguous status formats are rejected; it is not a general Markdown or YAML parser.
+
+The optional test runner executes the selected program directly, without a shell; callers must supply its executable and arguments explicitly. It discards captured output and treats a nonzero exit, timeout, or launch failure as a failed check. Tests can have side effects, so use only commands appropriate for the target project.
