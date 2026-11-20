@@ -79,3 +79,17 @@ node bin/aem-devflow.js github-issue-export OWNER REPOSITORY NUMBER /path/to/raw
 ```
 
 The parent directory must already exist. The command creates a new file and refuses to overwrite one. It includes the original issue description and comments as untrusted source content; it does not infer acceptance criteria, fetch attachments, or implement the other reference `agent-req` phases.
+
+## Independently configured providers
+
+The experimental provider adapters keep tracker, source control, and CI choices separate. A tracker can be used without configuring the others. For example, create a JSON file containing:
+
+```json
+{
+  "tracker": { "provider": "github", "owner": "my-team", "repository": "issues" },
+  "scm": { "provider": "github", "owner": "my-team", "repository": "site" },
+  "ci": { "provider": "github-actions", "owner": "my-team", "repository": "site" }
+}
+```
+
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. Currently GitHub Issues, GitHub SCM, and GitHub Actions are the only implemented adapters; selecting Jira, ADO, GitLab, or Bitbucket fails rather than falling back. Full ADO/Jira workflows are not implemented yet.

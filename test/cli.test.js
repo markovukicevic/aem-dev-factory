@@ -146,3 +146,15 @@ test('exports a complete issue to a new story file without overwriting it', asyn
   assert.equal(await runCli(args, options), 1);
   assert.match(messages.errors.at(-1), /not overwritten/);
 });
+
+test('reads a ticket through the independently configured tracker adapter', async () => {
+  const { messages, output } = capture();
+  const makeTracker = (config, credentials) => {
+    assert.equal(config.provider, 'github');
+    assert.equal(credentials.token, 'secret');
+    return { getTicket: async number => ({ number, provider: 'github' }) };
+  };
+  const options = { output, env: { GITHUB_TOKEN: 'secret' }, makeTracker, readBody: async () => JSON.stringify({ tracker: { provider: 'github', owner: 'team', repository: 'issues' } }) };
+  assert.equal(await runCli(['tracker-ticket', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).number, 7);
+});
