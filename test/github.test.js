@@ -45,3 +45,20 @@ test('reports API failures without leaking the token or response body', async ()
   const client = createGitHubClient({ owner: 'team', repository: 'site', token: 'secret', fetchImpl: async () => ({ ok: false, status: 403 }) });
   await assert.rejects(client.getPullRequest(1), error => error.message === 'GitHub request failed (403)' && error.status === 403);
 });
+
+test('reads separate pages of review and conversation comments', async () => {
+  const calls = [];
+  const client = createGitHubClient({ owner: 'team', repository: 'site', token: 'secret', fetchImpl: async (url) => {
+    calls.push(url);
+    return { ok: true, json: async () => [{ id: 1 }] };
+  } });
+  assert.deepEqual(await client.listReviewComments(7, { page: 2, perPage: 20 }), [{ id: 1 }]);
+  await client.listIssueComments(7);
+  assert.deepEqual(calls, [
+    'https://api.github.com/repos/team/site/pulls/7/comments?per_page=20&page=2',
+    'https://api.github.com/repos/team/site/issues/7/comments?per_page=100&page=1',
+  ]);
+  assert.throws(() => client.listReviewComments(-1), TypeError);
+  assert.throws(() => client.listIssueComments(7, { perPage: 101 }), TypeError);
+  assert.throws(() => client.listIssueComments(7, { page: 0 }), TypeError);
+});

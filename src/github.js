@@ -8,6 +8,17 @@ export function githubRepositoryPath(owner, repository) {
   return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
 }
 
+function validateNumber(number, name) {
+  if (!Number.isSafeInteger(number) || number <= 0) throw new TypeError(`${name} must be a positive integer`);
+}
+
+function pageQuery(page, perPage) {
+  validateNumber(page, 'page');
+  validateNumber(perPage, 'perPage');
+  if (perPage > 100) throw new TypeError('perPage must be at most 100');
+  return `?per_page=${perPage}&page=${page}`;
+}
+
 /** A minimal GitHub Cloud pull request client with an injectable transport. */
 export function createGitHubClient({ owner, repository, token, fetchImpl = globalThis.fetch }) {
   const path = githubRepositoryPath(owner, repository);
@@ -36,8 +47,16 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
 
   return {
     getPullRequest(number) {
-      if (!Number.isSafeInteger(number) || number <= 0) throw new TypeError('pull request number must be a positive integer');
+      validateNumber(number, 'pull request number');
       return request('GET', `/pulls/${number}`);
+    },
+    listReviewComments(number, { page = 1, perPage = 100 } = {}) {
+      validateNumber(number, 'pull request number');
+      return request('GET', `/pulls/${number}/comments${pageQuery(page, perPage)}`);
+    },
+    listIssueComments(number, { page = 1, perPage = 100 } = {}) {
+      validateNumber(number, 'pull request number');
+      return request('GET', `/issues/${number}/comments${pageQuery(page, perPage)}`);
     },
     createPullRequest({ title, head, base, body = '', draft = false }) {
       for (const [name, value] of Object.entries({ title, head, base })) {
