@@ -129,3 +129,20 @@ test('rejects incomplete creation requests and hides provider errors', async () 
   assert.equal(await runCli(['github-pr-create', 'team', 'site', 'config.json', 'plan.md', 'Title', '--body-file', 'body.md'], options), 1);
   assert.equal(messages.errors.at(-1).includes('secret'), false);
 });
+
+test('exports a complete issue to a new story file without overwriting it', async t => {
+  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-cli-story-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'raw-story.md');
+  const { messages, output } = capture();
+  const makeClient = () => ({ getIssue: async number => ({ number, title: 'Bug', body: 'Details', state: 'open', labels: [] }), listIssueComments: async () => [] });
+  const options = { env: { GITHUB_TOKEN: 'secret' }, output, makeClient };
+  const args = ['github-issue-export', 'team', 'repo', '7', path];
+  assert.equal(await runCli(args, options), 0);
+  assert.match(await readFile(path, 'utf8'), /Details/);
+  assert.equal(await runCli(args, options), 1);
+  assert.match(messages.errors.at(-1), /not overwritten/);
+});

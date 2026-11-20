@@ -27,7 +27,7 @@ node bin/aem-devflow.js github-issue-context OWNER REPOSITORY NUMBER
 
 These read-only commands print pull request or issue JSON; the context command also reads review and conversation comments, check runs, and combined status for the PR head commit. Context includes only the requested page of each paginated response (page 1 by default), clearly marked in its output; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. The underlying client also supports creating a pull request and reading individual pages of review comments, conversation comments, check runs and combined commit status, but PR creation is not exposed through the command or connected to a complete workflow. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
 
-The issue context command retrieves the issue and comment pages, returning an error instead of silently truncating if its page limit is reached. It rejects pull requests returned by the Issues API and has been read-tested against a public GitHub issue. It does not fetch attachments or create spec files.
+The issue context command retrieves the issue and comment pages, returning an error instead of silently truncating if its page limit is reached. It rejects pull requests returned by the Issues API and has been read-tested against a public GitHub issue. It does not fetch attachments.
 
 The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage so far consists of reading a public pull request, its context, and an issue; other operations have only been tested with simulated responses.
 
@@ -71,3 +71,11 @@ node /path/to/aem-dev-flow-max/bin/aem-devflow.js github-pr-create OWNER REPOSIT
 ```
 
 Remove `--draft` for a non-draft PR. This is an explicit GitHub write operation. The command runs the configured tests and checks the plan, Git state, origin identity, published branch, locally tracked base, and existing PRs. It never pushes the branch. It prints a JSON result and does not automatically retry a failed or ambiguous create request. Check GitHub before retrying after a network failure. The existing client and this command have not been tested by creating an actual GitHub PR.
+
+## Export a GitHub issue
+
+```sh
+node bin/aem-devflow.js github-issue-export OWNER REPOSITORY NUMBER /path/to/raw-story.md
+```
+
+The parent directory must already exist. The command creates a new file and refuses to overwrite one. It includes the original issue description and comments as untrusted source content; it does not infer acceptance criteria, fetch attachments, or implement the other reference `agent-req` phases.

@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises';
 import { createGitHubPullRequest } from './github-pr-flow.js';
 import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
+import { saveGitHubIssueStory } from './issue-story.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, readBody = readFile, cwd = process.cwd() } = {}) {
@@ -30,6 +31,20 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       return result.ready ? 0 : 1;
     } catch {
       output.error('Unable to inspect readiness. Check the configuration, plan and Git repository.');
+      return 1;
+    }
+  }
+  if (args[0] === 'github-issue-export') {
+    if (args.length !== 5 || !/^[1-9][0-9]*$/.test(args[3]) || !Number.isSafeInteger(Number(args[3])) || !args[4]?.trim()) { output.error(usage); return 2; }
+    if (!env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment before running this command.'); return 2; }
+    try {
+      const client = makeClient({ owner: args[1], repository: args[2], token: env.GITHUB_TOKEN });
+      const issue = await fetchGitHubIssueContext({ client, number: Number(args[3]) });
+      const result = await saveGitHubIssueStory(issue, args[4]);
+      output.log(JSON.stringify(result, null, 2));
+      return 0;
+    } catch (error) {
+      output.error(error?.code === 'EEXIST' ? 'Output file already exists; it was not overwritten.' : 'Unable to export GitHub issue. Check the issue, output path and connection.');
       return 1;
     }
   }
