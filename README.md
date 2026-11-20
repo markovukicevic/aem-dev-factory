@@ -18,8 +18,9 @@ Set `GITHUB_TOKEN` in your environment using your preferred credential manager. 
 
 ```sh
 node bin/aem-devflow.js github-pr OWNER REPOSITORY NUMBER
+node bin/aem-devflow.js github-pr-context OWNER REPOSITORY NUMBER
 ```
 
-This read-only command prints the pull request JSON; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. The underlying client also supports creating a pull request and reading individual pages of review comments, conversation comments, check runs and combined commit status, but those operations are not yet exposed through the command or connected to a workflow. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
+These read-only commands print pull request JSON; the context command also reads review and conversation comments, check runs, and combined status for the PR head commit. Context includes only the first page of each paginated response, clearly marked in its output; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. The underlying client also supports creating a pull request and reading individual pages of review comments, conversation comments, check runs and combined commit status, but creation and explicit page selection are not yet exposed through the command or connected to a workflow. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
 
-The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage so far consists of reading a public pull request; other operations have only been tested with simulated responses.
+The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage so far consists of reading a public pull request and its context; other operations have only been tested with simulated responses.
