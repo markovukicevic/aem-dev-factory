@@ -31,3 +31,20 @@ test('rejects untrusted URLs, invalid keys and incomplete comment pagination', a
   await assert.rejects(tracker.getTicket('bad/key'), /Invalid Jira issue key/);
   await assert.rejects(tracker.getTicket('TEAM-7'), /incomplete/);
 });
+
+test('rejects malformed or prematurely empty comment pages', async () => {
+  for (const page of [
+    { startAt: 1, total: 1, comments: [comment(1)] },
+    { startAt: 0, total: 1, comments: [] },
+    { startAt: 0, total: 0, comments: [comment(1)] },
+    { startAt: 0, total: 1, comments: [{ id: '1', body: 'plain text' }] },
+  ]) {
+    const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async url => ({ ok: true, json: async () => url.includes('/comment?') ? page : issue }) });
+    await assert.rejects(tracker.getTicket('TEAM-7'));
+  }
+});
+
+test('reports HTTP failures without exposing credentials or response bodies', async () => {
+  const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'user@example.com', token: 'secret', fetchImpl: async () => ({ ok: false, status: 403, json: async () => ({ message: 'secret' }) }) });
+  await assert.rejects(tracker.getTicket('TEAM-7'), error => error.status === 403 && error.message === 'Jira request failed (403)');
+});
