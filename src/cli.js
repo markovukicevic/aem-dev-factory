@@ -11,12 +11,15 @@ const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|githu
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, makeTracker = createTrackerProvider, readBody = readFile, cwd = process.cwd() } = {}) {
   if (args[0] === 'tracker-ticket') {
-    if (args.length !== 3 || !/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2]))) { output.error(usage); return 2; }
-    if (!env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment before running this command.'); return 2; }
+    if (args.length !== 3 || typeof args[2] !== 'string' || !args[2].trim()) { output.error(usage); return 2; }
     try {
       const config = JSON.parse(await readBody(args[1], 'utf8'));
-      const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN });
-      output.log(JSON.stringify(await tracker.getTicket(Number(args[2])), null, 2));
+      if (config.tracker?.provider === 'github' && !env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment before running this command.'); return 2; }
+      if (config.tracker?.provider === 'jira' && (!env.JIRA_EMAIL || !env.JIRA_API_TOKEN)) { output.error('Set JIRA_EMAIL and JIRA_API_TOKEN in the environment.'); return 2; }
+      const github = config.tracker?.provider === 'github';
+      if (github && (!/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])))) { output.error(usage); return 2; }
+      const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN, jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN });
+      output.log(JSON.stringify(await tracker.getTicket(github ? Number(args[2]) : args[2]), null, 2));
       return 0;
     } catch {
       output.error('Unable to read tracker ticket. Check the configuration and connection.');

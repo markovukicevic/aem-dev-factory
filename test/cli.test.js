@@ -158,3 +158,16 @@ test('reads a ticket through the independently configured tracker adapter', asyn
   assert.equal(await runCli(['tracker-ticket', 'providers.json', '7'], options), 0);
   assert.equal(JSON.parse(messages.logs[0]).number, 7);
 });
+
+test('uses Jira credentials for a Jira tracker without requiring a GitHub token', async () => {
+  const { messages, output } = capture();
+  const makeTracker = (config, credentials) => {
+    assert.equal(config.provider, 'jira');
+    assert.equal(credentials.jiraEmail, 'user@example.com');
+    assert.equal(credentials.jiraToken, 'jira-secret');
+    return { getTicket: async key => ({ key, provider: 'jira' }) };
+  };
+  const options = { output, env: { JIRA_EMAIL: 'user@example.com', JIRA_API_TOKEN: 'jira-secret' }, makeTracker, readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }) };
+  assert.equal(await runCli(['tracker-ticket', 'providers.json', 'TEAM-7'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).key, 'TEAM-7');
+});

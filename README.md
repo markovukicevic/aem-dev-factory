@@ -92,4 +92,8 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 }
 ```
 
-`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. Currently GitHub Issues, GitHub SCM, and GitHub Actions are the only implemented adapters; selecting Jira, ADO, GitLab, or Bitbucket fails rather than falling back. Full ADO/Jira workflows are not implemented yet.
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented adapters cover GitHub Issues or Jira Cloud as trackers, GitHub SCM, and GitHub Actions. ADO, GitLab, and Bitbucket adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
+
+### Jira Cloud tracker
+
+Set `tracker` to `{"provider":"jira","baseUrl":"https://your-team.atlassian.net"}`, and provide `JIRA_EMAIL` and `JIRA_API_TOKEN` through the environment. Then run `tracker-ticket /path/to/providers.json TEAM-123`. This reads an issue and its comments using Jira Cloud REST API v3. Rich text is returned in Atlassian Document Format (ADF), not converted to Markdown. It does not retrieve attachments or update Jira. Pagination is bounded and fails if incomplete. This adapter has only been tested with simulated Jira responses; it has not been tested against a live Jira account.

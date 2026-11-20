@@ -25,7 +25,7 @@ test('routes tracker, SCM and CI requests to their independently configured repo
 });
 
 test('rejects unsupported provider combinations instead of silently falling back', () => {
-  for (const [key, provider] of [['tracker', 'jira'], ['scm', 'ado'], ['ci', 'gitlab']]) {
+  for (const [key, provider] of [['tracker', 'bitbucket'], ['scm', 'ado'], ['ci', 'gitlab']]) {
     assert.throws(() => createProviderSet({ ...config, [key]: { provider } }, { token: 'secret' }), /Unsupported/);
   }
 });
@@ -34,4 +34,12 @@ test('can create a tracker independently without requiring SCM or CI configurati
   const { createTrackerProvider } = await import('../src/providers.js');
   const tracker = createTrackerProvider(config.tracker, { token: 'secret', fetchImpl: async url => ({ ok: true, json: async () => url.includes('/comments') ? [] : { number: 7, title: 'Issue', labels: [] } }) });
   assert.equal((await tracker.getTicket(7)).number, 7);
+});
+
+test('supports Jira tracker independently alongside GitHub SCM and Actions', async () => {
+  const mixed = { ...config, tracker: { provider: 'jira', baseUrl: 'https://team.atlassian.net' } };
+  const fetchImpl = async url => ({ ok: true, json: async () => url.includes('/comment?') ? { startAt: 0, total: 0, comments: [] } : url.includes('atlassian.net') ? { key: 'TEAM-7', fields: { summary: 'Story' } } : { number: 2 } });
+  const providers = createProviderSet(mixed, { token: 'github-secret', jiraEmail: 'a@example.com', jiraToken: 'jira-secret', fetchImpl });
+  assert.equal((await providers.tracker.getTicket('TEAM-7')).provider, 'jira');
+  assert.equal((await providers.scm.getPullRequest(2)).number, 2);
 });
