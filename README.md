@@ -22,9 +22,12 @@ node bin/aem-devflow.js github-pr OWNER REPOSITORY NUMBER
 node bin/aem-devflow.js github-pr-context OWNER REPOSITORY NUMBER
 node bin/aem-devflow.js github-pr-context OWNER REPOSITORY NUMBER --page 2
 node bin/aem-devflow.js github-issue OWNER REPOSITORY NUMBER
+node bin/aem-devflow.js github-issue-context OWNER REPOSITORY NUMBER
 ```
 
 These read-only commands print pull request or issue JSON; the context command also reads review and conversation comments, check runs, and combined status for the PR head commit. Context includes only the requested page of each paginated response (page 1 by default), clearly marked in its output; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. The underlying client also supports creating a pull request and reading individual pages of review comments, conversation comments, check runs and combined commit status, but PR creation is not exposed through the command or connected to a complete workflow. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
+
+The issue context command retrieves the issue and comment pages, returning an error instead of silently truncating if its page limit is reached. It rejects pull requests returned by the Issues API and has been read-tested against a public GitHub issue. It does not fetch attachments or create spec files.
 
 The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage so far consists of reading a public pull request, its context, and an issue; other operations have only been tested with simulated responses.
 

@@ -101,3 +101,10 @@ test('runs configured readiness locally without a GitHub token', async () => {
   assert.deepEqual(options, { cwd: '/repo', configPath: 'config.json', planPath: 'implement.md' });
   assert.equal(JSON.parse(messages.logs[0]).ready, false);
 });
+
+test('returns normalized issue context without treating a pull request as an issue', async () => {
+  const { messages, output } = capture();
+  const makeClient = () => ({ getIssue: async number => ({ number, title: 'Bug', state: 'open', labels: [] }), listIssueComments: async () => [] });
+  assert.equal(await runCli(['github-issue-context', 'team', 'site', '31'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
+  assert.equal(JSON.parse(messages.logs[0]).provider, 'github');
+});
