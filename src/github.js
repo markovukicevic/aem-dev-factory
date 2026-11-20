@@ -58,6 +58,14 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       validateNumber(number, 'pull request number');
       return request('GET', `/issues/${number}/comments${pageQuery(page, perPage)}`);
     },
+    listCheckRuns(sha, { page = 1, perPage = 100 } = {}) {
+      if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');
+      return request('GET', `/commits/${sha}/check-runs${pageQuery(page, perPage)}`);
+    },
+    getCommitStatus(sha) {
+      if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');
+      return request('GET', `/commits/${sha}/status`);
+    },
     createPullRequest({ title, head, base, body = '', draft = false }) {
       for (const [name, value] of Object.entries({ title, head, base })) {
         if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} is required`);

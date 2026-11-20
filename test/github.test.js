@@ -62,3 +62,19 @@ test('reads separate pages of review and conversation comments', async () => {
   assert.throws(() => client.listIssueComments(7, { perPage: 101 }), TypeError);
   assert.throws(() => client.listIssueComments(7, { page: 0 }), TypeError);
 });
+
+test('reads check runs and combined commit status for an explicit commit', async () => {
+  const calls = [];
+  const client = createGitHubClient({ owner: 'team', repository: 'site', token: 'secret', fetchImpl: async (url) => {
+    calls.push(url);
+    return { ok: true, json: async () => ({ state: 'success' }) };
+  } });
+  await client.listCheckRuns('123abcd', { page: 2 });
+  assert.deepEqual(await client.getCommitStatus('123abcd'), { state: 'success' });
+  assert.deepEqual(calls, [
+    'https://api.github.com/repos/team/site/commits/123abcd/check-runs?per_page=100&page=2',
+    'https://api.github.com/repos/team/site/commits/123abcd/status',
+  ]);
+  assert.throws(() => client.listCheckRuns('../main'), TypeError);
+  assert.throws(() => client.getCommitStatus('main'), TypeError);
+});
