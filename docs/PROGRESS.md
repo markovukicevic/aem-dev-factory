@@ -6,10 +6,11 @@
 - Recorded an initial inventory of its four plugins.
 - Added a GitHub Cloud client for reading and creating pull requests and reading pages of comments, check runs, and combined commit status. It is not yet connected to the reference workflow or configuration system.
 - Added read-only CLI commands for fetching a pull request and its first page of comments and checks. Verified both against a public `cli/cli` pull request. Added a read-only GitHub issue command and verified it on a public issue. PR creation has only been tested with simulated responses.
+- Added a conservative parser for the reference implementation-plan format and connected it to Git readiness inspection. Tests and the base branch are still supplied by the caller; unsupported or ambiguous plan formats are rejected.
 - Added a `--page` option for paginated PR context, Git branch/worktree inspection, and preliminary PR readiness checks. The checks use caller-supplied plan and test evidence and are not yet a complete PR flow.
 - Linked the new project to its GitHub origin and added a test workflow. The first GitHub Actions run passed on Node 20 and 22; action versions were then updated to address a deprecation warning.
 - Most recent observed five-hour quota reset: 2026-11-20 21:27 Europe/Berlin. Scheduled sessions must verify the reset and current usage before starting; limits are shared across the account.
 
 ## Next
 
-Expand the reference inventory; parse and validate actual plan and test evidence; design the plugin and provider boundaries; and connect a complete GitHub PR flow. Preserve existing reference behavior as it is recreated.
+Expand the reference inventory; expand supported plan formats and validate actual test evidence; design the plugin and provider boundaries; and connect a complete GitHub PR flow. Preserve existing reference behavior as it is recreated.
