@@ -46,6 +46,10 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
   }
 
   return {
+    getIssue(number) {
+      validateNumber(number, 'issue number');
+      return request('GET', `/issues/${number}`);
+    },
     getPullRequest(number) {
       validateNumber(number, 'pull request number');
       return request('GET', `/pulls/${number}`);

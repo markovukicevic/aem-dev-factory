@@ -78,3 +78,14 @@ test('reads check runs and combined commit status for an explicit commit', async
   assert.throws(() => client.listCheckRuns('../main'), TypeError);
   assert.throws(() => client.getCommitStatus('main'), TypeError);
 });
+
+test('reads a GitHub issue and rejects invalid issue numbers', async () => {
+  let url;
+  const client = createGitHubClient({ owner: 'team', repository: 'site', token: 'secret', fetchImpl: async value => {
+    url = value;
+    return { ok: true, json: async () => ({ number: 31, title: 'Example' }) };
+  } });
+  assert.deepEqual(await client.getIssue(31), { number: 31, title: 'Example' });
+  assert.equal(url, 'https://api.github.com/repos/team/site/issues/31');
+  assert.throws(() => client.getIssue(-1), TypeError);
+});
