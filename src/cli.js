@@ -1,11 +1,27 @@
+import { readFile } from 'node:fs/promises';
+import { createGitHubPullRequest } from './github-pr-flow.js';
 import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
 
-/** Execute the read-only CLI command; dependencies are injectable for tests. */
-export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, cwd = process.cwd() } = {}) {
+/** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
+export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, readBody = readFile, cwd = process.cwd() } = {}) {
+  if (args[0] === 'github-pr-create') {
+    const valid = (args.length === 8 || (args.length === 9 && args[8] === '--draft')) && args[6] === '--body-file' && args.slice(1, 6).every(value => typeof value === 'string' && value.trim()) && args[7]?.trim();
+    if (!valid) { output.error(usage); return 2; }
+    if (!env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment before running this command.'); return 2; }
+    try {
+      const body = await readBody(args[7], 'utf8');
+      const result = await createPullRequest({ cwd, owner: args[1], repository: args[2], configPath: args[3], planPath: args[4], title: args[5], token: env.GITHUB_TOKEN, body, draft: args.length === 9 });
+      output.log(JSON.stringify(result, null, 2));
+      return result.created ? 0 : 1;
+    } catch (error) {
+      output.error(Number.isInteger(error?.status) ? `GitHub request failed (${error.status})` : 'Unable to create pull request. Check the configuration, plan, branch and connection.');
+      return 1;
+    }
+  }
   if (args[0] === 'readiness') {
     if (args.length !== 3) { output.error(usage); return 2; }
     try {

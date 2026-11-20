@@ -58,6 +58,16 @@ node /path/to/aem-dev-flow-max/bin/aem-devflow.js readiness /path/to/devflow.jso
 
 The command runs the configured program, checks the plan and local Git state, and outputs the result as JSON. It exits with 0 when ready and 1 when blocked or an error occurs. It does not create or push a PR. `scm.baseBranch` may be omitted if the local `origin/HEAD` points to an existing remote-tracking branch. An explicitly configured base must also exist as a local `origin` remote-tracking reference. These references can be stale and are not refreshed automatically. The command also accepts the reference project's `.ai/config.yaml`: it reads `scm.base-branch` and `build.test`. Simple test commands and quoted arguments are supported; shell operators, variables, substitutions, and globs are rejected. Other legacy settings are not yet used. JSON configuration remains supported.
 
-The experimental GitHub PR flow is currently a library function and has only been exercised with a simulated GitHub API and local test repositories. It checks readiness, the published branch, commits beyond the locally tracked base, and existing open PRs before making one create request; it does not automatically retry ambiguous failures. Remote branches and local files may still change between checks and creation.
+The experimental GitHub PR creation command has only been exercised with a simulated GitHub API and local test repositories. It checks readiness, the published branch, commits beyond the locally tracked base, and existing open PRs before making one create request; it does not automatically retry ambiguous failures. Remote branches and local files may still change between checks and creation.
 
 The open-PR and commit checks reduce duplicates and empty PRs but are not atomic with PR creation. The commit comparison uses the local tracking reference for the base branch, which can be stale.
+
+## Create a GitHub pull request (experimental)
+
+From the target repository, after publishing the branch, supply a reviewed description file and token with pull request write access:
+
+```sh
+node /path/to/aem-dev-flow-max/bin/aem-devflow.js github-pr-create OWNER REPOSITORY /path/to/config.yaml /path/to/implement.md "PR title" --body-file /path/to/pr-description.md --draft
+```
+
+Remove `--draft` for a non-draft PR. This is an explicit GitHub write operation. The command runs the configured tests and checks the plan, Git state, origin identity, published branch, locally tracked base, and existing PRs. It never pushes the branch. It prints a JSON result and does not automatically retry a failed or ambiguous create request. Check GitHub before retrying after a network failure. The existing client and this command have not been tested by creating an actual GitHub PR.

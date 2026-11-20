@@ -108,3 +108,24 @@ test('returns normalized issue context without treating a pull request as an iss
   assert.equal(await runCli(['github-issue-context', 'team', 'site', '31'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
   assert.equal(JSON.parse(messages.logs[0]).provider, 'github');
 });
+
+test('creates a PR only when explicitly invoked with a body file and token', async () => {
+  const { messages, output } = capture();
+  let input;
+  const options = { cwd: '/repo', env: { GITHUB_TOKEN: 'secret' }, output, readBody: async path => { assert.equal(path, 'body.md'); return 'Description'; }, createPullRequest: async value => { input = value; return { created: true, pullRequest: { number: 42 } }; } };
+  assert.equal(await runCli(['github-pr-create', 'team', 'site', 'config.json', 'plan.md', 'A change', '--body-file', 'body.md', '--draft'], options), 0);
+  assert.equal(input.body, 'Description');
+  assert.equal(input.draft, true);
+  assert.equal(input.token, 'secret');
+  assert.equal(JSON.parse(messages.logs[0]).pullRequest.number, 42);
+});
+
+test('rejects incomplete creation requests and hides provider errors', async () => {
+  const { messages, output } = capture();
+  let called = false;
+  const options = { env: { GITHUB_TOKEN: 'secret' }, output, readBody: async () => 'Description', createPullRequest: async () => { called = true; throw new Error('secret'); } };
+  assert.equal(await runCli(['github-pr-create', 'team', 'site', 'config.json', 'plan.md', 'Title'], options), 2);
+  assert.equal(called, false);
+  assert.equal(await runCli(['github-pr-create', 'team', 'site', 'config.json', 'plan.md', 'Title', '--body-file', 'body.md'], options), 1);
+  assert.equal(messages.errors.at(-1).includes('secret'), false);
+});

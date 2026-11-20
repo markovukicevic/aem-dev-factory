@@ -6,6 +6,7 @@
 - Recorded an initial inventory of its four plugins.
 - Added a GitHub Cloud client for reading and creating pull requests and reading pages of comments, check runs, and combined commit status. It is not yet connected to the reference workflow or configuration system.
 - Added read-only CLI commands for fetching a pull request and its first page of comments and checks. Verified both against a public `cli/cli` pull request. Added a read-only GitHub issue command and verified it on a public issue. PR creation has only been tested with simulated responses.
+- Added an explicit experimental GitHub PR creation CLI requiring a description file and token. The write path is tested with a simulated API only; it has not created a real PR.
 - Added duplicate-open-PR and empty-diff checks to the experimental GitHub PR flow. The diff uses the locally tracked base and may be stale.
 - Added an experimental GitHub PR creation flow that checks origin identity, readiness and whether the current commit is already published, with simulated GitHub writes and real local Git fixtures. It does not push, generate descriptions, or prevent concurrent changes after the final checks.
 - Readiness base-branch resolution now rejects missing local origin tracking references. This does not verify the current remote state.
