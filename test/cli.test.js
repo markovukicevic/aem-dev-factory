@@ -52,7 +52,7 @@ test('returns PR context with separate comments, check runs and commit status', 
   assert.equal(result.conversationComments[0].id, 'conversation');
   assert.equal(result.checkRuns.sha, '123abcd');
   assert.equal(result.commitStatus.state, 'pending');
-  assert.match(result.pagination.note, /first page/);
+  assert.match(result.pagination.note, /requested page/);
 });
 
 test('does not present incomplete context as successful if a request fails', async () => {
@@ -73,4 +73,21 @@ test('reads an issue independently of the pull request commands', async () => {
   const makeClient = () => ({ getIssue: async number => ({ number, title: 'Example' }) });
   assert.equal(await runCli(['github-issue', 'team', 'site', '31'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
   assert.deepEqual(JSON.parse(messages.logs[0]), { number: 31, title: 'Example' });
+});
+
+
+test('fetches the selected page for each paginated context component', async () => {
+  const { messages, output } = capture();
+  const pages = [];
+  const page = async (_id, options) => { pages.push(options.page); return []; };
+  const makeClient = () => ({
+    getPullRequest: async () => ({ head: { sha: '123abcd' } }),
+    listReviewComments: page, listIssueComments: page, listCheckRuns: page,
+    getCommitStatus: async () => ({}),
+  });
+  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12', '--page', '2'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
+  assert.deepEqual(pages, [2, 2, 2]);
+  assert.equal(JSON.parse(messages.logs[0]).pagination.page, 2);
+  assert.equal(await runCli(['github-pr', 'team', 'site', '12', '--page', '2'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 2);
+  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12', '--page', '0'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 2);
 });

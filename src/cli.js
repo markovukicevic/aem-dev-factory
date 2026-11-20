@@ -1,10 +1,11 @@
 import { createGitHubClient } from './github.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue> <owner> <repository> <number>';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue> <owner> <repository> <number> [--page <number>]';
 
 /** Execute the read-only CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient } = {}) {
-  if (args.length !== 4 || !['github-pr', 'github-pr-context', 'github-issue'].includes(args[0]) || !/^[1-9][0-9]*$/.test(args[3])) {
+  const validPage = args.length === 6 && args[0] === 'github-pr-context' && args[4] === '--page' && /^[1-9][0-9]*$/.test(args[5]) && Number.isSafeInteger(Number(args[5]));
+  if ((args.length !== 4 && !validPage) || !['github-pr', 'github-pr-context', 'github-issue'].includes(args[0]) || !/^[1-9][0-9]*$/.test(args[3]) || !Number.isSafeInteger(Number(args[3]))) {
     output.error(usage);
     return 2;
   }
@@ -24,12 +25,13 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       output.log(JSON.stringify(pullRequest, null, 2));
     } else {
       const sha = pullRequest?.head?.sha;
+      const page = validPage ? Number(args[5]) : 1;
       const [reviewComments, conversationComments, checkRuns, commitStatus] = await Promise.all([
-        client.listReviewComments(number), client.listIssueComments(number),
-        client.listCheckRuns(sha), client.getCommitStatus(sha),
+        client.listReviewComments(number, { page }), client.listIssueComments(number, { page }),
+        client.listCheckRuns(sha, { page }), client.getCommitStatus(sha),
       ]);
       output.log(JSON.stringify({ pullRequest, reviewComments, conversationComments, checkRuns, commitStatus,
-        pagination: { page: 1, perPage: 100, note: 'Comments and checks contain only the first page.' } }, null, 2));
+        pagination: { page, perPage: 100, note: 'Comments and checks contain only the requested page.' } }, null, 2));
     }
     return 0;
   } catch (error) {
