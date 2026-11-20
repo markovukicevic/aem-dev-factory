@@ -20,6 +20,8 @@ test('checks a real plan using a configured base and actual test process', async
   t.after(() => rm(dir, { recursive: true, force: true }));
   const cwd = join(dir, 'repo');
   execFileSync('git', ['init', '-q', '-b', 'feature', cwd]);
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd });
+  execFileSync('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD'], { cwd });
   const configPath = join(dir, 'devflow.json');
   const planPath = join(dir, 'implement.md');
   await writeFile(planPath, '### Step 1: Work\n**Status:** done\n');

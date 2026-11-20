@@ -10,7 +10,10 @@ test('resolves an explicitly configured branch and rejects invalid names', async
   const cwd = await mkdtemp(join(tmpdir(), 'devflow-base-'));
   t.after(() => rm(cwd, { recursive: true, force: true }));
   execFileSync('git', ['init', '-q', cwd]);
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd });
+  execFileSync('git', ['update-ref', 'refs/remotes/origin/release/next', 'HEAD'], { cwd });
   assert.equal(await resolveBaseBranch({ cwd, configuredBase: 'release/next' }), 'release/next');
+  await assert.rejects(resolveBaseBranch({ cwd, configuredBase: 'missing' }), /missing/);
   await assert.rejects(resolveBaseBranch({ cwd, configuredBase: '../bad' }), /Invalid base/);
   await assert.rejects(resolveBaseBranch({ cwd, configuredBase: '' }), /invalid/);
 });

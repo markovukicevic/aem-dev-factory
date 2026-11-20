@@ -27,6 +27,8 @@ test('checks a real repository using the reference YAML settings', async t => {
   t.after(() => rm(dir, { recursive: true, force: true }));
   const cwd = join(dir, 'repo');
   execFileSync('git', ['init', '-q', '-b', 'feature', cwd]);
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd });
+  execFileSync('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD'], { cwd });
   const configPath = join(dir, 'config.yaml');
   const planPath = join(dir, 'implement.md');
   await writeFile(configPath, `scm:\n  base-branch: main\nbuild:\n  test: >-\n    ${process.execPath} -e 'process.exit(0)'\n`);

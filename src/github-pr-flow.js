@@ -1,0 +1,30 @@
+import { inspectConfiguredReadiness } from './configured-readiness.js';
+import { inspectPlanReadiness } from './inspect-readiness.js';
+import { readGitHubOrigin } from './github-origin.js';
+import { inspectPublishedBranch } from './published-branch.js';
+import { createGitHubClient } from './github.js';
+import { createReadyPullRequest } from './pr-workflow.js';
+
+/** Explicit PR creation flow. It never pushes, retries writes, or discovers credentials. */
+export async function createGitHubPullRequest(input, dependencies = {}) {
+  const inspect = dependencies.inspect ?? inspectConfiguredReadiness;
+  const refresh = dependencies.refresh ?? inspectPlanReadiness;
+  const originReader = dependencies.originReader ?? readGitHubOrigin;
+  const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
+  const makeClient = dependencies.makeClient ?? createGitHubClient;
+  const first = await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
+  if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
+  const origin = await originReader(input.cwd);
+  if (typeof input.owner !== 'string' || typeof input.repository !== 'string' || origin.owner.toLowerCase() !== input.owner.toLowerCase() || origin.repository.toLowerCase() !== input.repository.toLowerCase()) {
+    return { created: false, blockers: ['GitHub repository does not match origin.'], warnings: first.warnings };
+  }
+  const head = first.readiness.branch.head;
+  const published = await publishedReader({ cwd: input.cwd, head });
+  if (!published.published) return { created: false, blockers: ['The current commit is not published on the origin branch.'], warnings: first.warnings };
+  const current = await refresh({ cwd: input.cwd, planPath: input.planPath, testsPassed: true, base: first.readiness.branch.base });
+  if (!current.ready || current.readiness.branch.head !== head) return { created: false, blockers: [...current.blockers, ...(current.readiness.branch.head !== head ? ['The current branch changed during inspection.'] : [])], warnings: current.warnings };
+  const last = await publishedReader({ cwd: input.cwd, head });
+  if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
+  const client = makeClient({ owner: input.owner, repository: input.repository, token: input.token });
+  return createReadyPullRequest({ provider: client, readiness: current.readiness, title: input.title, body: input.body, draft: input.draft });
+}

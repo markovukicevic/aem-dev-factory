@@ -32,5 +32,12 @@ export async function resolveBaseBranch({ cwd, configuredBase }, { run = execFil
   } catch {
     throw new Error('Invalid base branch name.');
   }
+  if (configuredBase !== undefined) {
+    try {
+      await run('git', ['show-ref', '--verify', '--quiet', `refs/remotes/origin/${base}`], options);
+    } catch {
+      throw new Error('Configured base branch is missing from local origin references.');
+    }
+  }
   return base;
 }
