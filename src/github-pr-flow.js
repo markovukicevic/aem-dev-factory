@@ -2,6 +2,7 @@ import { inspectConfiguredReadiness } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
 import { readGitHubOrigin } from './github-origin.js';
 import { inspectPublishedBranch } from './published-branch.js';
+import { inspectBranchDiff } from './branch-diff.js';
 import { createGitHubClient } from './github.js';
 import { createReadyPullRequest } from './pr-workflow.js';
 
@@ -12,6 +13,7 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const originReader = dependencies.originReader ?? readGitHubOrigin;
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
   const makeClient = dependencies.makeClient ?? createGitHubClient;
+  const inspectDiff = dependencies.inspectDiff ?? inspectBranchDiff;
   const first = await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
@@ -25,6 +27,11 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   if (!current.ready || current.readiness.branch.head !== head) return { created: false, blockers: [...current.blockers, ...(current.readiness.branch.head !== head ? ['The current branch changed during inspection.'] : [])], warnings: current.warnings };
   const last = await publishedReader({ cwd: input.cwd, head });
   if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
+  const diff = await inspectDiff({ cwd: input.cwd, base: current.readiness.branch.base });
+  if (!diff.hasCommits) return { created: false, blockers: ['There are no commits beyond the tracked base branch.'], warnings: current.warnings };
   const client = makeClient({ owner: input.owner, repository: input.repository, token: input.token });
+  const existing = await client.listOpenPullRequests({ owner: input.owner, head, base: current.readiness.branch.base });
+  if (!Array.isArray(existing)) throw new Error('Invalid GitHub pull request response');
+  if (existing.length) return { created: false, blockers: ['An open pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.number, url: pr.html_url })), warnings: current.warnings };
   return createReadyPullRequest({ provider: client, readiness: current.readiness, title: input.title, body: input.body, draft: input.draft });
 }

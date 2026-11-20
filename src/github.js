@@ -70,6 +70,11 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');
       return request('GET', `/commits/${sha}/status`);
     },
+    listOpenPullRequests({ owner: headOwner, head, base }) {
+      if ([headOwner, head, base].some(value => typeof value !== 'string' || !value.trim())) throw new TypeError('owner, head and base are required');
+      const query = new URLSearchParams({ state: 'open', head: `${headOwner}:${head}`, base, per_page: '100' });
+      return request('GET', `/pulls?${query}`);
+    },
     createPullRequest({ title, head, base, body = '', draft = false }) {
       for (const [name, value] of Object.entries({ title, head, base })) {
         if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} is required`);

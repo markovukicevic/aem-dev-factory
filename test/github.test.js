@@ -89,3 +89,13 @@ test('reads a GitHub issue and rejects invalid issue numbers', async () => {
   assert.equal(url, 'https://api.github.com/repos/team/site/issues/31');
   assert.throws(() => client.getIssue(-1), TypeError);
 });
+
+test('queries open pull requests for the exact head and base', async () => {
+  let url;
+  const client = createGitHubClient({ owner: 'team', repository: 'site', token: 'secret', fetchImpl: async value => { url = value; return { ok: true, json: async () => [] }; } });
+  assert.deepEqual(await client.listOpenPullRequests({ owner: 'team', head: 'feature/x', base: 'main' }), []);
+  const query = new URL(url).searchParams;
+  assert.equal(query.get('head'), 'team:feature/x');
+  assert.equal(query.get('base'), 'main');
+  assert.equal(query.get('state'), 'open');
+});
