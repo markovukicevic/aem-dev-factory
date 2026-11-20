@@ -1,9 +1,13 @@
 import { readFile } from 'node:fs/promises';
+import { extname } from 'node:path';
+import { parseLegacyConfig } from './legacy-config.js';
 
 /** Read Max's explicit JSON configuration; no shell syntax or implicit defaults. */
 export async function loadReadinessConfig(path, { read = readFile } = {}) {
   if (typeof path !== 'string' || !path.trim()) throw new TypeError('Configuration path is required');
-  const config = JSON.parse(await read(path, 'utf8'));
+  const source = await read(path, 'utf8');
+  if (['.yaml', '.yml'].includes(extname(path).toLowerCase())) return parseLegacyConfig(source);
+  const config = JSON.parse(source);
   if (!config || typeof config !== 'object' || Array.isArray(config)) throw new TypeError('Configuration must be an object');
   const { scm, test } = config;
   if (scm !== undefined && (!scm || typeof scm !== 'object' || Array.isArray(scm))) throw new TypeError('scm must be an object');

@@ -9,6 +9,7 @@ This project is at an early stage. It does not yet provide the original project'
 Use Node.js 18 or newer:
 
 ```sh
+npm ci --ignore-scripts
 npm test
 ```
 
@@ -52,4 +53,4 @@ From the target Git repository, run:
 node /path/to/aem-dev-flow-max/bin/aem-devflow.js readiness /path/to/devflow.json /path/to/implement.md
 ```
 
-The command runs the configured program, checks the plan and local Git state, and outputs the result as JSON. It exits with 0 when ready and 1 when blocked or an error occurs. It does not create or push a PR. `scm.baseBranch` may be omitted if the local `origin/HEAD` points to an existing remote-tracking branch; the local reference can be stale and is not refreshed automatically. This JSON configuration is new and is not compatible with the reference project's `.ai/config.yaml` yet.
+The command runs the configured program, checks the plan and local Git state, and outputs the result as JSON. It exits with 0 when ready and 1 when blocked or an error occurs. It does not create or push a PR. `scm.baseBranch` may be omitted if the local `origin/HEAD` points to an existing remote-tracking branch; the local reference can be stale and is not refreshed automatically. The command also accepts the reference project's `.ai/config.yaml`: it reads `scm.base-branch` and `build.test`. Simple test commands and quoted arguments are supported; shell operators, variables, substitutions, and globs are rejected. Other legacy settings are not yet used. JSON configuration remains supported.
