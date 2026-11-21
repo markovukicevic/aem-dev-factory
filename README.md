@@ -259,3 +259,5 @@ From the target project, `project-inspect` reports local technology markers with
 `hub-init <repos.json>` creates a new reference-style `.ai/config.yaml` hub registry and a `state` directory from an explicit JSON array of `{ "name", "path" }` entries; optional `base-branch` and `project` fields are supported. It refuses to replace an existing config and does not validate repository identity or enable dispatch. Directories may remain after a failed setup.
 
 `hub-select <name> [name ...]` resolves explicitly selected names against the configured hub registry. Unknown or duplicate names are rejected, and reported path availability is not proof of identity or task suitability. It does not infer targets from a ticket or dispatch work.
+
+`hub-discover <source-file>` resolves one explicit `repos: web, api` line outside fenced code blocks against the hub registry. Multiple, malformed, unknown or missing directives fail rather than guessing. The source is untrusted: the result is only a proposal and never authorizes dispatch. HTML directives and other automatic routing are not supported.

@@ -697,3 +697,18 @@ test('selects explicitly named hub repositories', async t => {
   assert.equal(JSON.parse(messages.logs.at(-1)).repos[0].name, 'web');
   assert.equal(await runCli(['hub-select', 'missing'], { cwd, output }), 1);
 });
+
+test('resolves an explicit hub directive as a proposal', async t => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'hub-directive-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, '.ai'));
+  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n  repos:\n    - name: web\n      path: web\n');
+  const source = join(cwd, 'story.md');
+  await writeFile(source, 'repos: web');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['hub-discover', source], { cwd, output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).repos[0].name, 'web');
+});

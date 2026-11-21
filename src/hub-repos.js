@@ -39,3 +39,35 @@ export async function selectHubRepositories({ cwd, names }) {
   if (unknown.length) throw new Error(`Unknown hub repositories: ${unknown.join(', ')}`);
   return { repos: names.map(name => byName.get(name)), scope: 'Explicit registry selection only; paths, repository identity and task suitability require verification.' };
 }
+
+/** Extract exactly one explicit repos directive outside fenced code blocks. */
+export function parseHubRepositoryDirective(text) {
+  if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > 262144) throw new TypeError('Invalid directive text');
+  let fence = null;
+  const found = [];
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (marker) {
+      if (!fence) fence = { char: marker[1][0], length: marker[1].length };
+      else if (marker[1][0] === fence.char && marker[1].length >= fence.length) fence = null;
+      continue;
+    }
+    if (fence) continue;
+    const match = /^\s*repos\s*:\s*(.*?)\s*$/i.exec(line);
+    if (!match) continue;
+    if (!match[1]) throw new Error('Empty repository directive');
+    const names = match[1].split(',').map(name => name.trim());
+    if (names.some(name => !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) || new Set(names).size !== names.length) throw new Error('Invalid repository directive');
+    found.push(names);
+  }
+  if (fence) throw new Error('Unclosed code fence');
+  if (found.length !== 1) throw new Error(found.length ? 'Ambiguous repository directives' : 'Repository directive not found');
+  return found[0];
+}
+
+/** Resolve a directive as a proposal only; source text cannot authorize dispatch. */
+export async function discoverHubRepositories({ cwd, path }) {
+  const text = (await readLimitedFile(path, 262144)).toString('utf8');
+  const selected = await selectHubRepositories({ cwd, names: parseHubRepositoryDirective(text) });
+  return { ...selected, scope: 'Untrusted source directive resolved as a proposal only; verify intent and repository identity before work.' };
+}

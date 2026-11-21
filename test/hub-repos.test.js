@@ -42,3 +42,26 @@ test('selects only explicitly named registered repositories', async t => {
   await assert.rejects(selectHubRepositories({ cwd, names: ['unknown'] }), /Unknown/);
   await assert.rejects(selectHubRepositories({ cwd, names: ['web', 'web'] }), /Unique/);
 });
+
+test('parses one explicit repository directive outside fenced examples', async () => {
+  const { parseHubRepositoryDirective } = await import('../src/hub-repos.js');
+  assert.deepEqual(parseHubRepositoryDirective('```text\nrepos: ignored\n```\nrepos: web, api\n'), ['web', 'api']);
+  assert.throws(() => parseHubRepositoryDirective('repos: web\nrepos: api'), /Ambiguous/);
+  assert.throws(() => parseHubRepositoryDirective('repos: web, ../other'), /Invalid/);
+  assert.throws(() => parseHubRepositoryDirective('```\nrepos: web'), /Unclosed/);
+});
+
+test('resolves a source directive only against registered hub repositories', async t => {
+  const { discoverHubRepositories } = await import('../src/hub-repos.js');
+  const cwd = await mkdtemp(join(tmpdir(), 'hub-directive-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, '.ai'));
+  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n  repos:\n    - name: web\n      path: web\n');
+  const source = join(cwd, 'source.md');
+  await writeFile(source, 'repos: web');
+  const result = await discoverHubRepositories({ cwd, path: source });
+  assert.equal(result.repos[0].name, 'web');
+  assert.match(result.scope, /proposal only/);
+  await writeFile(source, 'repos: unknown');
+  await assert.rejects(discoverHubRepositories({ cwd, path: source }), /Unknown/);
+});
