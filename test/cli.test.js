@@ -771,3 +771,14 @@ test('starts an explicit local webhook listener without exposing its secret', as
   assert.ok(!messages.logs.at(-1).includes('secret-value'));
   assert.equal(await runCli(['webhook-listen', path, dir, '0'], options), 2);
 });
+
+test('lists local webhook claim records without running tasks', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'webhook-claims-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['webhook-claims', dir], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).complete, true);
+});

@@ -21,7 +21,7 @@ export async function claimGitHubWebhook(input, { directory, now = () => new Dat
     throw error;
   }
   try {
-    await file.writeFile(`${JSON.stringify({ digest, deliveryId: inspected.deliveryId, claimedAt: now() })}\n`, 'utf8');
+    await file.writeFile(`${JSON.stringify({ digest, deliveryId: inspected.deliveryId, claimedAt: now(), repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action })}\n`, 'utf8');
     await file.sync();
   } finally { await file.close(); }
   return { ...inspected, claimed: true };

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added inspectable local webhook claim metadata and backward-compatible listing of earlier digest-only records. Claims are not a task queue or evidence of execution.
+
 - Added an explicit loopback-only GitHub webhook receiver that verifies and claims deliveries locally without running tasks. It is not a public service, distributed replay protection or a live GitHub integration.
 
 - Added built-in CLI help and an initial `agent-help` skill; refreshed the provider overview, including the removal of Bitbucket Cloud native issue tracking.
@@ -143,5 +145,5 @@
 2. Validate skill discovery and workflows in the actual supported AI clients; extend the installer for skill assets only after defining safe copy behavior.
 3. Exercise provider integrations against disposable test repositories and accounts where available. Confirm permissions, pagination and error handling before treating simulated write tests as live validation.
 4. Continue AEM development workflows, including live-instance and rendered-page checks when a suitable test instance is available.
-5. Improve CI status coverage and webhook handling; a webhook listener, durable distributed replay protection and agent dispatch are not implemented.
+5. Improve CI status coverage and webhook handling; the local listener and claims do not provide a public service, durable distributed replay protection or agent dispatch.
 6. Extend plan formats and legacy YAML compatibility where the reference workflow requires them. Preserve existing behavior and document unsupported cases.
