@@ -26,7 +26,7 @@ export function createTrackerProvider(config, options = {}) {
 export function createScmProvider(config, options = {}) {
   if (config?.provider === 'gitlab') {
     const client = createGitLabClient({ project: config.project, token: options.gitlabToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
-    return { provider: 'gitlab', getPullRequest: client.getPullRequest, getPullRequestComments: client.getPullRequestComments };
+    return { provider: 'gitlab', getPullRequest: client.getPullRequest, getPullRequestComments: client.getPullRequestComments, createPullRequest: client.createPullRequest };
   }
   if (config?.provider === 'bitbucket-cloud') {
     const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });

@@ -35,3 +35,16 @@ test('rejects invalid project paths, repeated pagination and incomplete results'
   await assert.rejects(client.getTicket(7), /incomplete/);
   await assert.rejects(client.getPullRequest(0));
 });
+
+test('lists matching open MRs and creates a draft with explicit source and target', async () => {
+  const calls = [];
+  const client = createGitLabClient({ project: 'team/site', token: 'secret', fetchImpl: async (...args) => { calls.push(args); return { ok: true, headers: { get: () => null }, json: async () => args[1].method === 'POST' ? { iid: 9 } : [] }; } });
+  assert.deepEqual(await client.listOpenPullRequests({ head: 'feature/123', base: 'main' }), []);
+  const query = new URL(calls[0][0]).searchParams;
+  assert.equal(query.get('source_branch'), 'feature/123');
+  assert.equal(query.get('target_branch'), 'main');
+  assert.equal(query.get('scope'), 'all');
+  assert.equal((await client.createPullRequest({ title: 'Change', head: 'feature/123', base: 'main', body: 'Summary', draft: true })).iid, 9);
+  assert.deepEqual(JSON.parse(calls[1][1].body), { title: 'Draft: Change', source_branch: 'feature/123', target_branch: 'main', description: 'Summary', remove_source_branch: false });
+  await assert.rejects(client.createPullRequest({ title: 'Draft: Change', head: 'feature', base: 'main', draft: false }));
+});

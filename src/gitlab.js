@@ -1,11 +1,13 @@
+import { branchRef } from './git-ref.js';
+
 /** GitLab.com REST client. Self-managed instances are a separate target. */
 export function createGitLabClient({ project, token, fetchImpl = globalThis.fetch, maxPages = 10 }) {
   if (typeof project !== 'string' || project.split('/').length < 2 || project.split('/').some(segment => !/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(segment) || segment === '.' || segment === '..')) throw new TypeError('Invalid GitLab project path');
   if (typeof token !== 'string' || !token.trim()) throw new TypeError('GitLab access token is required');
   if (typeof fetchImpl !== 'function' || !Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 100) throw new TypeError('Invalid GitLab client options');
   const root = `https://gitlab.com/api/v4/projects/${encodeURIComponent(project)}`;
-  async function get(path) {
-    const response = await fetchImpl(`${root}${path}`, { method: 'GET', headers: { Accept: 'application/json', 'PRIVATE-TOKEN': token }, redirect: 'error' });
+  async function request(path, { method = 'GET', body } = {}) {
+    const response = await fetchImpl(`${root}${path}`, { method, headers: { Accept: 'application/json', 'PRIVATE-TOKEN': token, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), redirect: 'error' });
     if (!response.ok) {
       const error = new Error(`GitLab request failed (${response.status})`);
       error.status = response.status;
@@ -13,6 +15,7 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
     }
     return { data: await response.json(), headers: response.headers };
   }
+  const get = path => request(path);
   function iid(value) {
     if (!Number.isSafeInteger(value) || value < 1) throw new TypeError('Invalid GitLab IID');
   }
@@ -50,6 +53,34 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
     },
     async getPullRequest(number) { iid(number); return (await get(`/merge_requests/${number}`)).data; },
     getPullRequestComments(number) { return notes('merge_requests', number); },
+    async listOpenPullRequests({ head, base }) {
+      branchRef(head);
+      branchRef(base);
+      const results = [];
+      let page = 1;
+      for (let count = 0; count < maxPages; count++) {
+        const query = new URLSearchParams({ state: 'opened', scope: 'all', source_branch: head, target_branch: base, per_page: '100', page: String(page) });
+        const result = await get(`/merge_requests?${query}`);
+        if (!Array.isArray(result.data) || result.data.length > 100) throw new Error('Invalid GitLab merge request response');
+        results.push(...result.data);
+        const next = result.headers?.get?.('x-next-page');
+        if (next !== null && next !== undefined && next !== '') {
+          if (!/^[1-9][0-9]*$/.test(next) || !Number.isSafeInteger(Number(next)) || Number(next) <= page) throw new Error('Invalid GitLab next page');
+          page = Number(next);
+        } else if (result.data.length === 100) page++;
+        else return results;
+      }
+      throw new Error('GitLab merge request limit reached; context is incomplete');
+    },
+    async createPullRequest({ title, head, base, body = '', draft = false }) {
+      if (typeof title !== 'string' || !title.trim() || typeof body !== 'string' || typeof draft !== 'boolean') throw new TypeError('Invalid merge request fields');
+      branchRef(head);
+      branchRef(base);
+      if (head === base) throw new TypeError('Source and target branches must differ');
+      if (!draft && /^(?:draft:|\[draft\]|\(draft\))/i.test(title.trim())) throw new TypeError('Draft title conflicts with draft flag');
+      const finalTitle = draft && !/^(?:draft:|\[draft\]|\(draft\))/i.test(title.trim()) ? `Draft: ${title}` : title;
+      return (await request('/merge_requests', { method: 'POST', body: { source_branch: head, target_branch: base, title: finalTitle, description: body, remove_source_branch: false } })).data;
+    },
     async getPipeline(id) { iid(id); return (await get(`/pipelines/${id}`)).data; },
     async listPipelines({ sha, page = 1, perPage = 100 } = {}) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha) || !Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100) throw new TypeError('Invalid GitLab pipeline query');

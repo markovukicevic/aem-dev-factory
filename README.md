@@ -151,4 +151,14 @@ The command checks readiness, origin, published branch, locally tracked base and
 
 ### GitLab.com
 
-For a GitLab.com project such as `team/subgroup/site`, use `{"provider":"gitlab","project":"team/subgroup/site"}` for the tracker or SCM and `{"provider":"gitlab-ci","project":"team/subgroup/site"}` for CI. Supply `GITLAB_TOKEN`. `tracker-ticket`, `tracker-export`, `scm-pr`, and `ci-status` read issues, export source, read merge requests, and list the first page of commit pipelines respectively. The library can also read paginated merge-request notes and individual pipelines. GitLab export uses `gitlab-<number>` for `spec-init`. GitLab.com reads have only been tested with simulated responses; self-managed instances and writes are not supported yet.
+For a GitLab.com project such as `team/subgroup/site`, use `{"provider":"gitlab","project":"team/subgroup/site"}` for the tracker or SCM and `{"provider":"gitlab-ci","project":"team/subgroup/site"}` for CI. Supply `GITLAB_TOKEN`. `tracker-ticket`, `tracker-export`, `scm-pr`, and `ci-status` read issues, export source, read merge requests, and list the first page of commit pipelines respectively. The library can also read paginated merge-request notes and individual pipelines. GitLab export uses `gitlab-<number>` for `spec-init`. GitLab.com reads have only been tested with simulated responses; self-managed instances are not supported.
+
+### Create a GitLab.com merge request (experimental)
+
+After publishing the branch, provide `GITLAB_TOKEN`, a config and plan, and a reviewed description:
+
+```sh
+node /path/to/aem-devflow-max/bin/aem-devflow.js gitlab-mr-create team/subgroup/site /path/to/config.yaml /path/to/implement.md "MR title" --body-file /path/to/description.md --draft
+```
+
+The command checks readiness, origin, published branch, locally tracked base and existing open MRs before one create request. It does not push or retry an ambiguous write. Checks are not atomic, and local tracking references may be stale. Creation has been tested with local Git repositories and a simulated API, not a live GitLab account. The direct library create method does not perform readiness checks.
