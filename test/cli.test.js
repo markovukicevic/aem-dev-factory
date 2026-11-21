@@ -516,3 +516,12 @@ test('reads GitHub PR file metadata through the configured SCM', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).files[0].filename, 'test.js');
   assert.equal(await runCli(['github-pr-files', 'providers.json', 'bad'], options), 2);
 });
+
+test('reads GitLab merge request diffs with the configured provider', async () => {
+  const { messages, output } = capture();
+  const refs = { base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40), start_sha: 'c'.repeat(40) };
+  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'gitlab' } }), makeScm: () => ({ provider: 'gitlab', getPullRequest: async () => ({ iid: 7, diff_refs: refs }), listMergeRequestDiffs: async () => ({ values: [], nextPage: null }) }) };
+  assert.equal(await runCli(['gitlab-mr-diffs', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).diffComplete, null);
+  assert.equal(await runCli(['gitlab-mr-diffs', 'providers.json', 'bad'], options), 2);
+});
