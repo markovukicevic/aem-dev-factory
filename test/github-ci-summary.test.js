@@ -37,3 +37,10 @@ test('paginates GitHub check runs and rejects shifting or malformed results', as
   assert.equal(partial.complete, false);
   assert.equal(partial.state, 'unknown');
 });
+
+test('retains individual observed check details and classic status', () => {
+  const result = summarizeGitHubCi(checks({ name: 'build', status: 'completed', conclusion: 'failure' }, { name: 'optional', status: 'completed', conclusion: 'skipped' }), status(1, 'success'));
+  assert.equal(result.state, 'failure');
+  assert.equal(result.classicStatus, 'success');
+  assert.deepEqual(result.checkResults.map(check => [check.name, check.state, check.conclusion]), [['build', 'failure', 'failure'], ['optional', 'unknown', 'skipped']]);
+});

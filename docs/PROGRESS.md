@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Expanded the GitHub CI summary with observed check names, statuses and conclusions so uncertain or failing results can be inspected.
+
 - Connected GitHub PR discussion, changed-file metadata and CI summary into a single revision-checked read-only review context; full diffs, required checks and potentially fork CI remain outside its coverage. Verified against public `cli/cli` PR 15117.
 
 - Added bounded Bitbucket Cloud PR status retrieval for review. Simulated responses cover pagination and unsafe URLs; live Bitbucket validation remains open.
