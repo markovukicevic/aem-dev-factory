@@ -429,3 +429,24 @@ test('generates a PR description from plan and verification files', async t => {
   assert.match(await readFile(out, 'utf8'), /Unit tests passed/);
   assert.equal(await runCli(args, { output }), 1);
 });
+
+test('inspects a signed webhook from files without executing a task', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { createHmac } = await import('node:crypto');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-webhook-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const body = JSON.stringify({ action: 'opened', issue: { number: 7 }, repository: { full_name: 'team/site' }, sender: { login: 'alex' } });
+  const signature = `sha256=${createHmac('sha256', 'secret').update(body).digest('hex')}`;
+  const policy = join(dir, 'policy.json');
+  const headers = join(dir, 'headers.json');
+  const payload = join(dir, 'body.json');
+  await writeFile(policy, JSON.stringify({ allowedRepositories: ['team/site'], allowedActors: ['alex'] }));
+  await writeFile(headers, JSON.stringify({ signature, event: 'issues', deliveryId: '12345678-1234-1234-1234-123456789abc' }));
+  await writeFile(payload, body);
+  const { messages, output } = capture();
+  assert.equal(await runCli(['webhook-inspect', policy, headers, payload], { output, env: { GITHUB_WEBHOOK_SECRET: 'secret' } }), 0);
+  assert.equal(JSON.parse(messages.logs[0]).kind, 'issue');
+  assert.equal(await runCli(['webhook-inspect', policy, headers, payload], { output, env: { GITHUB_WEBHOOK_SECRET: 'wrong' } }), 1);
+});

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added offline GitHub webhook signature verification and allowlisted event classification plus an initial automation skill. No listener, replay protection, agent execution or deployment is implemented.
+
 - Added a local PR description builder using existing summary, completed plan and supplied verification evidence. It does not verify the evidence or replace existing files.
 
 - Added an explicit GitHub Actions workflow-dispatch command. An accepted response does not imply run completion; no live workflow dispatch was performed.

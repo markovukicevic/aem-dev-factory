@@ -170,7 +170,7 @@ The early `agent-core` plugin also includes instruction files for `agent-plan`, 
 
 ### Plugin packaging
 
-The repository contains an initial Claude Code marketplace manifest for `agent-core-max`, `aem-tools-max`, and `agent-hub-max`. `npm run validate:plugins` checks the manifest, source paths and skill frontmatter; it does not prove runtime behavior. Claude Code is not installed in the development environment used for this work, so marketplace registration, installation and skill invocation have not been verified. The CLI-based skills also require `AEM_DEVFLOW_MAX_HOME` to point to a checkout with dependencies installed.
+The repository contains an initial Claude Code marketplace manifest for `agent-core-max`, `aem-tools-max`, `agent-hub-max`, and `agent-automation-max`. `npm run validate:plugins` checks the manifest, source paths and skill frontmatter; it does not prove runtime behavior. Claude Code is not installed in the development environment used for this work, so marketplace registration, installation and skill invocation have not been verified. The CLI-based skills also require `AEM_DEVFLOW_MAX_HOME` to point to a checkout with dependencies installed.
 
 ### Local AEM component candidates
 
@@ -207,3 +207,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 ### Prepare a PR description
 
 `pr-description <share-plan-or-dash> <explain-or-dash> <implement.md> <verification.md> <new-output.md>` assembles a description from an existing summary, completed plan steps, and supplied verification evidence. Use `-` for an unavailable optional source. The command does not run tests or validate the truth of the supplied evidence; review its output before creating a PR. It refuses to overwrite an existing file.
+
+### Offline GitHub webhook inspection
+
+`webhook-inspect <policy.json> <headers.json> <body.json>` checks the raw body against `GITHUB_WEBHOOK_SECRET` and explicit `allowedRepositories` and `allowedActors` arrays. The headers file has `signature`, `event`, and `deliveryId` fields. Supported events are narrowly classified; no task is executed and no listener is started. This building block does not prevent replay or establish that the event and delivery headers are bound to the signed body, and it is not a production webhook service. The signature implementation is tested against GitHub's published test vector and synthetic deliveries.

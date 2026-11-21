@@ -19,6 +19,11 @@
       "name": "agent-hub-max",
       "source": "./plugins/agent-hub",
       "description": "Read-only multi-repository status"
+    },
+    {
+      "name": "agent-automation-max",
+      "source": "./plugins/agent-automation",
+      "description": "Offline webhook inspection"
     }
   ]
 }
