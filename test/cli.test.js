@@ -606,3 +606,17 @@ test('reports missing local ticket artifacts', async t => {
   assert.equal(await runCli(['ticket-status', dir], { output }), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).files.find(file => file.name === 'raw-story.md').status, 'missing');
 });
+
+test('initializes a project from explicit non-secret provider configuration', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'project-init-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const configPath = join(cwd, 'providers-input.json');
+  await writeFile(configPath, JSON.stringify({ scm: { provider: 'github', owner: 'team', repository: 'site' } }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['project-init', configPath], { cwd, output }), 0);
+  assert.match(JSON.parse(messages.logs.at(-1)).path, /providers\.json$/);
+  assert.equal(await runCli(['project-init', configPath], { cwd, output }), 1);
+});

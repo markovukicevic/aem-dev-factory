@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added explicit non-secret project provider setup and an initial `agent-init` skill. This is not yet the original initialization workflow and does not create its rules, MCP settings or legacy config.
+
 - Added local ticket artifact inspection and an initial Definition of Ready review skill. Artifact presence is not evidence of readiness; AI-client behavior remains untested.
 
 - Added single-fetch ticket initialization with a provider/project identity record and non-overwriting source export. Legacy directories are not adopted automatically; verified initialization in a temporary project against public `cli/cli` issue 15121.

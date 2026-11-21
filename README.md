@@ -26,7 +26,7 @@ node bin/aem-devflow.js github-issue OWNER REPOSITORY NUMBER
 node bin/aem-devflow.js github-issue-context OWNER REPOSITORY NUMBER
 ```
 
-These read-only commands print pull request or issue JSON; the context command also reads review and conversation comments, check runs, and combined status for the PR head commit. Context includes only the requested page of each paginated response (page 1 by default), clearly marked in its output; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. The underlying client also supports creating a pull request and reading individual pages of review comments, conversation comments, check runs and combined commit status, but PR creation is not exposed through the command or connected to a complete workflow. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
+These read-only commands print pull request or issue JSON; the context command also reads review and conversation comments, check runs, and combined status for the PR head commit. Context includes only the requested page of each paginated response (page 1 by default), clearly marked in its output; the response may contain private repository data. It uses GitHub Cloud's API and does not yet support GitHub Enterprise Server. Experimental guarded PR creation commands are available separately; review their documented limitations before use. GitHub paginates comment and check responses; callers must request subsequent pages explicitly.
 
 The issue context command retrieves the issue and comment pages, returning an error instead of silently truncating if its page limit is reached. It rejects pull requests returned by the Issues API and has been read-tested against a public GitHub issue. It does not fetch attachments.
 
@@ -245,3 +245,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 `ticket-init /path/to/providers.json <id>` fetches the configured tracker ticket once, creates or reuses its spec directory, stores non-secret tracker identity and writes a new `raw-story.md`. Existing directories without a matching identity and existing story files are not overwritten. A failure can leave an identity-only directory; inspect it before retrying. Identity is scoped to the configured provider and project. Existing legacy spec directories require manual review rather than automatic adoption.
 
 `ticket-status <spec-directory>` inspects expected local ticket artifacts and summarizes a supported implementation plan when present. It reports missing or unreadable files; presence does not establish that evidence, tracker identity, requirements or verification are correct. No tracker or remote system is contacted.
+
+### Initialize a project
+
+From the target project, `project-init <providers.json>` validates an explicit JSON provider configuration and creates `.ai/providers.json` and `.ai/specs` without replacing existing files. Only recognized, non-secret provider fields are accepted; credentials must be supplied through environment variables. It creates directories before the config file and can leave them behind on failure. This setup does not recreate the original `.ai/config.yaml`, rules, MCP configuration, or test settings; those remain separate work.
