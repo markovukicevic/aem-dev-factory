@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added bounded local OSGi JSON syntax inspection without printing values. Unsupported formats, runmode semantics and live services remain unverified.
+
 - Added a local component-only AEM diagnostic and an initial `aem-doctor` skill. Runtime, inheritance, OSGi, dispatcher and complete original diagnostics remain unimplemented.
 
 - Added read-only local project-marker inspection to assist setup. Markers do not establish runtime behavior, provider access or full project type.

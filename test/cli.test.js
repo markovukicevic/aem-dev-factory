@@ -643,3 +643,16 @@ test('inspects a local AEM component without accessing an AEM instance', async t
   assert.equal(await runCli(['aem-doctor-component', dir], { output }), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).definition.status, 'missing');
 });
+
+test('inspects a local OSGi directory without printing config values', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'aem-osgi-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await writeFile(join(dir, 'service.cfg.json'), '{"value":"private"}');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['aem-doctor-osgi', dir], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'valid-json-object');
+  assert.ok(!messages.logs.at(-1).includes('private'));
+});

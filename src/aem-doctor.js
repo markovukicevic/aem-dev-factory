@@ -43,3 +43,40 @@ export async function inspectAemComponent({ path }) {
   if (!templates.length) warnings.push('No immediate local HTML template was found; rendering may be inherited or implemented elsewhere.');
   return { path, definition, dialog, templates, warnings, scope: 'Explicit local component files only; XML semantics, inheritance, runtime AEM, OSGi and dispatcher are not verified.' };
 }
+
+/** Inspect JSON syntax of local OSGi configs, without reporting configuration values. */
+export async function inspectOsgiConfigs({ path, maxEntries = 5000, maxDepth = 12 }) {
+  if (typeof path !== 'string' || !path.trim() || !Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > 10000 || !Number.isSafeInteger(maxDepth) || maxDepth < 0 || maxDepth > 30) throw new TypeError('Invalid OSGi inspection options');
+  if (await kind(path, 'directory') !== 'present') throw new Error('OSGi path must be a local directory');
+  const queue = [{ dir: path, relative: '', depth: 0 }];
+  const files = [];
+  const skipped = [];
+  let scanned = 0;
+  while (queue.length) {
+    const current = queue.pop();
+    const entries = await readdir(current.dir, { withFileTypes: true });
+    scanned += entries.length;
+    if (scanned > maxEntries) throw new Error('OSGi inspection limit exceeded');
+    for (const entry of entries) {
+      const relative = current.relative ? `${current.relative}/${entry.name}` : entry.name;
+      const full = join(current.dir, entry.name);
+      if (entry.isSymbolicLink()) { skipped.push({ path: relative, reason: 'symlink' }); continue; }
+      if (entry.isDirectory()) {
+        if (current.depth >= maxDepth) skipped.push({ path: relative, reason: 'depth-limit' });
+        else queue.push({ dir: full, relative, depth: current.depth + 1 });
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (entry.name.endsWith('.config')) { files.push({ path: relative, status: 'unsupported-format' }); continue; }
+      if (!entry.name.endsWith('.cfg.json')) continue;
+      try {
+        const data = JSON.parse((await readLimitedFile(full, 1024 * 1024)).toString('utf8'));
+        if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Configuration must be an object');
+        files.push({ path: relative, status: 'valid-json-object' });
+      } catch { files.push({ path: relative, status: 'invalid-or-unreadable' }); }
+    }
+  }
+  files.sort((a, b) => a.path.localeCompare(b.path));
+  skipped.sort((a, b) => a.path.localeCompare(b.path));
+  return { path, files, skipped, scope: 'Local JSON syntax only; configuration values, runmode correctness, secrets and live OSGi services were not verified.' };
+}
