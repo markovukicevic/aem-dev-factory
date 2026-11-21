@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an initial evidence-based Definition of Done review skill; it does not perform the reference skill’s automatic fixes or tracker updates and has not been tested in a client.
+
 - Added explicit paginated Bitbucket Cloud commit-status retrieval with bounded, validated next links; API behavior has only been tested using simulated responses.
 
 - Added an initial plan validation skill covering requirement mapping, scope, dependencies, paths and verification; client behavior has not been tested.
