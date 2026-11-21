@@ -175,3 +175,7 @@ The repository contains an initial Claude Code marketplace manifest for `agent-c
 ### Local AEM component candidates
 
 From an AEM repository, `node /path/to/aem-dev-flow-max/bin/aem-devflow.js aem-components hero` lists matching source directories, observed component definitions, dialogs, and selected files. It searches exact names below directories named `components`, skips common generated directories and symlinks, and fails instead of returning incomplete results when its search limit is exceeded. It does not resolve external models, inspect authored pages, parse dialog fields, or verify runtime behavior. Tested using local synthetic component trees only.
+
+### Inspect a local AEM dialog
+
+`node bin/aem-devflow.js aem-dialog /path/to/_cq_dialog/.content.xml` extracts explicit field names, resource types, labels, descriptions, required flags, and value/default-value attributes. It rejects malformed XML, DTD/entity declarations and files larger than 1 MiB. These are local XML attributes only; inherited fields, authored values and runtime behavior are not checked. Tests use synthetic dialog XML, not a live AEM instance.

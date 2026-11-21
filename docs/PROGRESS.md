@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added local AEM dialog XML field inspection with size and DTD checks, using synthetic fixtures. Inheritance, authored values, live AEM and full AEM workflows remain unverified.
+
 - Added a read-only local AEM component candidate search and CLI. It finds matching source folders and dialog files using synthetic fixtures; it does not inspect a live AEM instance or resolve all external component files.
 
 - Added an initial Claude Code marketplace manifest and structural plugin validation in CI. Claude Code is not installed here, so registration, installation and real skill behavior remain unverified.

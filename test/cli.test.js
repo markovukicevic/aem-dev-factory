@@ -331,3 +331,16 @@ test('searches local AEM component candidates without credentials', async t => {
   assert.equal(await runCli(['aem-components', 'hero'], { cwd, env: {}, output }), 0);
   assert.equal(JSON.parse(messages.logs[0]).candidates.length, 1);
 });
+
+test('inspects a local AEM dialog without credentials', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-aem-dialog-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, '.content.xml');
+  await writeFile(path, '<root xmlns:sling="urn:sling"><title sling:resourceType="text" name="./title" fieldLabel="Title"/></root>');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['aem-dialog', path], { env: {}, output }), 0);
+  assert.equal(JSON.parse(messages.logs[0]).fields[0].name, './title');
+});
