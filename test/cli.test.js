@@ -231,3 +231,17 @@ test('creates Azure PRs only on explicit command and passes selected work-item I
   assert.equal(JSON.parse(messages.logs[0]).pullRequest.pullRequestId, 9);
   assert.equal(await runCli(args.concat(['--work-item', '-1']), options), 2);
 });
+
+test('initializes a ticket directory through the CLI without replacing existing work', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'devflow-cli-spec-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['spec-init', 'github-12', 'A new feature'], { cwd, output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).created, true);
+  assert.equal(await runCli(['spec-init', 'github-12', 'Renamed'], { cwd, output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).created, false);
+  assert.equal(await runCli(['spec-init', '../bad', 'Title'], { cwd, output }), 1);
+});

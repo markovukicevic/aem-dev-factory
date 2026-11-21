@@ -119,3 +119,14 @@ node /path/to/aem-devflow-max/bin/aem-devflow.js ado-pr-create ORG PROJECT REPO 
 ```
 
 `--draft` and `--work-item` are optional. The command runs readiness checks, verifies the origin, published commit, locally tracked base, and active PRs. It does not push, and it does not automatically retry an ambiguous failure. The checks are not atomic; local references can be stale and branches can change after inspection. Creation is tested with a simulated Azure API and local Git repositories, not a live Azure account.
+
+## Early requirements workflow
+
+`plugins/agent-core/skills/agent-req/SKILL.md` contains an initial five-phase requirements workflow using the tracker commands. `spec-init` creates or selects a unique directory under `.ai/specs/` without overwriting existing work:
+
+```sh
+node bin/aem-devflow.js spec-init github-123 "Story title"
+node bin/aem-devflow.js spec-init TEAM-123 "Story title"
+```
+
+Use `ado-123` for Azure work-item IDs. The skill requires `AEM_DEVFLOW_MAX_HOME` to point to this checkout and a separately prepared provider config. Its instruction file has been structurally validated, but it has not been installed or behaviorally tested in an AI client. It does not yet provide full reference-project parity, attachment handling, or existing-spec updates.
