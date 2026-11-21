@@ -12,6 +12,7 @@ import { savePullRequestDescription } from './pr-description.js';
 import { inspectGitHubWebhook } from './github-webhook.js';
 import { claimGitHubWebhook } from './webhook-claim.js';
 import { readLimitedFile } from './read-limited.js';
+import { installSkill } from './install-skill.js';
 import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 import { saveGitHubIssueStory } from './issue-story.js';
@@ -19,7 +20,7 @@ import { saveTrackerStory } from './tracker-story.js';
 import { createTrackerProvider, createScmProvider, createCiProvider, createDocumentationProvider } from './providers.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js aem-dialog-snapshot <dialog.xml> <output.json>\n       node bin/aem-devflow.js aem-dialog-compare <before.json> <after.json>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js pr-description <share-plan-or-dash> <explain-or-dash> <plan> <verification> <output>\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js webhook-inspect <policy.json> <headers.json> <body.json>\n       node bin/aem-devflow.js webhook-claim <policy.json> <headers.json> <body.json> <store-dir>\n       node bin/aem-devflow.js jira-attachment <providers.json> <attachment-id> <output-file>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ci-dispatch <providers.json> <workflow> <ref> [--inputs-file <json>]\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js install-skill <codex|claude|copilot> <skill> <target-project>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js aem-dialog-snapshot <dialog.xml> <output.json>\n       node bin/aem-devflow.js aem-dialog-compare <before.json> <after.json>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js pr-description <share-plan-or-dash> <explain-or-dash> <plan> <verification> <output>\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js webhook-inspect <policy.json> <headers.json> <body.json>\n       node bin/aem-devflow.js webhook-claim <policy.json> <headers.json> <body.json> <store-dir>\n       node bin/aem-devflow.js jira-attachment <providers.json> <attachment-id> <output-file>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ci-dispatch <providers.json> <workflow> <ref> [--inputs-file <json>]\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, createBitbucketPr = createBitbucketPullRequest, createGitlabMr = createGitLabMergeRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, makeDocumentation = createDocumentationProvider, readBody = readFile, cwd = process.cwd() } = {}) {
@@ -85,6 +86,16 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       return 0;
     } catch {
       output.error('Unable to read CI workflow runs. Check the configuration and connection.');
+      return 1;
+    }
+  }
+  if (args[0] === 'install-skill') {
+    if (args.length !== 4 || args.slice(1).some(value => typeof value !== 'string' || !value.trim())) { output.error(usage); return 2; }
+    try {
+      output.log(JSON.stringify(await installSkill({ client: args[1], name: args[2], target: args[3] }), null, 2));
+      return 0;
+    } catch {
+      output.error('Unable to install skill. Check the client, source, target and existing files.');
       return 1;
     }
   }

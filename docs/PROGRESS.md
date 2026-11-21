@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an explicit per-project installer for self-contained skills targeting Codex, Claude Code and Copilot directories. It refuses to overwrite and has been tested with temporary projects; client discovery and behavior remain unverified.
+
 - Added an atomic local webhook body-digest claim to suppress duplicate payloads. It does not provide distributed replay protection, bind unsigned headers, run agents, or reconcile crashes automatically.
 
 - Added offline GitHub webhook signature verification and allowlisted event classification plus an initial automation skill. No listener, distributed replay protection, agent execution or deployment is implemented.
