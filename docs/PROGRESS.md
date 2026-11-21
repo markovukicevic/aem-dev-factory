@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added local provider-configuration and credential-presence diagnostics, plus setup-to-ticket workflow coverage. Credential values and live service access are not inspected.
+
 - Added bounded, explicit `repos:` directive resolution as an untrusted proposal against the hub registry. HTML, implicit routing and dispatch remain unsupported.
 
 - Added explicit registry-based hub repository selection and an initial discovery skill. Automated routing from ticket text and multi-repository dispatch remain unimplemented.

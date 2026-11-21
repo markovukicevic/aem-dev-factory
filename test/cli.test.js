@@ -712,3 +712,17 @@ test('resolves an explicit hub directive as a proposal', async t => {
   assert.equal(await runCli(['hub-discover', source], { cwd, output }), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).repos[0].name, 'web');
 });
+
+test('inspects provider credential presence without printing values', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'project-doctor-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const path = join(cwd, 'providers.json');
+  await writeFile(path, JSON.stringify({ scm: { provider: 'github', owner: 'team', repository: 'site' } }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['project-doctor', path], { cwd, output, env: { GITHUB_TOKEN: 'secret-value' } }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).providers[0].credentials[0].present, true);
+  assert.ok(!messages.logs.at(-1).includes('secret-value'));
+});
