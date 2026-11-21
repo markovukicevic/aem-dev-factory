@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added non-overwriting local PR response workspaces across supported SCM providers and an initial reply-drafting skill. It does not infer resolution, create replies or post comments. Verified against saved public `cli/cli` PR 15117 context.
+
 - Extended hub status to expose validated local command states, starting commits and exit codes without exposing command arguments or output.
 
 - Added explicit sequential local hub command execution with clean-repository preflight, per-repository state and stop-on-failure behavior. It is not an agent dispatcher, does not validate work and offers no subprocess isolation or automatic recovery.

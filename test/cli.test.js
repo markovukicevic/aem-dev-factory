@@ -850,3 +850,17 @@ test('runs an explicitly configured local hub task', async t => {
   assert.equal(await runCli(['hub-run', input], { cwd: hub, output }), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).repos.repo, 'done');
 });
+
+test('creates a local PR discussion workspace without posting replies', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'pr-response-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const input = join(dir, 'context.json'), destination = join(dir, 'draft.md');
+  await writeFile(input, JSON.stringify({ provider: 'github', pullRequest: {}, comments: [{ id: 1, body: 'Comment' }], reviewComments: [], reviews: [], discussionComplete: true }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['pr-response-draft', input, destination], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).count, 1);
+  assert.equal(await runCli(['pr-response-draft', input, destination], { output }), 1);
+});
