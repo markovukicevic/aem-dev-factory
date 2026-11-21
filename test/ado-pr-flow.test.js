@@ -5,7 +5,7 @@ import { createAdoPullRequest } from '../src/ado-pr-flow.js';
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', organization: 'org', project: 'project', repository: 'repo', token: 'token', title: 'Change', workItemIds: [12] };
 const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main' } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
-const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ organization: 'org', project: 'project', repository: 'repo' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true }), makeClient: () => ({ listActivePullRequests: async () => [], createPullRequest: async () => ({ pullRequestId: 1 }) }) });
+const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ organization: 'org', project: 'project', repository: 'repo' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listActivePullRequests: async () => [], createPullRequest: async () => ({ pullRequestId: 1 }) }) });
 
 test('creates an Azure PR only after checks and passes explicit work-item links', async () => {
   let calls = 0;
@@ -18,7 +18,8 @@ test('blocks mismatched origins, unpublished branches, empty diffs and existing 
   for (const override of [
     { originReader: async () => ({ organization: 'other', project: 'project', repository: 'repo' }) },
     { publishedReader: async () => ({ published: false }) },
-    { inspectDiff: async () => ({ hasCommits: false }) },
+    { inspectDiff: async () => ({ hasCommits: false, hasChanges: false }) },
+    { inspectDiff: async () => ({ hasCommits: true, hasChanges: false }) },
     { makeClient: () => ({ listActivePullRequests: async () => [{ pullRequestId: 3 }] }) },
     { inspect: async () => ({ ready: false, blockers: ['tests failed'], warnings: [] }) },
   ]) assert.equal((await createAdoPullRequest(input, { ...deps(), ...override })).created, false);
@@ -45,6 +46,8 @@ test('runs readiness and published-branch checks against a real local Git origin
   commit();
   git(['remote', 'add', 'origin', remote]);
   git(['push', '-q', 'origin', 'HEAD:refs/heads/main']);
+  await writeFile(join(cwd, 'feature.txt'), 'feature content');
+  git(['add', 'feature.txt']);
   commit();
   git(['push', '-q', 'origin', 'HEAD:refs/heads/feature']);
   git(['fetch', '-q', 'origin']);

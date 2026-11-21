@@ -6,7 +6,7 @@ import { createGitLabMergeRequest } from '../src/gitlab-pr-flow.js';
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', project: 'team/sub/site', token: 'token', title: 'Change' };
 const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main' } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
-const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ project: 'team/sub/site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ iid: 1 }) }) });
+const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ project: 'team/sub/site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ iid: 1 }) }) });
 
 test('parses only standard GitLab.com origins', () => {
   for (const remote of ['https://gitlab.com/team/sub/site.git', 'git@gitlab.com:team/sub/site.git', 'ssh://git@gitlab.com/team/sub/site']) assert.deepEqual(parseGitLabOrigin(remote), { project: 'team/sub/site' });
@@ -24,7 +24,8 @@ test('blocks mismatched origins, unpublished branches, empty diffs and duplicate
   for (const override of [
     { originReader: async () => ({ project: 'other/site' }) },
     { publishedReader: async () => ({ published: false }) },
-    { inspectDiff: async () => ({ hasCommits: false }) },
+    { inspectDiff: async () => ({ hasCommits: false, hasChanges: false }) },
+    { inspectDiff: async () => ({ hasCommits: true, hasChanges: false }) },
     { makeClient: () => ({ listOpenPullRequests: async () => [{ iid: 3 }] }) },
     { inspect: async () => ({ ready: false, blockers: ['tests failed'], warnings: [] }) },
   ]) assert.equal((await createGitLabMergeRequest(input, { ...deps(), ...override })).created, false);
@@ -51,6 +52,8 @@ test('uses real local Git evidence and blocks an unpublished newer commit', asyn
   commit();
   git(['remote', 'add', 'origin', remote]);
   git(['push', '-q', 'origin', 'HEAD:refs/heads/main']);
+  await writeFile(join(cwd, 'feature.txt'), 'feature content');
+  git(['add', 'feature.txt']);
   commit();
   git(['push', '-q', 'origin', 'HEAD:refs/heads/feature']);
   git(['fetch', '-q', 'origin']);

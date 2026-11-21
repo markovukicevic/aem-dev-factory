@@ -25,7 +25,8 @@ export async function createGitLabMergeRequest(input, dependencies = {}) {
   const last = await publishedReader({ cwd: input.cwd, head });
   if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
   const base = current.readiness.branch.base;
-  if (!(await inspectDiff({ cwd: input.cwd, base })).hasCommits) return { created: false, blockers: ['There are no commits beyond the tracked base branch.'], warnings: current.warnings };
+  const diff = await inspectDiff({ cwd: input.cwd, base });
+  if (!diff.hasCommits || !diff.hasChanges) return { created: false, blockers: ['There are no file changes beyond the tracked base branch.'], warnings: current.warnings };
   const client = makeClient({ project: input.project, token: input.token });
   const existing = await client.listOpenPullRequests({ head, base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitLab merge request response');

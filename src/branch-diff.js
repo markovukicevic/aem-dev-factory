@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-/** Check whether HEAD has commits beyond the locally tracked base branch. */
+/** Check commits and actual file changes against the locally tracked base branch. */
 export async function inspectBranchDiff({ cwd, base }, { run = execFileAsync } = {}) {
   if (typeof cwd !== 'string' || !cwd.trim() || typeof base !== 'string' || !base.trim() || base.startsWith('-')) throw new TypeError('cwd and base branch are required');
   const options = { cwd, encoding: 'utf8', maxBuffer: 8192 };
@@ -18,5 +18,12 @@ export async function inspectBranchDiff({ cwd, base }, { run = execFileAsync } =
   const text = stdout.trim();
   if (!/^\d+$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error('Invalid Git commit count');
   const count = Number(text);
-  return { hasCommits: count > 0, count };
+  let hasChanges = false;
+  try {
+    await run('git', ['diff', '--quiet', '--no-ext-diff', '--no-textconv', `${baseRef}...HEAD`, '--'], options);
+  } catch (error) {
+    if (error?.code !== 1) throw error;
+    hasChanges = true;
+  }
+  return { hasCommits: count > 0, hasChanges, count };
 }

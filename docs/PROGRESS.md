@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Hardened all four PR/MR flows to reject branches containing commits but no actual file changes relative to the tracked base. Tests use local Git repositories, including an empty commit case.
+
 - Added Jira attachment metadata and explicit bounded downloads without overwriting files or following redirects. Binary content is not decoded or structurally validated; all tests use simulated Jira responses.
 
 - Added an explicit read-only Confluence Cloud page operation with separate credentials and storage-format output. Tested with simulated responses; live verification, search and writes remain open.

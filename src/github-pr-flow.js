@@ -28,7 +28,7 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const last = await publishedReader({ cwd: input.cwd, head });
   if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
   const diff = await inspectDiff({ cwd: input.cwd, base: current.readiness.branch.base });
-  if (!diff.hasCommits) return { created: false, blockers: ['There are no commits beyond the tracked base branch.'], warnings: current.warnings };
+  if (!diff.hasCommits || !diff.hasChanges) return { created: false, blockers: ['There are no file changes beyond the tracked base branch.'], warnings: current.warnings };
   const client = makeClient({ owner: input.owner, repository: input.repository, token: input.token });
   const existing = await client.listOpenPullRequests({ owner: input.owner, head, base: current.readiness.branch.base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitHub pull request response');

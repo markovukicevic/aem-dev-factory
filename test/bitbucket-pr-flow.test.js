@@ -6,7 +6,7 @@ import { createBitbucketPullRequest } from '../src/bitbucket-pr-flow.js';
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', workspace: 'team', repository: 'site', token: 'token', title: 'Change' };
 const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main' } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
-const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ workspace: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ id: 1 }) }) });
+const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ workspace: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ id: 1 }) }) });
 
 test('recognizes only standard Bitbucket Cloud origins', () => {
   for (const remote of ['https://bitbucket.org/team/site.git', 'git@bitbucket.org:team/site.git', 'ssh://git@bitbucket.org/team/site']) assert.deepEqual(parseBitbucketOrigin(remote), { workspace: 'team', repository: 'site' });
@@ -24,7 +24,8 @@ test('blocks mismatched origins, unpublished branches, empty diffs and duplicate
   for (const override of [
     { originReader: async () => ({ workspace: 'other', repository: 'site' }) },
     { publishedReader: async () => ({ published: false }) },
-    { inspectDiff: async () => ({ hasCommits: false }) },
+    { inspectDiff: async () => ({ hasCommits: false, hasChanges: false }) },
+    { inspectDiff: async () => ({ hasCommits: true, hasChanges: false }) },
     { makeClient: () => ({ listOpenPullRequests: async () => [{ id: 3 }] }) },
     { inspect: async () => ({ ready: false, blockers: ['tests failed'], warnings: [] }) },
   ]) assert.equal((await createBitbucketPullRequest(input, { ...deps(), ...override })).created, false);
@@ -51,6 +52,8 @@ test('checks a real local origin and blocks an unpublished newer commit', async 
   commit();
   git(['remote', 'add', 'origin', remote]);
   git(['push', '-q', 'origin', 'HEAD:refs/heads/main']);
+  await writeFile(join(cwd, 'feature.txt'), 'feature content');
+  git(['add', 'feature.txt']);
   commit();
   git(['push', '-q', 'origin', 'HEAD:refs/heads/feature']);
   git(['fetch', '-q', 'origin']);

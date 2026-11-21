@@ -27,7 +27,7 @@ export async function createAdoPullRequest(input, dependencies = {}) {
   if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
   const base = current.readiness.branch.base;
   const diff = await inspectDiff({ cwd: input.cwd, base });
-  if (!diff.hasCommits) return { created: false, blockers: ['There are no commits beyond the tracked base branch.'], warnings: current.warnings };
+  if (!diff.hasCommits || !diff.hasChanges) return { created: false, blockers: ['There are no file changes beyond the tracked base branch.'], warnings: current.warnings };
   const client = makeClient({ organization: input.organization, project: input.project, repository: input.repository, token: input.token });
   const existing = await client.listActivePullRequests({ head, base });
   if (existing.length) return { created: false, blockers: ['An active pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.pullRequestId, url: pr.url })), warnings: current.warnings };

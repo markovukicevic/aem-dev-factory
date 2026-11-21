@@ -5,7 +5,7 @@ import { createGitHubPullRequest } from '../src/github-pr-flow.js';
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', owner: 'team', repository: 'site', token: 'token', title: 'Example' };
 const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main' } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
-const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ owner: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ number: 1 }) }) });
+const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ owner: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ number: 1 }) }) });
 
 test('creates only after checks and repository identity succeed', async () => {
   let calls = 0;
@@ -51,6 +51,8 @@ test('integrates readiness and published branch checks against a real local Git 
   commit();
   git(['remote', 'add', 'origin', remote]);
   git(['push', '-q', 'origin', 'HEAD:refs/heads/main']);
+  await writeFile(join(cwd, 'feature.txt'), 'feature content');
+  git(['add', 'feature.txt']);
   commit();
   git(['push', '-q', 'origin', 'HEAD:refs/heads/feature']);
   git(['fetch', '-q', 'origin']);
@@ -76,5 +78,7 @@ test('does not create duplicate or empty pull requests', async () => {
   assert.equal(duplicate.existingPullRequests[0].number, 42);
   const empty = await createGitHubPullRequest(input, { ...deps(), inspectDiff: async () => ({ hasCommits: false }), makeClient: () => client });
   assert.equal(empty.created, false);
+  const emptyCommit = await createGitHubPullRequest(input, { ...deps(), inspectDiff: async () => ({ hasCommits: true, hasChanges: false }), makeClient: () => client });
+  assert.equal(emptyCommit.created, false);
   assert.equal(creates, 0);
 });
