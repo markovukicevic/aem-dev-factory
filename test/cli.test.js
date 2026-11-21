@@ -409,3 +409,23 @@ test('dispatches only an explicitly requested GitHub workflow', async () => {
   assert.equal(JSON.parse(messages.logs[0]).accepted, true);
   assert.equal(await runCli(['ci-dispatch', 'config.json', 'build.yml'], options), 2);
 });
+
+test('generates a PR description from plan and verification files', async t => {
+  const { mkdtemp, readFile, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-pr-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const explanation = join(dir, 'explain.md');
+  const plan = join(dir, 'implement.md');
+  const verification = join(dir, 'verification.md');
+  const out = join(dir, 'pr.md');
+  await writeFile(explanation, '## Summary\nChange hero\n');
+  await writeFile(plan, '### Step 1: Implement\n**Status:** done\n');
+  await writeFile(verification, 'Unit tests passed');
+  const { output } = capture();
+  const args = ['pr-description', '-', explanation, plan, verification, out];
+  assert.equal(await runCli(args, { output }), 0);
+  assert.match(await readFile(out, 'utf8'), /Unit tests passed/);
+  assert.equal(await runCli(args, { output }), 1);
+});

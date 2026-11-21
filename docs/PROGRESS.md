@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added a local PR description builder using existing summary, completed plan and supplied verification evidence. It does not verify the evidence or replace existing files.
+
 - Added an explicit GitHub Actions workflow-dispatch command. An accepted response does not imply run completion; no live workflow dispatch was performed.
 
 - Added local AEM dialog field snapshots and comparison without overwrite, plus an initial snapshot skill. This does not inspect live AEM, inherited fields or rendered pages.
