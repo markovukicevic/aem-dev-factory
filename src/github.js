@@ -62,6 +62,16 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       validateNumber(number, 'pull request number');
       return request('GET', `/issues/${number}/comments${pageQuery(page, perPage)}`);
     },
+    listWorkflowRuns({ sha, page = 1, perPage = 100 } = {}) {
+      if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');
+      const query = new URLSearchParams({ head_sha: sha, per_page: String(perPage), page: String(page) });
+      pageQuery(page, perPage);
+      return request('GET', `/actions/runs?${query}`);
+    },
+    getWorkflowRun(number) {
+      validateNumber(number, 'workflow run ID');
+      return request('GET', `/actions/runs/${number}`);
+    },
     listCheckRuns(sha, { page = 1, perPage = 100 } = {}) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');
       return request('GET', `/commits/${sha}/check-runs${pageQuery(page, perPage)}`);

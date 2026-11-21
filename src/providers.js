@@ -27,7 +27,7 @@ export function createScmProvider(config, options = {}) {
 export function createCiProvider(config, options = {}) {
   if (config?.provider !== 'github-actions') throw new Error('Unsupported CI provider');
   const client = githubClient(config, options);
-  return { provider: 'github-actions', listCheckRuns: (sha, page) => client.listCheckRuns(sha, page), getCommitStatus: sha => client.getCommitStatus(sha) };
+  return { provider: 'github-actions', listCheckRuns: (sha, page) => client.listCheckRuns(sha, page), getCommitStatus: sha => client.getCommitStatus(sha), listWorkflowRuns: options => client.listWorkflowRuns(options), getWorkflowRun: id => client.getWorkflowRun(id) };
 }
 
 export function createProviderSet(config, options = {}) {

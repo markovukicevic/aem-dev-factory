@@ -245,3 +245,13 @@ test('initializes a ticket directory through the CLI without replacing existing 
   assert.equal(JSON.parse(messages.logs.at(-1)).created, false);
   assert.equal(await runCli(['spec-init', '../bad', 'Title'], { cwd, output }), 1);
 });
+
+test('reads CI runs using the separately configured CI adapter', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'github-actions' } }), makeCi: (config, credentials) => { assert.equal(config.provider, 'github-actions'); assert.equal(credentials.token, 'secret'); return { listWorkflowRuns: async input => ({ input }), getWorkflowRun: async id => ({ id }) }; } };
+  assert.equal(await runCli(['ci-runs', 'providers.json', '123abcd', '--page', '2'], options), 0);
+  assert.deepEqual(JSON.parse(messages.logs.at(-1)).input, { sha: '123abcd', page: 2 });
+  assert.equal(await runCli(['ci-run', 'providers.json', '42'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).id, 42);
+  assert.equal(await runCli(['ci-runs', 'providers.json', 'main'], options), 2);
+});

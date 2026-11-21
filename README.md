@@ -130,3 +130,7 @@ node bin/aem-devflow.js spec-init TEAM-123 "Story title"
 ```
 
 Use `ado-123` for Azure work-item IDs. The skill requires `AEM_DEVFLOW_MAX_HOME` to point to this checkout and a separately prepared provider config. Its instruction file has been structurally validated, but it has not been installed or behaviorally tested in an AI client. It does not yet provide full reference-project parity, attachment handling, or existing-spec updates.
+
+### Read GitHub Actions runs
+
+With a configured `ci` provider and a token with Actions read access, `ci-runs /path/to/providers.json <commit-sha> [--page N]` reads one page of workflow runs for a commit, and `ci-run /path/to/providers.json <run-id>` reads one run. These commands only read; they do not trigger workflows. Individual run retrieval was verified against this project's GitHub repository.

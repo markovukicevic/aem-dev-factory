@@ -99,3 +99,16 @@ test('queries open pull requests for the exact head and base', async () => {
   assert.equal(query.get('base'), 'main');
   assert.equal(query.get('state'), 'open');
 });
+
+test('reads a page of workflow runs for a commit and an individual run', async () => {
+  const urls = [];
+  const client = createGitHubClient({ owner: 'team', repository: 'site', token: 'secret', fetchImpl: async url => { urls.push(url); return { ok: true, json: async () => ({}) }; } });
+  await client.listWorkflowRuns({ sha: '123abcd', page: 2 });
+  await client.getWorkflowRun(42);
+  const query = new URL(urls[0]).searchParams;
+  assert.equal(query.get('head_sha'), '123abcd');
+  assert.equal(query.get('page'), '2');
+  assert.match(urls[1], /\/actions\/runs\/42$/);
+  assert.throws(() => client.getWorkflowRun(0));
+  assert.throws(() => client.listWorkflowRuns({ sha: 'main' }));
+});
