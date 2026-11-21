@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Hardened the final pre-write check against missing test evidence and covered final configuration and published-branch changes in focused tests.
+
 - Rechecked plan, Git state, readiness settings and published commit after duplicate-PR lookup, before provider writes. The final check does not remove all concurrent races.
 
 - Added normalized readiness-config consistency checks around tests and before PR creation across providers. Later races and changes not represented in normalized settings remain possible.
