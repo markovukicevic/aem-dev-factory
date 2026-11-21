@@ -4,9 +4,9 @@ Compared against the local reference checkout at `7ecd2a0` (1.1.0). A matching n
 
 ## agent-core
 
-Reference skills: 49. Same-named Max skills: 14.
+Reference skills: 49. Same-named Max skills: 15.
 
-**Initial Max skills:** `agent-doctor`, `agent-dor`, `agent-help`, `agent-init`, `agent-plan`, `agent-plan-validate`, `agent-pr`, `agent-pr-answer`, `agent-pr-review`, `agent-req`, `agent-req-dod`, `agent-step`, `agent-step-all`, `agent-step-verify`.
+**Initial Max skills:** `agent-doctor`, `agent-dor`, `agent-help`, `agent-init`, `agent-plan`, `agent-plan-validate`, `agent-pr`, `agent-pr-answer`, `agent-pr-review`, `agent-pr-review-report`, `agent-req`, `agent-req-dod`, `agent-step`, `agent-step-all`, `agent-step-verify`.
 
 **Reference skills without a same-named Max skill:**
 
@@ -32,7 +32,6 @@ Reference skills: 49. Same-named Max skills: 14.
 - `agent-plan-resolve`
 - `agent-pr-commit`
 - `agent-pr-review-all`
-- `agent-pr-review-report`
 - `agent-pr-reviews-report`
 - `agent-req-import`
 - `agent-req-tasks`

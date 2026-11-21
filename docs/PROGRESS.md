@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added local categorized PR review reports from explicitly supplied findings, checks and limitations; it does not perform a review, validate claims or publish externally.
+
 - Added non-overwriting local PR response workspaces across supported SCM providers and an initial reply-drafting skill. It does not infer resolution, create replies or post comments. Verified against saved public `cli/cli` PR 15117 context.
 
 - Extended hub status to expose validated local command states, starting commits and exit codes without exposing command arguments or output.

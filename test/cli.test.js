@@ -864,3 +864,17 @@ test('creates a local PR discussion workspace without posting replies', async t 
   assert.equal(JSON.parse(messages.logs.at(-1)).count, 1);
   assert.equal(await runCli(['pr-response-draft', input, destination], { output }), 1);
 });
+
+test('creates a local PR review report from supplied evidence', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'pr-review-report-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const input = join(dir, 'findings.json'), report = join(dir, 'report.md');
+  await writeFile(input, JSON.stringify({ repository: 'team/site', pullRequest: 7, head: 'a'.repeat(40), findings: [], checks: [], limitations: [] }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['pr-review-report', input, report], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).findingCount, 0);
+  assert.equal(await runCli(['pr-review-report', input, report], { output }), 1);
+});
