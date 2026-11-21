@@ -93,7 +93,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 }
 ```
 
-`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub, an initial Azure Repos implementation, and read-only Bitbucket Cloud. CI adapters cover GitHub Actions and Bitbucket commit status reads. Bitbucket Data Center and GitLab self-managed adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub, an initial Azure Repos implementation, and read-only Bitbucket Cloud. CI adapters cover GitHub Actions, Bitbucket commit status reads, GitLab CI, and Azure Pipelines builds. Bitbucket Data Center and GitLab self-managed adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
 
 ### Jira Cloud tracker
 
@@ -179,3 +179,7 @@ From an AEM repository, `node /path/to/aem-dev-flow-max/bin/aem-devflow.js aem-c
 ### Inspect a local AEM dialog
 
 `node bin/aem-devflow.js aem-dialog /path/to/_cq_dialog/.content.xml` extracts explicit field names, resource types, labels, descriptions, required flags, and value/default-value attributes. It rejects malformed XML, DTD/entity declarations and files larger than 1 MiB. These are local XML attributes only; inherited fields, authored values and runtime behavior are not checked. Tests use synthetic dialog XML, not a live AEM instance.
+
+### Azure Pipelines builds
+
+Set `ci` to `{"provider":"ado-pipelines","organization":"my-org","project":"My Project"}` and provide `ADO_PAT`. `ado-builds /path/to/providers.json feature/branch` lists one page of builds for that branch; a returned continuation token can be supplied with `--continuation`. `ado-build /path/to/providers.json 123` reads one build. A branch can have builds for multiple commits, so inspect each build's source version before associating it with a change. These operations are read-only and have only been tested with simulated API responses.

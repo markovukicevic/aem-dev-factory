@@ -344,3 +344,12 @@ test('inspects a local AEM dialog without credentials', async t => {
   assert.equal(await runCli(['aem-dialog', path], { env: {}, output }), 0);
   assert.equal(JSON.parse(messages.logs[0]).fields[0].name, './title');
 });
+
+test('reads Azure Pipelines builds through separate CI configuration', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'ado-pipelines' } }), makeCi: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { listBuilds: async query => ({ query, values: [] }), getBuild: async id => ({ id }) }; } };
+  assert.equal(await runCli(['ado-builds', 'providers.json', 'feature/a', '--continuation', 'next'], options), 0);
+  assert.deepEqual(JSON.parse(messages.logs.at(-1)).query, { branch: 'feature/a', continuationToken: 'next' });
+  assert.equal(await runCli(['ado-build', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).id, 7);
+});

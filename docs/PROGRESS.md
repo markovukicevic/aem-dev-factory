@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added read-only Azure Pipelines build listing by branch and build lookup, including continuation tokens. These calls have simulated API tests only; branch results can include builds from different commits.
+
 - Added local AEM dialog XML field inspection with size and DTD checks, using synthetic fixtures. Inheritance, authored values, live AEM and full AEM workflows remain unverified.
 
 - Added a read-only local AEM component candidate search and CLI. It finds matching source folders and dialog files using synthetic fixtures; it does not inspect a live AEM instance or resolve all external component files.

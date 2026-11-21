@@ -2,6 +2,7 @@ import { createGitHubClient } from './github.js';
 import { createJiraTracker } from './jira.js';
 import { createAdoTracker } from './ado.js';
 import { createAdoScm } from './ado-scm.js';
+import { createAdoCi } from './ado-ci.js';
 import { createBitbucketClient } from './bitbucket.js';
 import { createGitLabClient } from './gitlab.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
@@ -39,6 +40,7 @@ export function createScmProvider(config, options = {}) {
 }
 
 export function createCiProvider(config, options = {}) {
+  if (config?.provider === 'ado-pipelines') return createAdoCi({ organization: config.organization, project: config.project, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider === 'gitlab-ci') {
     const client = createGitLabClient({ project: config.project, token: options.gitlabToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
     return { provider: 'gitlab-ci', listPipelines: client.listPipelines, getPipeline: client.getPipeline };

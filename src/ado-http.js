@@ -6,7 +6,7 @@ export function createAdoHttp({ organization, project, token, fetchImpl = global
   if (typeof fetchImpl !== 'function') throw new TypeError('Invalid Azure DevOps client options');
   const base = `https://dev.azure.com/${encodeURIComponent(organization)}/${encodeURIComponent(project)}`;
   const authorization = `Basic ${Buffer.from(`:${token}`).toString('base64')}`;
-  async function request(path, { method = 'GET', body } = {}) {
+  async function requestWithMetadata(path, { method = 'GET', body } = {}) {
     const response = await fetchImpl(`${base}${path}`, {
       method,
       headers: { Accept: 'application/json', Authorization: authorization, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
@@ -18,7 +18,8 @@ export function createAdoHttp({ organization, project, token, fetchImpl = global
       error.status = response.status;
       throw error;
     }
-    return response.json();
+    return { data: await response.json(), headers: response.headers };
   }
-  return { base, request };
+  async function request(path, options) { return (await requestWithMetadata(path, options)).data; }
+  return { base, request, requestWithMetadata };
 }
