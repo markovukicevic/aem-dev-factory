@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added paginated GitHub PR changed-file metadata and available patches with revision stability checks and explicit completeness limits; patches alone do not constitute a complete diff. Verified the eight-file list of public `cli/cli` PR 15117.
+
 - Added provider-aware pull request discussion context and an initial review skill. Azure thread completeness is unknown, code diffs are not fetched, and non-GitHub providers have simulated API tests only. The GitHub path retrieved comments, review comments and reviews from public `cli/cli` PR 15117.
 
 - Extended GitHub CI summaries to fetch up to 10 pages of check runs, detect inconsistent pages and report larger results as incomplete; pagination uses simulated responses in tests.

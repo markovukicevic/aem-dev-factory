@@ -507,3 +507,12 @@ test('reads provider-configured pull request discussion context', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).comments[0].id, 1);
   assert.equal(await runCli(['scm-pr-context', 'providers.json', '../bad'], options), 2);
 });
+
+test('reads GitHub PR file metadata through the configured SCM', async () => {
+  const { messages, output } = capture();
+  const p = { number: 7, head: { sha: 'a'.repeat(40) }, base: { sha: 'b'.repeat(40) }, changed_files: 1 };
+  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'github' } }), makeScm: () => ({ provider: 'github', getPullRequest: async () => p, listPullRequestFiles: async () => [{ filename: 'test.js' }] }) };
+  assert.equal(await runCli(['github-pr-files', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].filename, 'test.js');
+  assert.equal(await runCli(['github-pr-files', 'providers.json', 'bad'], options), 2);
+});
