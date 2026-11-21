@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Rechecked plan, Git state, readiness settings and published commit after duplicate-PR lookup, before provider writes. The final check does not remove all concurrent races.
+
 - Added normalized readiness-config consistency checks around tests and before PR creation across providers. Later races and changes not represented in normalized settings remain possible.
 
 - Bound PR creation to the same implementation-plan digest seen immediately after testing across all four providers. Changes after the final check remain possible.

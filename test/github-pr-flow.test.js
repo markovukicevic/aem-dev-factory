@@ -109,3 +109,13 @@ test('rejects readiness configuration changed after testing', async () => {
   assert.equal(writes, 0);
   assert.match(result.blockers.join(' '), /configuration changed/);
 });
+
+test('refuses to write when the plan changes during duplicate lookup', async () => {
+  let refreshes = 0;
+  let writes = 0;
+  const dependencies = { ...deps(), refresh: async () => ++refreshes === 1 ? good : ({ ...good, readiness: { ...readiness, planDigest: 'd'.repeat(64) } }), makeClient: () => ({ listOpenPullRequests: async () => [], listActivePullRequests: async () => [], createPullRequest: async () => { writes++; } }) };
+  const result = await createGitHubPullRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /changed before/);
+});

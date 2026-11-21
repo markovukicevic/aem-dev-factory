@@ -1,3 +1,4 @@
+import { checkBeforePullRequestWrite } from './final-pr-check.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
 import { readAdoOrigin } from './ado-origin.js';
@@ -35,6 +36,8 @@ export async function createAdoPullRequest(input, dependencies = {}) {
   const client = makeClient({ organization: input.organization, project: input.project, repository: input.repository, token: input.token });
   const existing = await client.listActivePullRequests({ head, base });
   if (existing.length) return { created: false, blockers: ['An active pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.pullRequestId, url: pr.url })), warnings: current.warnings };
+  const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
+  if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
   const pullRequest = await client.createPullRequest({ title: input.title, body: input.body, draft: input.draft, head, base, workItemIds: input.workItemIds });
-  return { created: true, pullRequest, warnings: current.warnings };
+  return { created: true, pullRequest, warnings: final.warnings };
 }

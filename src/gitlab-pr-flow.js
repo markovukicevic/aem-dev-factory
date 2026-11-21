@@ -1,3 +1,4 @@
+import { checkBeforePullRequestWrite } from './final-pr-check.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
 import { readGitLabOrigin } from './gitlab-origin.js';
@@ -35,6 +36,8 @@ export async function createGitLabMergeRequest(input, dependencies = {}) {
   const existing = await client.listOpenPullRequests({ head, base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitLab merge request response');
   if (existing.length) return { created: false, blockers: ['An open merge request already exists for this branch and base.'], existingPullRequests: existing.map(mr => ({ number: mr.iid, url: mr.web_url })), warnings: current.warnings };
+  const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
+  if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
   const pullRequest = await client.createPullRequest({ title: input.title, body: input.body, draft: input.draft, head, base });
-  return { created: true, pullRequest, warnings: current.warnings };
+  return { created: true, pullRequest, warnings: final.warnings };
 }

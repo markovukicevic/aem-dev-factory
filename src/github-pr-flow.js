@@ -1,3 +1,4 @@
+import { checkBeforePullRequestWrite } from './final-pr-check.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
 import { readGitHubOrigin } from './github-origin.js';
@@ -37,5 +38,7 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const existing = await client.listOpenPullRequests({ owner: input.owner, head, base: current.readiness.branch.base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitHub pull request response');
   if (existing.length) return { created: false, blockers: ['An open pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.number, url: pr.html_url })), warnings: current.warnings };
-  return createReadyPullRequest({ provider: client, readiness: current.readiness, title: input.title, body: input.body, draft: input.draft });
+  const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
+  if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
+  return createReadyPullRequest({ provider: client, readiness: final.readiness, title: input.title, body: input.body, draft: input.draft });
 }
