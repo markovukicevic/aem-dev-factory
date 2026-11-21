@@ -237,3 +237,5 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 `plan-status <implement.md>` reads the supported plan format, reports declared step counts and selects the first pending step only when none are blocked or in progress. An in-progress step requires inspection before resuming. This is a read-only status summary; `allStepsDone` does not establish test or review success. The initial `agent-step-all` skill describes a sequential execution workflow, but has not been validated in an AI client.
 
 `bitbucket-pr-diffstat /path/to/providers.json <number>` reads Bitbucket Cloud PR changed-file statistics after validating the provider redirect and pagination URLs, and checks source and destination commit hashes before and after retrieval. It fails on incomplete pagination. Diff statistics are not a code diff; verify changes separately. Tested with simulated API responses only.
+
+`list-skills` shows bundled skill names, descriptions, plugins and whether the one-file installer supports them. A listed skill has not necessarily been tested in an AI client.

@@ -573,3 +573,10 @@ test('reads Bitbucket PR diffstat using the configured provider', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'modified');
   assert.equal(await runCli(['bitbucket-pr-diffstat', 'providers.json', '0'], options), 2);
 });
+
+test('lists bundled skills without modifying a target project', async () => {
+  const { messages, output } = capture();
+  assert.equal(await runCli(['list-skills'], { output }), 0);
+  assert.ok(JSON.parse(messages.logs.at(-1)).skills.some(skill => skill.name === 'agent-req'));
+  assert.equal(await runCli(['list-skills', 'extra'], { output }), 2);
+});

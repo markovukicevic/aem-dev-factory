@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added a bundled skill catalog with descriptions and one-file installer compatibility; it does not establish AI-client discovery or behavior.
+
 - Added Bitbucket Cloud PR diffstat reads with validated same-repository redirects, bounded pagination and revision checks. Simulated tests only; this is metadata, not a full diff.
 
 - Added bounded, read-only plan progress inspection and an initial sequential `agent-step-all` workflow. Declared statuses do not prove verification; real AI-client behavior is untested.
