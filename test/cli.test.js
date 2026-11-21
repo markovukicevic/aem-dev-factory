@@ -353,3 +353,16 @@ test('reads Azure Pipelines builds through separate CI configuration', async () 
   assert.equal(await runCli(['ado-build', 'providers.json', '7'], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).id, 7);
 });
+
+test('reads hub status from the current repository without credentials', async t => {
+  const { mkdtemp, mkdir, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'devflow-hub-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, '.ai'), { recursive: true });
+  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['hub-status'], { cwd, env: {}, output }), 0);
+  assert.deepEqual(JSON.parse(messages.logs[0]).dispatches, []);
+});

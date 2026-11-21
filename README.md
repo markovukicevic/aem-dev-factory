@@ -170,7 +170,7 @@ The early `agent-core` plugin also includes instruction files for `agent-plan`, 
 
 ### Plugin packaging
 
-The repository contains an initial Claude Code marketplace manifest for `agent-core-max` and `aem-tools-max`. `npm run validate:plugins` checks the manifest, source paths and skill frontmatter; it does not prove runtime behavior. Claude Code is not installed in the development environment used for this work, so marketplace registration, installation and skill invocation have not been verified. The CLI-based skills also require `AEM_DEVFLOW_MAX_HOME` to point to a checkout with dependencies installed.
+The repository contains an initial Claude Code marketplace manifest for `agent-core-max`, `aem-tools-max`, and `agent-hub-max`. `npm run validate:plugins` checks the manifest, source paths and skill frontmatter; it does not prove runtime behavior. Claude Code is not installed in the development environment used for this work, so marketplace registration, installation and skill invocation have not been verified. The CLI-based skills also require `AEM_DEVFLOW_MAX_HOME` to point to a checkout with dependencies installed.
 
 ### Local AEM component candidates
 
@@ -183,3 +183,7 @@ From an AEM repository, `node /path/to/aem-dev-flow-max/bin/aem-devflow.js aem-c
 ### Azure Pipelines builds
 
 Set `ci` to `{"provider":"ado-pipelines","organization":"my-org","project":"My Project"}` and provide `ADO_PAT`. `ado-builds /path/to/providers.json feature/branch` lists one page of builds for that branch; a returned continuation token can be supplied with `--continuation`. `ado-build /path/to/providers.json 123` reads one build. A branch can have builds for multiple commits, so inspect each build's source version before associating it with a change. These operations are read-only and have only been tested with simulated API responses.
+
+### Read multi-repository hub status
+
+From a hub directory with `hub.enabled: true` in `.ai/config.yaml`, `node /path/to/aem-dev-flow-max/bin/aem-devflow.js hub-status [ticket-id]` reads the reference project's `state/<ticket-id>/status.json` files. Missing or invalid entries are reported as incomplete. This does not launch agents, update status, or clean state; a recorded status does not prove a process is still running. Tests use synthetic hub files.

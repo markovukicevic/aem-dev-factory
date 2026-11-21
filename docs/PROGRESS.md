@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added read-only multi-repository hub status inspection for the reference status format, with incomplete results reported. An initial hub status skill is structurally validated; dispatch and cleanup are not implemented.
+
 - Added read-only Azure Pipelines build listing by branch and build lookup, including continuation tokens. These calls have simulated API tests only; branch results can include builds from different commits.
 
 - Added local AEM dialog XML field inspection with size and DTD checks, using synthetic fixtures. Inheritance, authored values, live AEM and full AEM workflows remain unverified.
