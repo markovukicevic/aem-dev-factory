@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added preflighted batch installation of explicitly selected self-contained skills. It reports partial failure and never rolls back user files; client discovery remains unverified.
+
 - Added non-overwriting automated test-evidence recording tied to observed plan, configuration and Git state. It does not certify review, other checks or final verification.
 
 - Added digest-checked, locked plan-step transitions with provenance invalidation. The command does not verify test evidence and cannot eliminate races with unrelated writers.

@@ -818,3 +818,15 @@ test('runs and records configured tests without marking a plan verified', async 
   assert.equal(JSON.parse(messages.logs.at(-1)).testPassed, true);
   assert.equal(await runCli(['verification-run', config, plan, evidence], { cwd, output }), 1);
 });
+
+test('installs an explicitly selected set of skills', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const target = await mkdtemp(join(tmpdir(), 'skills-batch-cli-'));
+  t.after(() => rm(target, { recursive: true, force: true }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['install-skills', 'codex', target, 'agent-req', 'agent-plan'], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).installed.length, 2);
+  assert.equal(await runCli(['install-skills', 'codex', target, 'agent-plan'], { output }), 1);
+});
