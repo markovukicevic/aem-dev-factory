@@ -112,3 +112,14 @@ test('reads a page of workflow runs for a commit and an individual run', async (
   assert.throws(() => client.getWorkflowRun(0));
   assert.throws(() => client.listWorkflowRuns({ sha: 'main' }));
 });
+
+test('dispatches a workflow once and accepts a 204 response without claiming completion', async () => {
+  const calls = [];
+  const client = createGitHubClient({ owner: 'team', repository: 'site', token: 'secret', fetchImpl: async (...args) => { calls.push(args); return { ok: true, status: 204, json: async () => { throw new Error('no body'); } }; } });
+  assert.deepEqual(await client.dispatchWorkflow({ workflow: 'build.yml', ref: 'feature/a', inputs: { stage: 'test', debug: false } }), { accepted: true, runId: null });
+  assert.match(calls[0][0], /\/actions\/workflows\/build.yml\/dispatches$/);
+  assert.deepEqual(JSON.parse(calls[0][1].body), { ref: 'feature/a', inputs: { stage: 'test', debug: false } });
+  assert.equal(calls.length, 1);
+  await assert.rejects(client.dispatchWorkflow({ workflow: '../secret', ref: 'main' }));
+  await assert.rejects(client.dispatchWorkflow({ workflow: 'build.yml', ref: '../bad' }));
+});

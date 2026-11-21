@@ -399,3 +399,13 @@ test('creates and compares local AEM dialog snapshots', async t => {
   assert.equal(await runCli(['aem-dialog-compare', before, after], { output }), 0);
   assert.deepEqual(JSON.parse(messages.logs.at(-1)).changed, []);
 });
+
+test('dispatches only an explicitly requested GitHub workflow', async () => {
+  const { messages, output } = capture();
+  let input;
+  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async path => path === 'config.json' ? JSON.stringify({ ci: { provider: 'github-actions' } }) : JSON.stringify({ stage: 'test' }), makeCi: () => ({ dispatchWorkflow: async value => { input = value; return { accepted: true, runId: null }; } }) };
+  assert.equal(await runCli(['ci-dispatch', 'config.json', 'build.yml', 'main', '--inputs-file', 'inputs.json'], options), 0);
+  assert.deepEqual(input, { workflow: 'build.yml', ref: 'main', inputs: { stage: 'test' } });
+  assert.equal(JSON.parse(messages.logs[0]).accepted, true);
+  assert.equal(await runCli(['ci-dispatch', 'config.json', 'build.yml'], options), 2);
+});

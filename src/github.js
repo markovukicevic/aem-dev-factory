@@ -1,3 +1,5 @@
+import { branchRef } from './git-ref.js';
+
 /** Construct a GitHub repository REST endpoint without allowing path injection. */
 export function githubRepositoryPath(owner, repository) {
   for (const [name, value] of Object.entries({ owner, repository })) {
@@ -42,6 +44,7 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       error.status = response.status;
       throw error;
     }
+    if (response.status === 204) return null;
     return response.json();
   }
 
@@ -61,6 +64,13 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
     listIssueComments(number, { page = 1, perPage = 100 } = {}) {
       validateNumber(number, 'pull request number');
       return request('GET', `/issues/${number}/comments${pageQuery(page, perPage)}`);
+    },
+    async dispatchWorkflow({ workflow, ref, inputs = {} }) {
+      if (typeof workflow !== 'string' || !/^(?:[1-9][0-9]*|[A-Za-z0-9_][A-Za-z0-9_.-]*\.ya?ml)$/.test(workflow) || workflow.includes('..')) throw new TypeError('Invalid workflow ID or file name');
+      branchRef(ref);
+      if (!inputs || typeof inputs !== 'object' || Array.isArray(inputs) || Object.keys(inputs).length > 25 || Object.values(inputs).some(value => !['string', 'boolean', 'number'].includes(typeof value) || (typeof value === 'number' && !Number.isFinite(value)))) throw new TypeError('Invalid workflow inputs');
+      await request('POST', `/actions/workflows/${encodeURIComponent(workflow)}/dispatches`, { ref, inputs });
+      return { accepted: true, runId: null };
     },
     listWorkflowRuns({ sha, page = 1, perPage = 100 } = {}) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');

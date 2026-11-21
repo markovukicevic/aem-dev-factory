@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an explicit GitHub Actions workflow-dispatch command. An accepted response does not imply run completion; no live workflow dispatch was performed.
+
 - Added local AEM dialog field snapshots and comparison without overwrite, plus an initial snapshot skill. This does not inspect live AEM, inherited fields or rendered pages.
 
 - Hardened all four PR/MR flows to reject branches containing commits but no actual file changes relative to the tracked base. Tests use local Git repositories, including an empty commit case.
@@ -30,7 +32,7 @@
 
 - Added read-only Bitbucket Cloud SCM and commit-status adapters with paginated PR comments, plus SCM and CI commands. Bitbucket API responses are simulated in tests; Data Center and complete status pagination remain open.
 
-- Added GitHub Actions workflow-run reading through the independent CI adapter and CLI. An individual run was read from the project repository; pagination and filtering are also covered by simulated tests. Workflow dispatch remains open.
+- Added GitHub Actions workflow-run reading through the independent CI adapter and CLI. An individual run was read from the project repository; pagination and filtering are also covered by simulated tests. Read operations and dispatch are separate; dispatch remains untested against a live account.
 
 - Added unique, non-overwriting ticket-directory setup and an initial `agent-req` requirements workflow using the configured tracker. Skill structure is validated; AI-client installation and behavioral testing remain open.
 

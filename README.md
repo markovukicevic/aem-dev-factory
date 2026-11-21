@@ -199,3 +199,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 ### Compare local dialog snapshots
 
 `aem-dialog-snapshot <dialog.xml> <new-output.json>` saves local explicit dialog fields without overwriting. `aem-dialog-compare <before.json> <after.json>` reports added, removed and changed fields by XML path. Snapshot files are limited to 1 MiB. This is not a live AEM snapshot or visual comparison; inherited fields and authored values are outside its scope. Tests use synthetic XML.
+
+### Dispatch a GitHub Actions workflow (experimental)
+
+`ci-dispatch /path/to/providers.json build.yml feature-branch [--inputs-file /path/to/inputs.json]` explicitly requests a `workflow_dispatch` run using the configured GitHub Actions provider. The token needs Actions write permission, and the workflow must support manual dispatch. Inputs are a JSON object; do not put secrets in workflow inputs. An `accepted` result means GitHub accepted the request, not that a run completed or succeeded. The command does not retry; after an ambiguous error, inspect GitHub before trying again. This write operation has only been tested with simulated responses.

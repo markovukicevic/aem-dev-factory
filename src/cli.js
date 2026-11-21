@@ -15,7 +15,7 @@ import { saveTrackerStory } from './tracker-story.js';
 import { createTrackerProvider, createScmProvider, createCiProvider, createDocumentationProvider } from './providers.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js aem-dialog-snapshot <dialog.xml> <output.json>\n       node bin/aem-devflow.js aem-dialog-compare <before.json> <after.json>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js jira-attachment <providers.json> <attachment-id> <output-file>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js aem-dialog-snapshot <dialog.xml> <output.json>\n       node bin/aem-devflow.js aem-dialog-compare <before.json> <after.json>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js jira-attachment <providers.json> <attachment-id> <output-file>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ci-dispatch <providers.json> <workflow> <ref> [--inputs-file <json>]\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, createBitbucketPr = createBitbucketPullRequest, createGitlabMr = createGitLabMergeRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, makeDocumentation = createDocumentationProvider, readBody = readFile, cwd = process.cwd() } = {}) {
@@ -49,6 +49,22 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       return 0;
     } catch {
       output.error('Unable to read CI status. Check the configuration and connection.');
+      return 1;
+    }
+  }
+  if (args[0] === 'ci-dispatch') {
+    const hasInputs = args.length === 6 && args[4] === '--inputs-file' && !!args[5]?.trim();
+    if ((args.length !== 4 && !hasInputs) || !args[2]?.trim() || !args[3]?.trim()) { output.error(usage); return 2; }
+    if (!env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment.'); return 2; }
+    try {
+      const config = JSON.parse(await readBody(args[1], 'utf8'));
+      if (config.ci?.provider !== 'github-actions') throw new Error('GitHub Actions configuration required');
+      const inputs = hasInputs ? JSON.parse(await readBody(args[5], 'utf8')) : {};
+      const ci = makeCi(config.ci, { token: env.GITHUB_TOKEN });
+      output.log(JSON.stringify(await ci.dispatchWorkflow({ workflow: args[2], ref: args[3], inputs }), null, 2));
+      return 0;
+    } catch {
+      output.error('Unable to dispatch workflow. Check the configuration, inputs and connection; inspect GitHub before retrying.');
       return 1;
     }
   }
