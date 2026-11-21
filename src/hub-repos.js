@@ -29,3 +29,13 @@ export async function inspectHubRepositories({ cwd }) {
   }
   return { repos, scope: 'Configured local paths and Git markers only; repository identity, access, health and live work are not verified.' };
 }
+
+/** Resolve explicit registry names only; never infer repos from ticket text. */
+export async function selectHubRepositories({ cwd, names }) {
+  if (!Array.isArray(names) || !names.length || names.length > 500 || names.some(name => typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) || new Set(names).size !== names.length) throw new TypeError('Unique repository names are required');
+  const registry = await inspectHubRepositories({ cwd });
+  const byName = new Map(registry.repos.map(repo => [repo.name, repo]));
+  const unknown = names.filter(name => !byName.has(name));
+  if (unknown.length) throw new Error(`Unknown hub repositories: ${unknown.join(', ')}`);
+  return { repos: names.map(name => byName.get(name)), scope: 'Explicit registry selection only; paths, repository identity and task suitability require verification.' };
+}

@@ -257,3 +257,5 @@ From the target project, `project-inspect` reports local technology markers with
 `hub-repos` reads an enabled reference-style hub configuration from the current directory and reports configured local repository paths and Git markers. It does not open repositories, validate identity, dispatch tasks or edit configuration.
 
 `hub-init <repos.json>` creates a new reference-style `.ai/config.yaml` hub registry and a `state` directory from an explicit JSON array of `{ "name", "path" }` entries; optional `base-branch` and `project` fields are supported. It refuses to replace an existing config and does not validate repository identity or enable dispatch. Directories may remain after a failed setup.
+
+`hub-select <name> [name ...]` resolves explicitly selected names against the configured hub registry. Unknown or duplicate names are rejected, and reported path availability is not proof of identity or task suitability. It does not infer targets from a ticket or dispatch work.

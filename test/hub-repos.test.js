@@ -30,3 +30,15 @@ test('rejects duplicated names and disabled hubs', async t => {
   await writeFile(config, 'hub:\n  enabled: false\n  repos: []\n');
   await assert.rejects(inspectHubRepositories({ cwd }), /disabled/);
 });
+
+test('selects only explicitly named registered repositories', async t => {
+  const { selectHubRepositories } = await import('../src/hub-repos.js');
+  const cwd = await mkdtemp(join(tmpdir(), 'hub-select-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, '.ai'));
+  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n  repos:\n    - name: web\n      path: web\n    - name: api\n      path: api\n');
+  const selected = await selectHubRepositories({ cwd, names: ['api', 'web'] });
+  assert.deepEqual(selected.repos.map(repo => repo.name), ['api', 'web']);
+  await assert.rejects(selectHubRepositories({ cwd, names: ['unknown'] }), /Unknown/);
+  await assert.rejects(selectHubRepositories({ cwd, names: ['web', 'web'] }), /Unique/);
+});

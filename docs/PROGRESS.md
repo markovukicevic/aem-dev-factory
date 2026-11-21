@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added explicit registry-based hub repository selection and an initial discovery skill. Automated routing from ticket text and multi-repository dispatch remain unimplemented.
+
 - Added explicit hub registry initialization and an initial hub-init skill. No repository discovery, client setup or dispatch is implemented.
 
 - Added read-only hub repository configuration inspection and an initial hub-config skill. Repository identity, config editing and multi-repository dispatch remain unimplemented.
