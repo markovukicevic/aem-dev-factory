@@ -564,3 +564,12 @@ test('reports plan status without changing the plan', async t => {
   assert.equal(JSON.parse(messages.logs.at(-1)).next.number, 1);
   assert.equal(await runCli(['plan-status'], { output }), 2);
 });
+
+test('reads Bitbucket PR diffstat using the configured provider', async () => {
+  const { messages, output } = capture();
+  const pr = { id: 7, source: { commit: { hash: 'a'.repeat(40) } }, destination: { commit: { hash: 'b'.repeat(40) } } };
+  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: () => ({ provider: 'bitbucket-cloud', getPullRequest: async () => pr, getPullRequestDiffstat: async () => [{ status: 'modified' }] }) };
+  assert.equal(await runCli(['bitbucket-pr-diffstat', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'modified');
+  assert.equal(await runCli(['bitbucket-pr-diffstat', 'providers.json', '0'], options), 2);
+});

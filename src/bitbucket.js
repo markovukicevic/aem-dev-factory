@@ -44,6 +44,20 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
   return {
     getRepository: () => get(endpoint('')),
     getPullRequest(id) { number(id); return get(endpoint(`/pullrequests/${id}`)); },
+    async getPullRequestDiffstat(id) {
+      number(id);
+      const response = await fetchImpl(endpoint(`/pullrequests/${id}/diffstat`), { method: 'GET', headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }, redirect: 'manual' });
+      if (response.status !== 302) throw new Error('Expected a Bitbucket diffstat redirect');
+      const location = response.headers?.get?.('location');
+      if (typeof location !== 'string' || location.length > 8192) throw new Error('Invalid Bitbucket diffstat redirect');
+      let target;
+      try { target = new URL(location, endpoint('')); } catch { throw new Error('Invalid Bitbucket diffstat redirect'); }
+      const prefix = `${root}/diffstat/`;
+      const spec = target.pathname.startsWith(prefix) ? target.pathname.slice(prefix.length) : '';
+      if (target.protocol !== 'https:' || target.hostname !== 'api.bitbucket.org' || target.port || target.username || target.password || target.hash || !/^[A-Za-z0-9._~-]{1,256}$/.test(spec) || spec === '.' || spec === '..') throw new Error('Invalid Bitbucket diffstat redirect');
+      target.searchParams.set('pagelen', '100');
+      return collect(target.pathname, target.searchParams);
+    },
     getPullRequestStatuses(id) {
       number(id);
       return collect(`${root}/pullrequests/${id}/statuses`, new URLSearchParams({ pagelen: '100' }));

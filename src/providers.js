@@ -32,7 +32,7 @@ export function createScmProvider(config, options = {}) {
   }
   if (config?.provider === 'bitbucket-cloud') {
     const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
-    return { provider: 'bitbucket-cloud', getPullRequest: client.getPullRequest, getPullRequestStatuses: client.getPullRequestStatuses, getPullRequestComments: client.getPullRequestComments, getRepository: client.getRepository, createPullRequest: client.createPullRequest };
+    return { provider: 'bitbucket-cloud', getPullRequest: client.getPullRequest, getPullRequestStatuses: client.getPullRequestStatuses, getPullRequestDiffstat: client.getPullRequestDiffstat, getPullRequestComments: client.getPullRequestComments, getRepository: client.getRepository, createPullRequest: client.createPullRequest };
   }
   if (config?.provider === 'ado') return createAdoScm({ organization: config.organization, project: config.project, repository: config.repository, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider !== 'github') throw new Error('Unsupported SCM provider');
