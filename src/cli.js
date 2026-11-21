@@ -58,15 +58,17 @@ export async function runCli(args, { env = process.env, output = console, makeCl
   }
   if (args[0] === 'ci-status-all') {
     if (args.length !== 3 || !/^[a-f0-9]{7,64}$/i.test(args[2])) { output.error(usage); return 2; }
-    if (!env.BITBUCKET_TOKEN) { output.error('Set BITBUCKET_TOKEN in the environment.'); return 2; }
     try {
       const config = JSON.parse(await readBody(args[1], 'utf8'));
-      if (config.ci?.provider !== 'bitbucket-pipelines') throw new Error('Bitbucket Pipelines configuration required');
-      const ci = makeCi(config.ci, { bitbucketToken: env.BITBUCKET_TOKEN });
-      output.log(JSON.stringify({ values: await ci.getAllCommitStatuses(args[2]) }, null, 2));
+      if (!['bitbucket-pipelines', 'gitlab-ci'].includes(config.ci?.provider)) throw new Error('Unsupported CI provider');
+      if (config.ci.provider === 'bitbucket-pipelines' && !env.BITBUCKET_TOKEN) { output.error('Set BITBUCKET_TOKEN in the environment.'); return 2; }
+      if (config.ci.provider === 'gitlab-ci' && !env.GITLAB_TOKEN) { output.error('Set GITLAB_TOKEN in the environment.'); return 2; }
+      const ci = makeCi(config.ci, { bitbucketToken: env.BITBUCKET_TOKEN, gitlabToken: env.GITLAB_TOKEN });
+      const values = config.ci.provider === 'bitbucket-pipelines' ? await ci.getAllCommitStatuses(args[2]) : await ci.listAllPipelines(args[2]);
+      output.log(JSON.stringify({ values }, null, 2));
       return 0;
     } catch {
-      output.error('Unable to read complete Bitbucket CI status. Check the configuration, pagination and connection.');
+      output.error('Unable to read complete CI status. Check the configuration, pagination and connection.');
       return 1;
     }
   }

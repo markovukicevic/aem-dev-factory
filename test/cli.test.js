@@ -491,3 +491,11 @@ test('reads complete Bitbucket CI status only for the configured provider', asyn
   assert.equal(await runCli(['ci-status-all', 'providers.json', 'main'], options), 2);
   assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], { ...options, readBody: async () => '{"ci":{"provider":"github-actions"}}' }), 1);
 });
+
+test('reads all GitLab pipelines using GitLab credentials', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'gitlab-ci' } }), makeCi: (config, credentials) => { assert.equal(credentials.gitlabToken, 'secret'); return { listAllPipelines: async sha => [{ sha }] }; } };
+  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).values[0].sha, '123abcd');
+  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], { ...options, env: {} }), 2);
+});

@@ -39,7 +39,26 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
     }
     throw new Error('GitLab page limit reached; context is incomplete');
   }
+  async function listAllPipelines(sha) {
+    if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('Invalid GitLab pipeline query');
+    let page = 1;
+    const values = [];
+    for (let count = 0; count < maxPages; count++) {
+      const query = new URLSearchParams({ sha, page: String(page), per_page: '100' });
+      const { data, headers } = await get(`/pipelines?${query}`);
+      if (!Array.isArray(data) || data.length > 100) throw new Error('Invalid GitLab pipelines response');
+      values.push(...data);
+      const next = headers?.get?.('x-next-page');
+      if (next !== null && next !== undefined && next !== '') {
+        if (!/^[1-9][0-9]*$/.test(next) || !Number.isSafeInteger(Number(next)) || Number(next) <= page) throw new Error('Invalid GitLab next page');
+        page = Number(next);
+      } else if (data.length === 100) page++;
+      else return values;
+    }
+    throw new Error('GitLab page limit reached; pipelines are incomplete');
+  }
   return {
+    listAllPipelines,
     async getTicket(number) {
       iid(number);
       const { data: issue } = await get(`/issues/${number}`);

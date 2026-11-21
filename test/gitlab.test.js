@@ -48,3 +48,13 @@ test('lists matching open MRs and creates a draft with explicit source and targe
   assert.deepEqual(JSON.parse(calls[1][1].body), { title: 'Draft: Change', source_branch: 'feature/123', target_branch: 'main', description: 'Summary', remove_source_branch: false });
   await assert.rejects(client.createPullRequest({ title: 'Draft: Change', head: 'feature', base: 'main', draft: false }));
 });
+
+test('collects GitLab pipelines across pages and rejects incomplete or invalid pagination', async () => {
+  const client = createGitLabClient({ project: 'team/site', token: 'secret', fetchImpl: async url => { const page = new URL(url).searchParams.get('page'); return { ok: true, headers: { get: () => page === '1' ? '2' : '' }, json: async () => [{ id: Number(page) }] }; } });
+  assert.deepEqual((await client.listAllPipelines('123abcd')).map(p => p.id), [1, 2]);
+  await assert.rejects(client.listAllPipelines('../main'));
+  const bad = createGitLabClient({ project: 'team/site', token: 'secret', fetchImpl: async () => ({ ok: true, headers: { get: () => '1' }, json: async () => [] }) });
+  await assert.rejects(bad.listAllPipelines('123abcd'), /Invalid GitLab next page/);
+  const limited = createGitLabClient({ project: 'team/site', token: 'secret', maxPages: 1, fetchImpl: async () => ({ ok: true, headers: { get: () => '2' }, json: async () => [] }) });
+  await assert.rejects(limited.listAllPipelines('123abcd'), /incomplete/);
+});
