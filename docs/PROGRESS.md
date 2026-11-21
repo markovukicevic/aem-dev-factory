@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added explicit hub registry initialization and an initial hub-init skill. No repository discovery, client setup or dispatch is implemented.
+
 - Added read-only hub repository configuration inspection and an initial hub-config skill. Repository identity, config editing and multi-repository dispatch remain unimplemented.
 
 - Added bounded local OSGi JSON syntax inspection without printing values. Unsupported formats, runmode semantics and live services remain unverified.

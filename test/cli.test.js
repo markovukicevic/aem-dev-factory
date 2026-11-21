@@ -669,3 +669,17 @@ test('inspects configured hub repositories', async t => {
   assert.equal(await runCli(['hub-repos'], { cwd, output }), 0);
   assert.deepEqual(JSON.parse(messages.logs.at(-1)).repos, []);
 });
+
+test('initializes a hub from an explicit repository list', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'hub-init-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const input = join(cwd, 'repos.json');
+  await writeFile(input, JSON.stringify([{ name: 'web', path: '../web' }]));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['hub-init', input], { cwd, output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).repositories, 1);
+  assert.equal(await runCli(['hub-init', input], { cwd, output }), 1);
+});

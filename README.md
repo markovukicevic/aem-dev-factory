@@ -255,3 +255,5 @@ From the target project, `project-inspect` reports local technology markers with
 `aem-doctor-osgi <config-directory>` checks local `.cfg.json` files for valid JSON objects, reports unsupported `.config` files and skipped paths, and never prints configuration values. It does not validate OSGi properties, runmodes, secrets or live services.
 
 `hub-repos` reads an enabled reference-style hub configuration from the current directory and reports configured local repository paths and Git markers. It does not open repositories, validate identity, dispatch tasks or edit configuration.
+
+`hub-init <repos.json>` creates a new reference-style `.ai/config.yaml` hub registry and a `state` directory from an explicit JSON array of `{ "name", "path" }` entries; optional `base-branch` and `project` fields are supported. It refuses to replace an existing config and does not validate repository identity or enable dispatch. Directories may remain after a failed setup.
