@@ -782,3 +782,19 @@ test('lists local webhook claim records without running tasks', async t => {
   assert.equal(await runCli(['webhook-claims', dir], { output }), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).complete, true);
 });
+
+test('transitions a plan using the digest from plan-status', async t => {
+  const { mkdtemp, writeFile, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'plan-transition-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const path = join(cwd, 'implement.md');
+  await writeFile(path, '### Step 1: Change\n**Status:** pending\n');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['plan-status', path], { cwd, output }), 0);
+  const digest = JSON.parse(messages.logs.at(-1)).digest;
+  assert.equal(await runCli(['plan-transition', path, '1', 'pending', 'in-progress', digest], { cwd, output }), 0);
+  assert.match(await readFile(path, 'utf8'), /in-progress/);
+  assert.equal(await runCli(['plan-transition', path, '1', 'pending', 'in-progress', digest], { cwd, output }), 1);
+});

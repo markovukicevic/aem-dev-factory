@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added digest-checked, locked plan-step transitions with provenance invalidation. The command does not verify test evidence and cannot eliminate races with unrelated writers.
+
 - Hardened the final pre-write check against missing test evidence and covered final configuration and published-branch changes in focused tests.
 
 - Rechecked plan, Git state, readiness settings and published commit after duplicate-PR lookup, before provider writes. The final check does not remove all concurrent races.

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { parseImplementationPlan } from './plan-parser.js';
 import { readLimitedFile } from './read-limited.js';
 
@@ -8,7 +9,7 @@ export function summarizePlanStatus(markdown) {
   for (const step of plan.steps) counts[step.status]++;
   const blockers = plan.steps.filter(step => step.status === 'blocked' || step.status === 'in-progress');
   const next = blockers.length ? null : plan.steps.find(step => step.status === 'pending') ?? null;
-  return { steps: plan.steps, counts, blockers, next, allStepsDone: counts.done === plan.steps.length, provenance: plan.provenance, scope: 'Declared plan status only; test results and verification are not checked.' };
+  return { digest: createHash('sha256').update(markdown, 'utf8').digest('hex'), steps: plan.steps, counts, blockers, next, allStepsDone: counts.done === plan.steps.length, provenance: plan.provenance, scope: 'Declared plan status only; test results and verification are not checked.' };
 }
 
 export async function readPlanStatus(path) {
