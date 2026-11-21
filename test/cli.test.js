@@ -878,3 +878,20 @@ test('creates a local PR review report from supplied evidence', async t => {
   assert.equal(JSON.parse(messages.logs.at(-1)).findingCount, 0);
   assert.equal(await runCli(['pr-review-report', input, report], { output }), 1);
 });
+
+test('runs a local changed-file security scan without printing detected values', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const cwd = await mkdtemp(join(tmpdir(), 'security-scan-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  execFileSync('git', ['init', '-q', '-b', 'feature'], { cwd });
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd });
+  const token = 'ghp_' + 'A'.repeat(36);
+  await writeFile(join(cwd, 'secret.txt'), token);
+  const { messages, output } = capture();
+  assert.equal(await runCli(['security-scan'], { cwd, output }), 1);
+  assert.equal(JSON.parse(messages.logs.at(-1)).findings[0].pattern, 'github-token-pattern');
+  assert.ok(!messages.logs.at(-1).includes(token));
+});

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added a bounded local changed-file scan for selected potential secret patterns without printing matched values. It is not a comprehensive security or history scan.
+
 - Added local categorized PR review reports from explicitly supplied findings, checks and limitations; it does not perform a review, validate claims or publish externally.
 
 - Added non-overwriting local PR response workspaces across supported SCM providers and an initial reply-drafting skill. It does not infer resolution, create replies or post comments. Verified against saved public `cli/cli` PR 15117 context.
