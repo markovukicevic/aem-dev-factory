@@ -253,3 +253,5 @@ From the target project, `project-inspect` reports local technology markers with
 `aem-doctor-component <component-directory>` inspects one local AEM component definition, local dialog presence and immediate HTML templates. Missing files are warnings, not proof of a defect: inheritance and alternative rendering are possible. It does not validate the live AEM instance, OSGi, dispatcher or full XML semantics.
 
 `aem-doctor-osgi <config-directory>` checks local `.cfg.json` files for valid JSON objects, reports unsupported `.config` files and skipped paths, and never prints configuration values. It does not validate OSGi properties, runmodes, secrets or live services.
+
+`hub-repos` reads an enabled reference-style hub configuration from the current directory and reports configured local repository paths and Git markers. It does not open repositories, validate identity, dispatch tasks or edit configuration.

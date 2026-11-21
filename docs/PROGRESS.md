@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added read-only hub repository configuration inspection and an initial hub-config skill. Repository identity, config editing and multi-repository dispatch remain unimplemented.
+
 - Added bounded local OSGi JSON syntax inspection without printing values. Unsupported formats, runmode semantics and live services remain unverified.
 
 - Added a local component-only AEM diagnostic and an initial `aem-doctor` skill. Runtime, inheritance, OSGi, dispatcher and complete original diagnostics remain unimplemented.

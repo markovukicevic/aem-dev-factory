@@ -656,3 +656,16 @@ test('inspects a local OSGi directory without printing config values', async t =
   assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'valid-json-object');
   assert.ok(!messages.logs.at(-1).includes('private'));
 });
+
+test('inspects configured hub repositories', async t => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'hub-repos-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, '.ai'));
+  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n  repos: []\n');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['hub-repos'], { cwd, output }), 0);
+  assert.deepEqual(JSON.parse(messages.logs.at(-1)).repos, []);
+});
