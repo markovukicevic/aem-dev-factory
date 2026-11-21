@@ -474,3 +474,11 @@ test('claims an approved webhook once without running a job', async t => {
   assert.equal(await runCli(args, options), 1);
   assert.equal(JSON.parse(messages.logs.at(-1)).reason, 'duplicate-payload');
 });
+
+test('summarizes GitHub CI through the configured provider', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'github-actions' } }), makeCi: () => ({ listCheckRuns: async () => ({ total_count: 1, check_runs: [{ status: 'completed', conclusion: 'success' }] }), getCommitStatus: async () => ({ total_count: 0 }) }) };
+  assert.equal(await runCli(['ci-summary', 'providers.json', '123abcd'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).state, 'success');
+  assert.equal(await runCli(['ci-summary', 'providers.json', 'main'], options), 2);
+});

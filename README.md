@@ -134,7 +134,7 @@ Use `ado-123` for Azure work-item IDs. The skill requires `AEM_DEVFLOW_MAX_HOME`
 
 ### Read GitHub Actions runs
 
-With a configured `ci` provider and a token with Actions read access, `ci-runs /path/to/providers.json <commit-sha> [--page N]` reads one page of workflow runs for a commit, and `ci-run /path/to/providers.json <run-id>` reads one run. These commands only read; they do not trigger workflows. Individual run retrieval was verified against this project's GitHub repository.
+With a configured `ci` provider and a token with Actions read access, `ci-runs /path/to/providers.json <commit-sha> [--page N]` reads one page of workflow runs for a commit, and `ci-run /path/to/providers.json <run-id>` reads one run. These commands only read; they do not trigger workflows. Individual run retrieval was verified against this project's GitHub repository. `ci-summary /path/to/providers.json <commit-sha>` summarizes the first 100 check runs and combined classic statuses. It reports incomplete data and uncertain conclusions conservatively; success applies only to observed results and does not establish that required branch protection checks are satisfied.
 
 ### Bitbucket Cloud
 
