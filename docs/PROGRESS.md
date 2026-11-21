@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Extended hub status to expose validated local command states, starting commits and exit codes without exposing command arguments or output.
+
 - Added explicit sequential local hub command execution with clean-repository preflight, per-repository state and stop-on-failure behavior. It is not an agent dispatcher, does not validate work and offers no subprocess isolation or automatic recovery.
 
 - Added preflighted batch installation of explicitly selected self-contained skills. It reports partial failure and never rolls back user files; client discovery remains unverified.

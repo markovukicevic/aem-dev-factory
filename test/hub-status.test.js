@@ -44,3 +44,17 @@ test('rejects disabled hubs, unsafe ticket IDs and symlinked status files', asyn
   await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: false\n');
   await assert.rejects(readHubStatuses({ cwd }), /not enabled/);
 });
+
+test('reports validated local task details without exposing unrecognized fields', async t => {
+  const cwd = await fixture(t);
+  const folder = join(cwd, 'state', 'TASK-1');
+  await mkdir(folder, { recursive: true });
+  const statusPath = join(folder, 'status.json');
+  await writeFile(statusPath, JSON.stringify({ ticket: 'TASK-1', title: 'Run', type: 'local-command', repos: { web: 'done', api: 'blocked' }, details: { web: { state: 'process-succeeded', startingCommit: 'a'.repeat(40), exitCode: 0, unexpected: 'private' }, api: { state: 'not-started' } } }));
+  const result = await readHubStatuses({ cwd });
+  assert.equal(result.dispatches[0].details.web.exitCode, 0);
+  assert.equal(result.dispatches[0].details.api.state, 'not-started');
+  assert.ok(!JSON.stringify(result).includes('private'));
+  await writeFile(statusPath, JSON.stringify({ ticket: 'TASK-1', title: 'Run', type: 'local-command', repos: { web: 'done' }, details: { web: { state: 'not-started' } } }));
+  assert.equal((await readHubStatuses({ cwd })).complete, false);
+});

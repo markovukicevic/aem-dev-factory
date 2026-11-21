@@ -30,6 +30,8 @@ test('runs a trusted command sequentially and records compatible hub status', as
   assert.deepEqual(result.repos, { web: 'done', api: 'done' });
   const report = await readHubStatuses({ cwd: hub, ticket: task.ticket });
   assert.deepEqual(report.dispatches[0].repos, result.repos);
+  assert.equal(report.dispatches[0].details.web.state, 'process-succeeded');
+  assert.equal(report.dispatches[0].details.web.exitCode, 0);
   assert.match(result.scope, /not verified/);
   await assert.rejects(runHubTask({ cwd: hub, task }), { code: 'EEXIST' });
 });
