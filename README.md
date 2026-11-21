@@ -162,3 +162,7 @@ node /path/to/aem-devflow-max/bin/aem-devflow.js gitlab-mr-create team/subgroup/
 ```
 
 The command checks readiness, origin, published branch, locally tracked base and existing open MRs before one create request. It does not push or retry an ambiguous write. Checks are not atomic, and local tracking references may be stale. Creation has been tested with local Git repositories and a simulated API, not a live GitLab account. The direct library create method does not perform readiness checks.
+
+### Initial planning, execution and AEM discovery workflows
+
+The early `agent-core` plugin also includes instruction files for `agent-plan`, `agent-step`, `agent-step-verify`, and `agent-pr`. The initial `aem-tools` plugin includes `aem-component` for local component discovery and optional read-only live inspection. These are first implementations, not feature parity with the original plugins. Their instruction files have been structurally validated, but they have not yet been installed or behaviorally tested in AI clients.

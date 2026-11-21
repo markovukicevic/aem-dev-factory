@@ -1,0 +1,12 @@
+---
+name: agent-step-verify
+description: Verify a completed implementation plan before a pull request, using actual project checks and review evidence.
+---
+
+# Verify completed work
+
+Read the target repository instructions, `implement.md`, requirements, research, configured build and test commands, and the full change diff. Stop if any plan step is not `done`. Set `provenance.verified` to `false` before starting when it exists.
+
+Run the applicable project build, lint, tests, and security or secret checks required by the repository. Review the change against the ticket, architecture rules, and tests. Record the actual commands, outcomes, review findings and any checks that could not be run. Missing required tools, failed checks, unresolved review findings, or unverified acceptance criteria block verification; do not infer success from a lack of output.
+
+Only when every required check passes and the actual review supports the change may `provenance.verified` be changed to `true`. Preserve all other frontmatter and plan content. If the plan has no provenance, report that it is a legacy plan; do not silently claim a provenance verification. Report the evidence and remaining risks to the user. Do not push, create a PR, or send messages as a side effect.
