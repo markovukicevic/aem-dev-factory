@@ -75,4 +75,9 @@
 
 ## Next
 
-Expand the reference inventory; expand supported plan formats and expand legacy YAML and test-command compatibility, and broaden branch discovery; design the plugin and provider boundaries; and connect a complete GitHub PR flow. Preserve existing reference behavior as it is recreated.
+1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.
+2. Validate skill discovery and workflows in the actual supported AI clients; extend the installer for skill assets only after defining safe copy behavior.
+3. Exercise provider integrations against disposable test repositories and accounts where available. Confirm permissions, pagination and error handling before treating simulated write tests as live validation.
+4. Continue AEM development workflows, including live-instance and rendered-page checks when a suitable test instance is available.
+5. Improve CI status coverage and webhook handling; a webhook listener, durable distributed replay protection and agent dispatch are not implemented.
+6. Extend plan formats and legacy YAML compatibility where the reference workflow requires them. Preserve existing behavior and document unsupported cases.
