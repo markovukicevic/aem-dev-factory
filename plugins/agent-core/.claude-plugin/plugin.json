@@ -1,5 +1,5 @@
 {
   "name": "agent-core-max",
   "version": "0.1.0",
-  "description": "Early requirements workflow for GitHub, Jira Cloud, and Azure DevOps Services"
+  "description": "Early requirements workflow for GitHub, GitLab.com, Jira Cloud, and Azure DevOps Services"
 }

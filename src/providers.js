@@ -3,6 +3,7 @@ import { createJiraTracker } from './jira.js';
 import { createAdoTracker } from './ado.js';
 import { createAdoScm } from './ado-scm.js';
 import { createBitbucketClient } from './bitbucket.js';
+import { createGitLabClient } from './gitlab.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 
 function githubClient(config, options) {
@@ -11,6 +12,10 @@ function githubClient(config, options) {
 
 /** Tracker, SCM and CI adapters can be chosen independently. */
 export function createTrackerProvider(config, options = {}) {
+  if (config?.provider === 'gitlab') {
+    const client = createGitLabClient({ project: config.project, token: options.gitlabToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+    return { provider: 'gitlab', getTicket: client.getTicket };
+  }
   if (config?.provider === 'ado') return createAdoTracker({ organization: config.organization, project: config.project, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider === 'jira') return createJiraTracker({ baseUrl: config.baseUrl, email: options.jiraEmail, token: options.jiraToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider !== 'github') throw new Error('Unsupported tracker provider');
@@ -19,6 +24,10 @@ export function createTrackerProvider(config, options = {}) {
 }
 
 export function createScmProvider(config, options = {}) {
+  if (config?.provider === 'gitlab') {
+    const client = createGitLabClient({ project: config.project, token: options.gitlabToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+    return { provider: 'gitlab', getPullRequest: client.getPullRequest, getPullRequestComments: client.getPullRequestComments };
+  }
   if (config?.provider === 'bitbucket-cloud') {
     const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
     return { provider: 'bitbucket-cloud', getPullRequest: client.getPullRequest, getPullRequestComments: client.getPullRequestComments, getRepository: client.getRepository, createPullRequest: client.createPullRequest };
@@ -30,6 +39,10 @@ export function createScmProvider(config, options = {}) {
 }
 
 export function createCiProvider(config, options = {}) {
+  if (config?.provider === 'gitlab-ci') {
+    const client = createGitLabClient({ project: config.project, token: options.gitlabToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+    return { provider: 'gitlab-ci', listPipelines: client.listPipelines, getPipeline: client.getPipeline };
+  }
   if (config?.provider === 'bitbucket-pipelines') {
     const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
     return { provider: 'bitbucket-pipelines', getCommitStatuses: client.getCommitStatuses };

@@ -282,3 +282,25 @@ test('creates a Bitbucket PR only on the explicit command', async () => {
   assert.equal(JSON.parse(messages.logs[0]).pullRequest.id, 9);
   assert.equal(await runCli(args.slice(0, 6), options), 2);
 });
+
+test('routes GitLab tracker, SCM and CI operations using a GitLab token', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'gitlab' }, scm: { provider: 'gitlab' }, ci: { provider: 'gitlab-ci' } }), makeTracker: (_config, credentials) => { assert.equal(credentials.gitlabToken, 'secret'); return { getTicket: async id => ({ number: id }) }; }, makeScm: (_config, credentials) => { assert.equal(credentials.gitlabToken, 'secret'); return { getPullRequest: async id => ({ iid: id }) }; }, makeCi: (_config, credentials) => { assert.equal(credentials.gitlabToken, 'secret'); return { listPipelines: async ({ sha }) => ({ sha, values: [] }) }; } };
+  assert.equal(await runCli(['tracker-ticket', 'providers.json', '7'], options), 0);
+  assert.equal(await runCli(['scm-pr', 'providers.json', '8'], options), 0);
+  assert.equal(await runCli(['ci-status', 'providers.json', '123abcd'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).sha, '123abcd');
+});
+
+test('exports GitLab tracker issues using a numeric IID', async t => {
+  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'devflow-gitlab-export-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const path = join(cwd, 'raw-story.md');
+  const { output } = capture();
+  const options = { output, env: { GITLAB_TOKEN: 'secret' }, makeTracker: () => ({ getTicket: async number => ({ provider: 'gitlab', number, title: 'Bug', body: 'Details', labels: [], comments: [] }) }), readBody: async () => JSON.stringify({ tracker: { provider: 'gitlab' } }) };
+  assert.equal(await runCli(['tracker-export', 'providers.json', '7', path], options), 0);
+  assert.match(await readFile(path, 'utf8'), /GitLab issue/);
+});

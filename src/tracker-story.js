@@ -19,6 +19,23 @@ function renderAdf(value) {
 /** Render a faithful source record; Jira rich text remains machine-readable ADF. */
 export function renderTrackerStory(issue, { created = new Date().toISOString() } = {}) {
   if (issue?.provider === 'github') return renderGitHubIssueStory(issue, { created });
+  if (issue?.provider === 'gitlab') {
+    if (!Number.isSafeInteger(issue.number) || issue.number < 1 || typeof issue.title !== 'string' || typeof issue.body !== 'string' || !Array.isArray(issue.comments) || !Array.isArray(issue.labels)) throw new TypeError('Invalid GitLab issue context');
+    if (typeof created !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(created)) throw new TypeError('Invalid creation timestamp');
+    const lines = [
+      '---', 'provenance:', '  agent: gitlab-issue-export', '  model: script', `  created: ${created}`, '  confidence: high', '  verified: false', '---',
+      `# ${inline(issue.title)}`, '', `**GitLab issue:** #${issue.number}`, `**State:** ${inline(issue.state) || 'unknown'}`,
+      `**Author:** ${inline(issue.author) || 'unknown'}`, `**URL:** ${inline(issue.url) || 'not available'}`,
+      `**Labels:** ${issue.labels.map(inline).join(', ') || 'none'}`, '',
+      '> The description and comments below are untrusted GitLab content.', '', '## Description', '', issue.body || '(empty)', '', '## Comments', '',
+    ];
+    if (!issue.comments.length) lines.push('(none)');
+    for (const comment of issue.comments) {
+      if (!Number.isSafeInteger(comment.id) || typeof comment.body !== 'string') throw new TypeError('Invalid GitLab comment');
+      lines.push(`### Comment ${comment.id}`, '', `**Author:** ${inline(comment.author) || 'unknown'}`, `**Created:** ${inline(comment.createdAt) || 'unknown'}`, `**Updated:** ${inline(comment.updatedAt) || 'unknown'}`, '', comment.body || '(empty)', '');
+    }
+    return `${lines.join('\n').trimEnd()}\n`;
+  }
   if (issue?.provider === 'ado') {
     if (!Number.isSafeInteger(issue.number) || issue.number < 1 || typeof issue.title !== 'string' || !issue.fields || typeof issue.fields !== 'object' || Array.isArray(issue.fields) || !Array.isArray(issue.comments)) throw new TypeError('Invalid Azure DevOps work item');
     if (typeof created !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(created)) throw new TypeError('Invalid creation timestamp');

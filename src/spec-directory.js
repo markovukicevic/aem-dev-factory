@@ -4,7 +4,7 @@ import { join } from 'node:path';
 /** Create or reuse one uniquely identified ticket directory without overwriting content. */
 export async function ensureSpecDirectory({ cwd, id, title }) {
   if (typeof cwd !== 'string' || !cwd.trim()) throw new TypeError('cwd is required');
-  if (typeof id !== 'string' || !/^(?:(?:github|ado)-[1-9][0-9]*|[A-Z][A-Z0-9_]*-[1-9][0-9]*)$/.test(id)) throw new TypeError('Ticket ID must be github-N, ado-N, or a Jira key');
+  if (typeof id !== 'string' || !/^(?:(?:github|gitlab|ado)-[1-9][0-9]*|[A-Z][A-Z0-9_]*-[1-9][0-9]*)$/.test(id)) throw new TypeError('Ticket ID must be github-N, gitlab-N, ado-N, or a Jira key');
   if (typeof title !== 'string' || !title.trim()) throw new TypeError('Title is required');
   const slug = title.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '') || 'work-item';
   const root = join(cwd, '.ai', 'specs');

@@ -19,9 +19,10 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     try {
       const config = JSON.parse(await readBody(args[1], 'utf8'));
       if (config.ci?.provider === 'github-actions' && !env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment.'); return 2; }
+      if (config.ci?.provider === 'gitlab-ci' && !env.GITLAB_TOKEN) { output.error('Set GITLAB_TOKEN in the environment.'); return 2; }
       if (config.ci?.provider === 'bitbucket-pipelines' && !env.BITBUCKET_TOKEN) { output.error('Set BITBUCKET_TOKEN in the environment.'); return 2; }
-      const ci = makeCi(config.ci, { token: env.GITHUB_TOKEN, bitbucketToken: env.BITBUCKET_TOKEN });
-      const result = config.ci?.provider === 'bitbucket-pipelines' ? await ci.getCommitStatuses(args[2]) : await ci.getCommitStatus(args[2]);
+      const ci = makeCi(config.ci, { token: env.GITHUB_TOKEN, bitbucketToken: env.BITBUCKET_TOKEN, gitlabToken: env.GITLAB_TOKEN });
+      const result = config.ci?.provider === 'bitbucket-pipelines' ? await ci.getCommitStatuses(args[2]) : config.ci?.provider === 'gitlab-ci' ? await ci.listPipelines({ sha: args[2] }) : await ci.getCommitStatus(args[2]);
       output.log(JSON.stringify(result, null, 2));
       return 0;
     } catch {
@@ -98,8 +99,9 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       const config = JSON.parse(await readBody(args[1], 'utf8'));
       if (config.scm?.provider === 'github' && !env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment.'); return 2; }
       if (config.scm?.provider === 'ado' && !env.ADO_PAT) { output.error('Set ADO_PAT in the environment.'); return 2; }
+      if (config.scm?.provider === 'gitlab' && !env.GITLAB_TOKEN) { output.error('Set GITLAB_TOKEN in the environment.'); return 2; }
       if (config.scm?.provider === 'bitbucket-cloud' && !env.BITBUCKET_TOKEN) { output.error('Set BITBUCKET_TOKEN in the environment.'); return 2; }
-      const scm = makeScm(config.scm, { token: env.GITHUB_TOKEN, adoToken: env.ADO_PAT, bitbucketToken: env.BITBUCKET_TOKEN });
+      const scm = makeScm(config.scm, { token: env.GITHUB_TOKEN, adoToken: env.ADO_PAT, bitbucketToken: env.BITBUCKET_TOKEN, gitlabToken: env.GITLAB_TOKEN });
       output.log(JSON.stringify(await scm.getPullRequest(Number(args[2])), null, 2));
       return 0;
     } catch {
@@ -114,10 +116,11 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       const config = JSON.parse(await readBody(args[1], 'utf8'));
       if (config.tracker?.provider === 'github' && !env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment before running this command.'); return 2; }
       if (config.tracker?.provider === 'jira' && (!env.JIRA_EMAIL || !env.JIRA_API_TOKEN)) { output.error('Set JIRA_EMAIL and JIRA_API_TOKEN in the environment.'); return 2; }
+      if (config.tracker?.provider === 'gitlab' && !env.GITLAB_TOKEN) { output.error('Set GITLAB_TOKEN in the environment.'); return 2; }
       if (config.tracker?.provider === 'ado' && !env.ADO_PAT) { output.error('Set ADO_PAT in the environment.'); return 2; }
-      const numeric = ['github', 'ado'].includes(config.tracker?.provider);
+      const numeric = ['github', 'ado', 'gitlab'].includes(config.tracker?.provider);
       if (numeric && (!/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])))) { output.error(usage); return 2; }
-      const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN, jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN, adoToken: env.ADO_PAT });
+      const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN, jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN, adoToken: env.ADO_PAT, gitlabToken: env.GITLAB_TOKEN });
       const ticket = await tracker.getTicket(numeric ? Number(args[2]) : args[2]);
       output.log(JSON.stringify(exporting ? await saveTrackerStory(ticket, args[3]) : ticket, null, 2));
       return 0;

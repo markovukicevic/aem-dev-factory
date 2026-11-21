@@ -92,7 +92,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 }
 ```
 
-`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub, an initial Azure Repos implementation, and read-only Bitbucket Cloud. CI adapters cover GitHub Actions and Bitbucket commit status reads. GitLab and Bitbucket Data Center adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub, an initial Azure Repos implementation, and read-only Bitbucket Cloud. CI adapters cover GitHub Actions and Bitbucket commit status reads. Bitbucket Data Center and GitLab self-managed adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
 
 ### Jira Cloud tracker
 
@@ -148,3 +148,7 @@ node /path/to/aem-dev-flow-max/bin/aem-devflow.js bitbucket-pr-create WORKSPACE 
 ```
 
 The command checks readiness, origin, published branch, locally tracked base and existing open PRs before a single create request. It does not push or retry a failed write. Checks are not atomic, and local tracking references may be stale. Creation has been tested with local Git repositories and a simulated API, not a live Bitbucket account. The direct library create method does not perform readiness checks.
+
+### GitLab.com
+
+For a GitLab.com project such as `team/subgroup/site`, use `{"provider":"gitlab","project":"team/subgroup/site"}` for the tracker or SCM and `{"provider":"gitlab-ci","project":"team/subgroup/site"}` for CI. Supply `GITLAB_TOKEN`. `tracker-ticket`, `tracker-export`, `scm-pr`, and `ci-status` read issues, export source, read merge requests, and list the first page of commit pipelines respectively. The library can also read paginated merge-request notes and individual pipelines. GitLab export uses `gitlab-<number>` for `spec-init`. GitLab.com reads have only been tested with simulated responses; self-managed instances and writes are not supported yet.

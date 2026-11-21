@@ -25,7 +25,7 @@ test('routes tracker, SCM and CI requests to their independently configured repo
 });
 
 test('rejects unsupported provider combinations instead of silently falling back', () => {
-  for (const [key, provider] of [['tracker', 'bitbucket'], ['scm', 'bitbucket'], ['ci', 'gitlab']]) {
+  for (const [key, provider] of [['tracker', 'bitbucket'], ['scm', 'bitbucket'], ['ci', 'unknown']]) {
     assert.throws(() => createProviderSet({ ...config, [key]: { provider } }, { token: 'secret' }), /Unsupported/);
   }
 });
@@ -42,4 +42,15 @@ test('supports Jira tracker independently alongside GitHub SCM and Actions', asy
   const providers = createProviderSet(mixed, { token: 'github-secret', jiraEmail: 'a@example.com', jiraToken: 'jira-secret', fetchImpl });
   assert.equal((await providers.tracker.getTicket('TEAM-7')).provider, 'jira');
   assert.equal((await providers.scm.getPullRequest(2)).number, 2);
+});
+
+test('selects GitLab SCM and CI independently of a GitHub tracker', async () => {
+  const mixed = { tracker: config.tracker, scm: { provider: 'gitlab', project: 'team/repo' }, ci: { provider: 'gitlab-ci', project: 'other/ci' } };
+  const urls = [];
+  const fetchImpl = async url => { urls.push(url); return { ok: true, headers: { get: () => null }, json: async () => url.includes('/pipelines?') ? [] : { iid: 3 } }; };
+  const result = createProviderSet(mixed, { token: 'github-secret', gitlabToken: 'gitlab-secret', fetchImpl });
+  assert.equal((await result.scm.getPullRequest(3)).iid, 3);
+  assert.deepEqual((await result.ci.listPipelines({ sha: '123abcd' })).values, []);
+  assert.match(urls[0], /projects\/team%2Frepo\/merge_requests\/3/);
+  assert.match(urls[1], /projects\/other%2Fci\/pipelines/);
 });

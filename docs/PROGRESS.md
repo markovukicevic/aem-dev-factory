@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added GitLab.com issue, merge-request, notes and pipeline read adapters and source export. Only simulated responses have been tested; writes and self-managed GitLab remain open.
+
 - Added an experimental guarded Bitbucket Cloud PR creation command with origin, readiness, published branch, duplicate and empty-diff checks. Tested with local Git and simulated API responses only; no live PR created.
 
 - Added read-only Bitbucket Cloud SCM and commit-status adapters with paginated PR comments, plus SCM and CI commands. Bitbucket API responses are simulated in tests; Data Center and complete status pagination remain open.

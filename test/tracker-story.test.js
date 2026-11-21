@@ -38,3 +38,12 @@ test('preserves Azure work item fields, relations and comment text as untrusted 
   assert.match(story, /````text/);
   assert.match(story, /untrusted Azure DevOps content/);
 });
+
+test('exports GitLab issue text and comments without inventing requirements', () => {
+  const gitlab = { provider: 'gitlab', number: 7, title: 'Bug', body: 'Original **text**', state: 'opened', labels: [], comments: [{ id: 1, body: 'Original note' }] };
+  const story = renderTrackerStory(gitlab, { created: '2026-11-21T12:00:00Z' });
+  assert.match(story, /GitLab issue/);
+  assert.match(story, /Original \*\*text\*\*/);
+  assert.match(story, /Original note/);
+  assert.doesNotMatch(story, /Acceptance Criteria/);
+});
