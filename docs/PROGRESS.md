@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Extended test-readiness consistency checks to reject a plan that changes during the test run, even when the changed plan still marks all steps done.
+
 - Hardened PR readiness to bind tests to the same clean branch and commit before and after testing, and require that commit to match the published branch across all four providers. Concurrent changes after checks remain possible.
 
 - Added inspectable local webhook claim metadata and backward-compatible listing of earlier digest-only records. Claims are not a task queue or evidence of execution.

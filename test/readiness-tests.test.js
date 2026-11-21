@@ -59,3 +59,12 @@ test('does not accept a test run that starts with a dirty worktree', async () =>
   assert.equal(result.readiness.checks.testsPassed, false);
   assert.match(result.blockers.join(' '), /clean worktree/);
 });
+
+test('rejects a passing test run if the plan changes while tests run', async () => {
+  let reads = 0;
+  const result = await inspectPlanWithTests({ cwd: '/repo', planPath: 'plan.md', base: 'main', testCommand: {} }, { readPlan: async () => ++reads === 1 ? done : done.replace('Implement', 'Different requirement'), runTests: async () => ({ passed: true }), readGit: async () => ({ head: 'feature', commit: 'a'.repeat(40), workingTreeClean: true }) });
+  assert.equal(result.testResult.passed, true);
+  assert.equal(result.ready, false);
+  assert.equal(result.readiness.checks.testsPassed, false);
+  assert.match(result.blockers.join(' '), /plan.*changed/);
+});
