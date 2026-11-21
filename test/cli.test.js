@@ -755,3 +755,19 @@ test('shows help successfully with the supported PR creation commands', async ()
   assert.match(messages.logs.at(-1), /gitlab-mr-create/);
   assert.match(messages.logs.at(-1), /bitbucket-pr-create/);
 });
+
+test('starts an explicit local webhook listener without exposing its secret', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'webhook-listener-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'policy.json');
+  await writeFile(path, JSON.stringify({ allowedRepositories: ['team/site'], allowedActors: ['alex'] }));
+  const { messages, output } = capture();
+  const options = { output, env: { GITHUB_WEBHOOK_SECRET: 'secret-value' }, startWebhook: async opts => { assert.equal(opts.secret, 'secret-value'); assert.equal(opts.port, 12345); return { on: () => {} }; } };
+  assert.equal(await runCli(['webhook-listen', path, dir, '12345'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).listening, '127.0.0.1');
+  assert.ok(!messages.logs.at(-1).includes('secret-value'));
+  assert.equal(await runCli(['webhook-listen', path, dir, '0'], options), 2);
+});

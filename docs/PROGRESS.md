@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an explicit loopback-only GitHub webhook receiver that verifies and claims deliveries locally without running tasks. It is not a public service, distributed replay protection or a live GitHub integration.
+
 - Added built-in CLI help and an initial `agent-help` skill; refreshed the provider overview, including the removal of Bitbucket Cloud native issue tracking.
 
 - Added non-overwriting local AEM component evidence reports and an initial doc-generation skill. Live AEM pages, authoring guides and screenshots are not implemented.
