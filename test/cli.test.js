@@ -317,3 +317,17 @@ test('creates a GitLab MR only on the explicit command', async () => {
   assert.equal(JSON.parse(messages.logs[0]).pullRequest.iid, 9);
   assert.equal(await runCli(args.slice(0, 5), options), 2);
 });
+
+test('searches local AEM component candidates without credentials', async t => {
+  const { mkdtemp, mkdir, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'devflow-aem-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const folder = join(cwd, 'components', 'hero');
+  await mkdir(folder, { recursive: true });
+  await writeFile(join(folder, '.content.xml'), '<component/>');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['aem-components', 'hero'], { cwd, env: {}, output }), 0);
+  assert.equal(JSON.parse(messages.logs[0]).candidates.length, 1);
+});

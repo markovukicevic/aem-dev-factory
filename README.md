@@ -171,3 +171,7 @@ The early `agent-core` plugin also includes instruction files for `agent-plan`, 
 ### Plugin packaging
 
 The repository contains an initial Claude Code marketplace manifest for `agent-core-max` and `aem-tools-max`. `npm run validate:plugins` checks the manifest, source paths and skill frontmatter; it does not prove runtime behavior. Claude Code is not installed in the development environment used for this work, so marketplace registration, installation and skill invocation have not been verified. The CLI-based skills also require `AEM_DEVFLOW_MAX_HOME` to point to a checkout with dependencies installed.
+
+### Local AEM component candidates
+
+From an AEM repository, `node /path/to/aem-dev-flow-max/bin/aem-devflow.js aem-components hero` lists matching source directories, observed component definitions, dialogs, and selected files. It searches exact names below directories named `components`, skips common generated directories and symlinks, and fails instead of returning incomplete results when its search limit is exceeded. It does not resolve external models, inspect authored pages, parse dialog fields, or verify runtime behavior. Tested using local synthetic component trees only.

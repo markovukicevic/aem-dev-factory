@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added a read-only local AEM component candidate search and CLI. It finds matching source folders and dialog files using synthetic fixtures; it does not inspect a live AEM instance or resolve all external component files.
+
 - Added an initial Claude Code marketplace manifest and structural plugin validation in CI. Claude Code is not installed here, so registration, installation and real skill behavior remain unverified.
 
 - Added initial planning, single-step execution, verification, PR and AEM component-discovery skill instructions. Structurally validated only; client installation and behavioral validation remain open, and the original plugin functionality is not yet reproduced.
