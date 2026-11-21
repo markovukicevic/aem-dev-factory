@@ -14,7 +14,7 @@ import { saveTrackerStory } from './tracker-story.js';
 import { createTrackerProvider, createScmProvider, createCiProvider, createDocumentationProvider } from './providers.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js jira-attachment <providers.json> <attachment-id> <output-file>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, createBitbucketPr = createBitbucketPullRequest, createGitlabMr = createGitLabMergeRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, makeDocumentation = createDocumentationProvider, readBody = readFile, cwd = process.cwd() } = {}) {
@@ -64,6 +64,20 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       return 0;
     } catch {
       output.error('Unable to read CI workflow runs. Check the configuration and connection.');
+      return 1;
+    }
+  }
+  if (args[0] === 'jira-attachment') {
+    if (args.length !== 4 || !/^[1-9][0-9]{0,30}$/.test(args[2]) || !args[3]?.trim()) { output.error(usage); return 2; }
+    if (!env.JIRA_EMAIL || !env.JIRA_API_TOKEN) { output.error('Set JIRA_EMAIL and JIRA_API_TOKEN in the environment.'); return 2; }
+    try {
+      const config = JSON.parse(await readBody(args[1], 'utf8'));
+      if (config.tracker?.provider !== 'jira') throw new Error('Jira tracker configuration required');
+      const tracker = makeTracker(config.tracker, { jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN });
+      output.log(JSON.stringify(await tracker.saveAttachment(args[2], args[3]), null, 2));
+      return 0;
+    } catch (error) {
+      output.error(error?.code === 'EEXIST' ? 'Output file already exists; it was not overwritten.' : 'Unable to download Jira attachment. Check the configuration, attachment and size limit.');
       return 1;
     }
   }

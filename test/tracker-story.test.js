@@ -47,3 +47,8 @@ test('exports GitLab issue text and comments without inventing requirements', ()
   assert.match(story, /Original note/);
   assert.doesNotMatch(story, /Acceptance Criteria/);
 });
+
+test('records Jira attachment metadata without downloading or inventing content', () => {
+  const story = renderTrackerStory({ ...issue, attachments: [{ id: '42', filename: 'image.png', size: 3, mimeType: 'image/png' }] }, { created: '2026-11-21T12:00:00Z' });
+  assert.match(story, /ID 42: image.png \(3 bytes; image\/png\)/);
+});

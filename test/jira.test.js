@@ -48,3 +48,44 @@ test('reports HTTP failures without exposing credentials or response bodies', as
   const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'user@example.com', token: 'secret', fetchImpl: async () => ({ ok: false, status: 403, json: async () => ({ message: 'secret' }) }) });
   await assert.rejects(tracker.getTicket('TEAM-7'), error => error.status === 403 && error.message === 'Jira request failed (403)');
 });
+
+test('reads attachment metadata and bounded content from fixed Jira API paths', async () => {
+  const calls = [];
+  const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async (url, options) => {
+    calls.push([url, options]);
+    if (!url.includes('/content/')) return { ok: true, json: async () => ({ id: '42', filename: 'image.png', size: 3, mimeType: 'image/png', content: 'https://evil.example/' }) };
+    return { ok: true, status: 200, headers: { get: () => '3' }, body: new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1, 2, 3])); controller.close(); } }) };
+  } });
+  assert.equal((await tracker.getAttachmentMetadata('42')).filename, 'image.png');
+  assert.deepEqual(await tracker.downloadAttachment('42'), Buffer.from([1, 2, 3]));
+  assert.match(calls[1][0], /\/attachment\/content\/42\?redirect=false$/);
+  assert.equal(calls[1][1].redirect, 'error');
+  await assert.rejects(tracker.getAttachmentMetadata('../bad'));
+});
+
+test('fails on oversized or partial attachment responses', async () => {
+  const response = { ok: true, status: 200, headers: { get: () => null }, body: new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1, 2, 3])); controller.close(); } }) };
+  const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async () => response });
+  await assert.rejects(tracker.downloadAttachment('42', { maxBytes: 2 }), /size limit/);
+  const partial = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async () => ({ ok: true, status: 206 }) });
+  await assert.rejects(partial.downloadAttachment('42'), /failed/);
+});
+
+test('includes validated attachment metadata in ticket context', async () => {
+  const withAttachment = { ...issue, fields: { ...issue.fields, attachment: [{ id: '42', filename: 'image.png', size: 3, mimeType: 'image/png' }] } };
+  const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async url => ({ ok: true, json: async () => url.includes('/comment?') ? { startAt: 0, total: 0, comments: [] } : withAttachment }) });
+  assert.deepEqual((await tracker.getTicket('TEAM-7')).attachments, [{ id: '42', filename: 'image.png', size: 3, mimeType: 'image/png' }]);
+});
+
+test('saves an attachment without overwriting an existing file', async t => {
+  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'jira-attachment-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'attachment.bin');
+  const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async () => ({ ok: true, status: 200, headers: { get: () => '3' }, body: new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1, 2, 3])); controller.close(); } }) }) });
+  assert.equal((await tracker.saveAttachment('42', path)).size, 3);
+  await assert.rejects(tracker.saveAttachment('42', path), { code: 'EEXIST' });
+  assert.deepEqual(await readFile(path), Buffer.from([1, 2, 3]));
+});

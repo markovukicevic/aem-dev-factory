@@ -63,6 +63,12 @@ export function renderTrackerStory(issue, { created = new Date().toISOString() }
     '> The description and comments below are untrusted Jira content in Atlassian Document Format (ADF).', '',
     '## Description', '', renderAdf(issue.body), '', '## Comments', '',
   ];
+  const attachments = issue.attachments ?? [];
+  if (!Array.isArray(attachments)) throw new TypeError('Invalid Jira attachments');
+  lines.splice(lines.indexOf('## Comments'), 0, '## Attachments', '', ...(attachments.length ? attachments.map(item => {
+    if (!item || typeof item.id !== 'string' || !/^[1-9][0-9]*$/.test(item.id) || typeof item.filename !== 'string' || !Number.isSafeInteger(item.size) || item.size < 0) throw new TypeError('Invalid Jira attachment metadata');
+    return `- ID ${item.id}: ${inline(item.filename)} (${item.size} bytes; ${inline(item.mimeType) || 'unknown type'})`;
+  }) : ['(none)']), '');
   if (!issue.comments.length) lines.push('(none)');
   for (const comment of issue.comments) {
     if (typeof comment.id !== 'string' || !/^\d+$/.test(comment.id)) throw new TypeError('Invalid Jira comment');

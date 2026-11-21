@@ -374,3 +374,11 @@ test('reads an explicitly selected Confluence page with separate credentials', a
   assert.equal(JSON.parse(messages.logs[0]).id, '123');
   assert.equal(await runCli(['confluence-page', 'providers.json', '../bad'], options), 2);
 });
+
+test('downloads an explicitly selected Jira attachment using the tracker credentials', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { JIRA_EMAIL: 'user@example.com', JIRA_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }), makeTracker: (_config, credentials) => { assert.equal(credentials.jiraToken, 'secret'); return { saveAttachment: async (id, path) => ({ id, path, size: 3 }) }; } };
+  assert.equal(await runCli(['jira-attachment', 'providers.json', '42', 'image.bin'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).id, '42');
+  assert.equal(await runCli(['jira-attachment', 'providers.json', '../bad', 'image.bin'], options), 2);
+});
