@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createGitHubPullRequest } from '../src/github-pr-flow.js';
 
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', owner: 'team', repository: 'site', token: 'token', title: 'Example' };
-const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main' } };
+const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
 const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ owner: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ number: 1 }) }) });
 
@@ -81,4 +81,13 @@ test('does not create duplicate or empty pull requests', async () => {
   const emptyCommit = await createGitHubPullRequest(input, { ...deps(), inspectDiff: async () => ({ hasCommits: true, hasChanges: false }), makeClient: () => client });
   assert.equal(emptyCommit.created, false);
   assert.equal(creates, 0);
+});
+
+test('rejects a published commit different from the tested commit', async () => {
+  let writes = 0;
+  const dependencies = { ...deps(), publishedReader: async () => ({ published: true, commit: 'b'.repeat(40) }), makeClient: () => ({ createPullRequest: async () => { writes++; } }) };
+  const result = await createGitHubPullRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /tested commit/);
 });

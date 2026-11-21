@@ -11,6 +11,7 @@ test('reads a real plan and checks the actual Git branch and working tree', asyn
   t.after(() => rm(dir, { recursive: true, force: true }));
   const repo = join(dir, 'repo');
   execFileSync('git', ['init', '-q', '-b', 'feature', repo]);
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd: repo });
   const planPath = join(dir, 'implement.md');
   await writeFile(planPath, '---\nprovenance:\n  confidence: medium\n  verified: true\n---\n### Step 1: Test\n**Status:** done\n');
   const result = await inspectPlanReadiness({ cwd: repo, planPath, testsPassed: true, base: 'main' });

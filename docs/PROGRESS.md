@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Hardened PR readiness to bind tests to the same clean branch and commit before and after testing, and require that commit to match the published branch across all four providers. Concurrent changes after checks remain possible.
+
 - Added inspectable local webhook claim metadata and backward-compatible listing of earlier digest-only records. Claims are not a task queue or evidence of execution.
 
 - Added an explicit loopback-only GitHub webhook receiver that verifies and claims deliveries locally without running tasks. It is not a public service, distributed replay protection or a live GitHub integration.

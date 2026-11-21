@@ -11,7 +11,7 @@ export async function inspectPullRequestReadiness({ cwd, steps, provenance, test
     steps,
     provenance,
     checks: { testsPassed, workingTreeClean: git.workingTreeClean },
-    branch: { head: git.head, base },
+    branch: { head: git.head, commit: git.commit, base },
   };
   return { readiness, ...evaluatePullRequestReadiness(readiness) };
 }
@@ -29,7 +29,14 @@ export async function inspectPlanWithTests({ cwd, planPath, base, testCommand },
   if (typeof planPath !== 'string' || !planPath.trim()) throw new TypeError('planPath is required');
   const readPlan = dependencies.readPlan ?? readFile;
   parseImplementationPlan(await readPlan(planPath, 'utf8'));
+  const before = await (dependencies.readGit ?? readGitState)(cwd);
   const testResult = await (dependencies.runTests ?? runTestCommand)({ ...testCommand, cwd });
   const result = await inspectPlanReadiness({ cwd, planPath, testsPassed: testResult?.passed === true, base }, dependencies);
+  const stable = before.workingTreeClean === true && typeof before.commit === 'string' && /^[a-f0-9]{40,64}$/i.test(before.commit) && before.head === result.readiness.branch.head && before.commit === result.readiness.branch.commit;
+  if (!stable) {
+    result.readiness.checks.testsPassed = false;
+    result.blockers.push('The branch, commit or clean worktree changed around the test run.');
+    result.ready = false;
+  }
   return { ...result, testResult };
 }

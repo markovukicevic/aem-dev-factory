@@ -4,7 +4,7 @@ import { parseBitbucketOrigin } from '../src/bitbucket-origin.js';
 import { createBitbucketPullRequest } from '../src/bitbucket-pr-flow.js';
 
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', workspace: 'team', repository: 'site', token: 'token', title: 'Change' };
-const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main' } };
+const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
 const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ workspace: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ id: 1 }) }) });
 
@@ -68,4 +68,13 @@ test('checks a real local origin and blocks an unpublished newer commit', async 
   commit();
   assert.equal((await createBitbucketPullRequest(options, dependencies)).created, false);
   assert.equal(creates, 1);
+});
+
+test('rejects a published commit different from the tested commit', async () => {
+  let writes = 0;
+  const dependencies = { ...deps(), publishedReader: async () => ({ published: true, commit: 'b'.repeat(40) }), makeClient: () => ({ createPullRequest: async () => { writes++; } }) };
+  const result = await createBitbucketPullRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /tested commit/);
 });
