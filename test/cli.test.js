@@ -735,3 +735,16 @@ test('inspects Azure builds for an exact commit without asserting branch policy'
   assert.equal(JSON.parse(messages.logs.at(-1)).builds[0].id, 1);
   assert.equal(await runCli(['ado-ci-commit', 'providers.json', 'main', 'abc'], options), 2);
 });
+
+test('writes a new local AEM evidence report', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'aem-report-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const { messages, output } = capture();
+  const report = join(dir, 'report.md');
+  assert.equal(await runCli(['aem-component-report', dir, report], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).path, report);
+  assert.equal(await runCli(['aem-component-report', dir, report], { output }), 1);
+});
