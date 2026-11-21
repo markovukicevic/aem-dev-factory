@@ -382,3 +382,20 @@ test('downloads an explicitly selected Jira attachment using the tracker credent
   assert.equal(JSON.parse(messages.logs[0]).id, '42');
   assert.equal(await runCli(['jira-attachment', 'providers.json', '../bad', 'image.bin'], options), 2);
 });
+
+test('creates and compares local AEM dialog snapshots', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'aem-snapshot-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const xml = join(dir, 'dialog.xml');
+  const before = join(dir, 'before.json');
+  const after = join(dir, 'after.json');
+  await writeFile(xml, '<root xmlns:sling="urn:sling"><title sling:resourceType="text" name="./title"/></root>');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['aem-dialog-snapshot', xml, before], { output }), 0);
+  assert.equal(await runCli(['aem-dialog-snapshot', xml, after], { output }), 0);
+  assert.equal(await runCli(['aem-dialog-compare', before, after], { output }), 0);
+  assert.deepEqual(JSON.parse(messages.logs.at(-1)).changed, []);
+});

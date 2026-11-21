@@ -6,6 +6,7 @@ import { createGitLabMergeRequest } from './gitlab-pr-flow.js';
 import { ensureSpecDirectory } from './spec-directory.js';
 import { findAemComponents } from './aem-components.js';
 import { readAemDialog } from './aem-dialog.js';
+import { saveAemDialogSnapshot, compareAemDialogSnapshotFiles } from './aem-snapshot.js';
 import { readHubStatuses } from './hub-status.js';
 import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
@@ -14,7 +15,7 @@ import { saveTrackerStory } from './tracker-story.js';
 import { createTrackerProvider, createScmProvider, createCiProvider, createDocumentationProvider } from './providers.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js jira-attachment <providers.json> <attachment-id> <output-file>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js aem-components <component-name>\n       node bin/aem-devflow.js aem-dialog <dialog.xml>\n       node bin/aem-devflow.js aem-dialog-snapshot <dialog.xml> <output.json>\n       node bin/aem-devflow.js aem-dialog-compare <before.json> <after.json>\n       node bin/aem-devflow.js hub-status [ticket-id]\n       node bin/aem-devflow.js confluence-page <providers.json> <page-id>\n       node bin/aem-devflow.js jira-attachment <providers.json> <attachment-id> <output-file>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js ado-builds <providers.json> <branch> [--continuation <token>]\n       node bin/aem-devflow.js ado-build <providers.json> <build-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, createBitbucketPr = createBitbucketPullRequest, createGitlabMr = createGitLabMergeRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, makeDocumentation = createDocumentationProvider, readBody = readFile, cwd = process.cwd() } = {}) {
@@ -102,6 +103,17 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       return result.complete ? 0 : 1;
     } catch {
       output.error('Unable to read hub status. Check the hub configuration and state directory.');
+      return 1;
+    }
+  }
+  if (args[0] === 'aem-dialog-snapshot' || args[0] === 'aem-dialog-compare') {
+    if (args.length !== 3 || !args[1]?.trim() || !args[2]?.trim()) { output.error(usage); return 2; }
+    try {
+      const result = args[0] === 'aem-dialog-snapshot' ? await saveAemDialogSnapshot({ dialogPath: args[1], outputPath: args[2] }) : await compareAemDialogSnapshotFiles(args[1], args[2]);
+      output.log(JSON.stringify(result, null, 2));
+      return 0;
+    } catch (error) {
+      output.error(error?.code === 'EEXIST' ? 'Output file already exists; it was not overwritten.' : 'Unable to save or compare local dialog snapshots.');
       return 1;
     }
   }

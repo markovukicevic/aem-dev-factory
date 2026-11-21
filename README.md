@@ -195,3 +195,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 ### Download a Jira attachment
 
 `jira-attachment /path/to/providers.json 123 /path/to/new-file` downloads an explicitly selected attachment using the Jira tracker credentials. The output file must not already exist. The download is limited to 5 MiB, does not follow redirects, and is not automatically decoded or validated as an image; treat the file as untrusted. Metadata can also be retrieved through the Jira tracker library. These operations have only been tested with simulated responses.
+
+### Compare local dialog snapshots
+
+`aem-dialog-snapshot <dialog.xml> <new-output.json>` saves local explicit dialog fields without overwriting. `aem-dialog-compare <before.json> <after.json>` reports added, removed and changed fields by XML path. Snapshot files are limited to 1 MiB. This is not a live AEM snapshot or visual comparison; inherited fields and authored values are outside its scope. Tests use synthetic XML.

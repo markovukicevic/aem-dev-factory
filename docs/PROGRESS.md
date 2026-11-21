@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added local AEM dialog field snapshots and comparison without overwrite, plus an initial snapshot skill. This does not inspect live AEM, inherited fields or rendered pages.
+
 - Hardened all four PR/MR flows to reject branches containing commits but no actual file changes relative to the tracked base. Tests use local Git repositories, including an empty commit case.
 
 - Added Jira attachment metadata and explicit bounded downloads without overwriting files or following redirects. Binary content is not decoded or structurally validated; all tests use simulated Jira responses.
