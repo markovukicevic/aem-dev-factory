@@ -17,6 +17,31 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
       validId(number);
       return request(`${root}/${number}?api-version=7.1`);
     },
+    async getIterationChanges(number, iteration, { maxPages = 10 } = {}) {
+      validId(number);
+      validId(iteration);
+      if (!Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 100) throw new TypeError('Invalid page limit');
+      let skip = 0;
+      let top = 100;
+      const changes = [];
+      for (let page = 0; page < maxPages; page++) {
+        const query = new URLSearchParams({ '$top': String(top), '$skip': String(skip), 'api-version': '7.1' });
+        const response = await request(`${root}/${number}/iterations/${iteration}/changes?${query}`);
+        if (!response || !Array.isArray(response.changeEntries) || response.changeEntries.length > top) throw new Error('Invalid Azure iteration changes');
+        changes.push(...response.changeEntries);
+        if (response.nextSkip === undefined && response.nextTop === undefined) {
+          if (response.changeEntries.length < top) return { changes, complete: true };
+          skip += top;
+          continue;
+        }
+        if (!Number.isSafeInteger(response.nextSkip) || !Number.isSafeInteger(response.nextTop) || response.nextSkip < 0 || response.nextTop < 0) throw new Error('Invalid Azure iteration changes');
+        if (response.nextSkip === 0 && response.nextTop === 0) return { changes, complete: true };
+        if (response.nextSkip <= skip || response.nextTop < 1 || response.nextTop > 2000) throw new Error('Invalid Azure continuation');
+        skip = response.nextSkip;
+        top = response.nextTop;
+      }
+      return { changes, complete: false };
+    },
     getPullRequestThreads(number) {
       validId(number);
       return request(`${root}/${number}/threads?api-version=7.1`);

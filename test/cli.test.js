@@ -525,3 +525,11 @@ test('reads GitLab merge request diffs with the configured provider', async () =
   assert.equal(JSON.parse(messages.logs.at(-1)).diffComplete, null);
   assert.equal(await runCli(['gitlab-mr-diffs', 'providers.json', 'bad'], options), 2);
 });
+
+test('reads explicitly selected Azure PR iteration changes', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { getIterationChanges: async (pr, iteration) => ({ changes: [{ pr, iteration }], complete: true }) }; } };
+  assert.equal(await runCli(['ado-pr-changes', 'providers.json', '7', '3'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).changes[0].iteration, 3);
+  assert.equal(await runCli(['ado-pr-changes', 'providers.json', '7', '0'], options), 2);
+});

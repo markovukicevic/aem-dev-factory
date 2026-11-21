@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added bounded Azure DevOps PR iteration change-metadata retrieval. Iteration selection is explicit, full diffs are not fetched, and API behavior is simulated-test only.
+
 - Added bounded GitLab.com merge-request diff reading with revision checks and explicit server-limit warnings. Tested with simulated responses; a live GitLab account remains unverified.
 
 - Added paginated GitHub PR changed-file metadata and available patches with revision stability checks and explicit completeness limits; patches alone do not constitute a complete diff. Verified the eight-file list of public `cli/cli` PR 15117.

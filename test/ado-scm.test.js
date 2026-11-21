@@ -40,3 +40,26 @@ test('checks for active pull requests matching source and target', async () => {
   assert.equal(query.get('searchCriteria.sourceRefName'), 'refs/heads/feature/123');
   assert.equal(query.get('searchCriteria.targetRefName'), 'refs/heads/main');
 });
+
+test('reads bounded Azure PR iteration change pages and rejects invalid continuation', async () => {
+  const urls = [];
+  const scm = createAdoScm({ organization: 'org', project: 'project', repository: 'site', token: 'secret', fetchImpl: async url => {
+    urls.push(url);
+    const skip = new URL(url).searchParams.get('$skip');
+    return { ok: true, json: async () => skip === '0' ? { changeEntries: [{ id: 1 }], nextSkip: 1, nextTop: 100 } : { changeEntries: [{ id: 2 }], nextSkip: 0, nextTop: 0 } };
+  } });
+  const result = await scm.getIterationChanges(7, 3);
+  assert.deepEqual(result.changes.map(item => item.id), [1, 2]);
+  assert.equal(result.complete, true);
+  assert.match(urls[0], /pullrequests\/7\/iterations\/3\/changes\?/);
+  assert.equal((await scm.getIterationChanges(7, 3, { maxPages: 1 })).complete, false);
+  await assert.rejects(scm.getIterationChanges(7, 0));
+  const invalid = createAdoScm({ organization: 'org', project: 'project', repository: 'site', token: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ({ changeEntries: [], nextSkip: 0, nextTop: 100 }) }) });
+  await assert.rejects(invalid.getIterationChanges(7, 3), /continuation/);
+});
+
+
+test('accepts Azure responses that omit zero continuation fields', async () => {
+  const scm = createAdoScm({ organization: 'org', project: 'project', repository: 'site', token: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ({ changeEntries: [{ item: { path: '/example' } }] }) }) });
+  assert.equal((await scm.getIterationChanges(7, 3)).complete, true);
+});
