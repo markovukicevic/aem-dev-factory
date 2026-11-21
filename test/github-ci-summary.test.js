@@ -21,3 +21,19 @@ test('requests both GitHub result types', async () => {
   assert.equal(result.state, 'success');
   assert.match(result.scope, /branch protection/);
 });
+
+test('paginates GitHub check runs and rejects shifting or malformed results', async () => {
+  const makeRuns = (start, count) => Array.from({ length: count }, (_, i) => ({ id: start + i, status: 'completed', conclusion: 'success' }));
+  const calls = [];
+  const ci = { listCheckRuns: async (_sha, { page }) => { calls.push(page); return { total_count: 101, check_runs: page === 1 ? makeRuns(1, 100) : makeRuns(101, 1) }; }, getCommitStatus: async () => status(0) };
+  const result = await readGitHubCiSummary(ci, 'abc1234');
+  assert.deepEqual(calls, [1, 2]);
+  assert.equal(result.state, 'success');
+  assert.equal(result.checkRunsReturned, 101);
+  const shifting = { ...ci, listCheckRuns: async (_sha, { page }) => ({ total_count: 101, check_runs: page === 1 ? makeRuns(1, 100) : makeRuns(1, 1) }) };
+  await assert.rejects(readGitHubCiSummary(shifting, 'abc1234'), /repeated/);
+  const limited = { ...ci, listCheckRuns: async (_sha, { page }) => ({ total_count: 1001, check_runs: makeRuns((page - 1) * 100 + 1, 100) }) };
+  const partial = await readGitHubCiSummary(limited, 'abc1234');
+  assert.equal(partial.complete, false);
+  assert.equal(partial.state, 'unknown');
+});

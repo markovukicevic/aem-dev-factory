@@ -18,6 +18,27 @@ export function summarizeGitHubCi(checks, statuses) {
 }
 
 export async function readGitHubCiSummary(ci, sha) {
-  const [checks, statuses] = await Promise.all([ci.listCheckRuns(sha, { page: 1, perPage: 100 }), ci.getCommitStatus(sha)]);
+  const [first, statuses] = await Promise.all([ci.listCheckRuns(sha, { page: 1, perPage: 100 }), ci.getCommitStatus(sha)]);
+  if (!first || !Number.isSafeInteger(first.total_count) || first.total_count < 0 || !Array.isArray(first.check_runs) || first.check_runs.length > 100 || first.check_runs.length > first.total_count) throw new Error('Invalid GitHub check runs response');
+  const checks = { total_count: first.total_count, check_runs: [...first.check_runs] };
+  const seen = new Set();
+  function addIds(runs) {
+    for (const run of runs) {
+      if (!Number.isSafeInteger(run?.id) || run.id < 1 || seen.has(run.id)) throw new Error('Invalid or repeated GitHub check run');
+      seen.add(run.id);
+    }
+  }
+  // IDs let us fail closed if pagination shifts while results are being read.
+  if (checks.total_count > checks.check_runs.length) {
+    addIds(checks.check_runs);
+    if (checks.check_runs.length !== 100) throw new Error('Incomplete GitHub check runs page');
+    for (let page = 2; page <= 10 && checks.check_runs.length < checks.total_count; page++) {
+      const next = await ci.listCheckRuns(sha, { page, perPage: 100 });
+      if (!next || next.total_count !== checks.total_count || !Array.isArray(next.check_runs) || next.check_runs.length === 0 || next.check_runs.length > 100 || checks.check_runs.length + next.check_runs.length > checks.total_count) throw new Error('Inconsistent GitHub check runs pages');
+      addIds(next.check_runs);
+      checks.check_runs.push(...next.check_runs);
+      if (checks.check_runs.length < checks.total_count && next.check_runs.length !== 100) throw new Error('Incomplete GitHub check runs page');
+    }
+  }
   return summarizeGitHubCi(checks, statuses);
 }

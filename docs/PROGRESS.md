@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Extended GitHub CI summaries to fetch up to 10 pages of check runs, detect inconsistent pages and report larger results as incomplete; pagination uses simulated responses in tests.
+
 - Added bounded complete pipeline listing for a GitLab commit. Pagination and failure paths are tested with simulated responses, not a live GitLab account.
 
 - Added an initial evidence-based Definition of Done review skill; it does not perform the reference skill’s automatic fixes or tracker updates and has not been tested in a client.
