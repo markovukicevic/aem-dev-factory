@@ -798,3 +798,23 @@ test('transitions a plan using the digest from plan-status', async t => {
   assert.match(await readFile(path, 'utf8'), /in-progress/);
   assert.equal(await runCli(['plan-transition', path, '1', 'pending', 'in-progress', digest], { cwd, output }), 1);
 });
+
+test('runs and records configured tests without marking a plan verified', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const root = await mkdtemp(join(tmpdir(), 'evidence-cli-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const cwd = join(root, 'repo');
+  execFileSync('git', ['init', '-q', '-b', 'feature', cwd]);
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd });
+  execFileSync('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD'], { cwd });
+  const plan = join(root, 'plan.md'), config = join(root, 'config.json'), evidence = join(root, 'evidence.md');
+  await writeFile(plan, '### Step 1: Work\n**Status:** done\n');
+  await writeFile(config, JSON.stringify({ scm: { baseBranch: 'main' }, test: { executable: process.execPath, args: ['-e', 'process.exit(0)'] } }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['verification-run', config, plan, evidence], { cwd, output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).testPassed, true);
+  assert.equal(await runCli(['verification-run', config, plan, evidence], { cwd, output }), 1);
+});

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added non-overwriting automated test-evidence recording tied to observed plan, configuration and Git state. It does not certify review, other checks or final verification.
+
 - Added digest-checked, locked plan-step transitions with provenance invalidation. The command does not verify test evidence and cannot eliminate races with unrelated writers.
 
 - Hardened the final pre-write check against missing test evidence and covered final configuration and published-branch changes in focused tests.
