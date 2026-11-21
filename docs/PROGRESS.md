@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added bounded Bitbucket Cloud PR status retrieval for review. Simulated responses cover pagination and unsafe URLs; live Bitbucket validation remains open.
+
 - Added bounded Azure DevOps PR iteration change-metadata retrieval. Iteration selection is explicit, full diffs are not fetched, and API behavior is simulated-test only.
 
 - Added bounded GitLab.com merge-request diff reading with revision checks and explicit server-limit warnings. Tested with simulated responses; a live GitLab account remains unverified.

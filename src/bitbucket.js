@@ -44,6 +44,10 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
   return {
     getRepository: () => get(endpoint('')),
     getPullRequest(id) { number(id); return get(endpoint(`/pullrequests/${id}`)); },
+    getPullRequestStatuses(id) {
+      number(id);
+      return collect(`${root}/pullrequests/${id}/statuses`, new URLSearchParams({ pagelen: '100' }));
+    },
     getPullRequestComments(id) {
       number(id);
       return collect(`${root}/pullrequests/${id}/comments`, new URLSearchParams({ pagelen: '100' }));

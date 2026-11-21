@@ -66,3 +66,14 @@ test('collects all Bitbucket commit status pages and rejects unsafe or incomplet
   const limited = createBitbucketClient({ workspace: 'team', repository: 'site', token: 'secret', maxPages: 1, fetchImpl: async () => ({ ok: true, json: async () => ({ values: [], next: 'https://api.bitbucket.org/2.0/repositories/team/site/commit/123abcd/statuses?page=2' }) }) });
   await assert.rejects(limited.getAllCommitStatuses('123abcd'), /incomplete/);
 });
+
+test('collects Bitbucket PR statuses and refuses unsafe or incomplete pages', async () => {
+  let calls = 0;
+  const scm = createScmProvider({ provider: 'bitbucket-cloud', workspace: 'team', repository: 'site' }, { bitbucketToken: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ++calls === 1 ? { values: [{ state: 'SUCCESSFUL' }], next: 'https://api.bitbucket.org/2.0/repositories/team/site/pullrequests/7/statuses?page=2' } : { values: [{ state: 'FAILED' }] } }) });
+  assert.deepEqual((await scm.getPullRequestStatuses(7)).map(item => item.state), ['SUCCESSFUL', 'FAILED']);
+  assert.throws(() => scm.getPullRequestStatuses(0));
+  const unsafe = createBitbucketClient({ workspace: 'team', repository: 'site', token: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ({ values: [], next: 'https://evil.example/statuses?page=2' }) }) });
+  await assert.rejects(unsafe.getPullRequestStatuses(7), /Invalid Bitbucket next page/);
+  const limited = createBitbucketClient({ workspace: 'team', repository: 'site', token: 'secret', maxPages: 1, fetchImpl: async () => ({ ok: true, json: async () => ({ values: [], next: 'https://api.bitbucket.org/2.0/repositories/team/site/pullrequests/7/statuses?page=2' }) }) });
+  await assert.rejects(limited.getPullRequestStatuses(7), /incomplete/);
+});

@@ -533,3 +533,11 @@ test('reads explicitly selected Azure PR iteration changes', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).changes[0].iteration, 3);
   assert.equal(await runCli(['ado-pr-changes', 'providers.json', '7', '0'], options), 2);
 });
+
+test('reads Bitbucket pull request statuses with the configured SCM', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: (_config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); return { provider: 'bitbucket-cloud', getPullRequestStatuses: async number => [{ number }] }; } };
+  assert.equal(await runCli(['bitbucket-pr-statuses', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).statuses[0].number, 7);
+  assert.equal(await runCli(['bitbucket-pr-statuses', 'providers.json', '0'], options), 2);
+});

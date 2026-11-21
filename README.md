@@ -227,3 +227,5 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 `gitlab-mr-diffs /path/to/providers.json <number>` reads up to 10 pages of GitLab.com merge-request diffs and checks that the diff revisions remain stable. GitLab can omit or limit files and patches, including collapsed or oversized diffs, so pagination completion is not proof of a complete diff. This read path has only simulated API tests.
 
 `ado-pr-changes /path/to/providers.json <pr-number> <iteration-number>` reads change metadata for an explicitly selected Azure DevOps PR iteration, following at most 10 pages. It flags incomplete pagination. This is not a full diff and does not establish that the selected iteration is current. The API path has only simulated tests.
+
+`bitbucket-pr-statuses /path/to/providers.json <number>` reads up to 10 pages of statuses associated with a Bitbucket Cloud pull request. The command fails rather than returning a partial list when pagination is incomplete. It does not establish which checks are required or whether branch protection is satisfied. Tested with simulated API responses only.
