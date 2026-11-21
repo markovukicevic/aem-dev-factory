@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added local ticket artifact inspection and an initial Definition of Ready review skill. Artifact presence is not evidence of readiness; AI-client behavior remains untested.
+
 - Added single-fetch ticket initialization with a provider/project identity record and non-overwriting source export. Legacy directories are not adopted automatically; verified initialization in a temporary project against public `cli/cli` issue 15121.
 
 - Added a bundled skill catalog with descriptions and one-file installer compatibility; it does not establish AI-client discovery or behavior.

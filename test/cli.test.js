@@ -595,3 +595,14 @@ test('fetches a tracker ticket once and initializes its source record', async t 
   assert.equal(JSON.parse(messages.logs.at(-1)).id, 'github-7');
   assert.equal(await runCli(['ticket-init', 'providers.json', 'invalid'], options), 2);
 });
+
+test('reports missing local ticket artifacts', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'ticket-status-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['ticket-status', dir], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).files.find(file => file.name === 'raw-story.md').status, 'missing');
+});

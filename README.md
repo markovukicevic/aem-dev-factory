@@ -243,3 +243,5 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 ### Initialize a ticket with source identity
 
 `ticket-init /path/to/providers.json <id>` fetches the configured tracker ticket once, creates or reuses its spec directory, stores non-secret tracker identity and writes a new `raw-story.md`. Existing directories without a matching identity and existing story files are not overwritten. A failure can leave an identity-only directory; inspect it before retrying. Identity is scoped to the configured provider and project. Existing legacy spec directories require manual review rather than automatic adoption.
+
+`ticket-status <spec-directory>` inspects expected local ticket artifacts and summarizes a supported implementation plan when present. It reports missing or unreadable files; presence does not establish that evidence, tracker identity, requirements or verification are correct. No tracker or remote system is contacted.
