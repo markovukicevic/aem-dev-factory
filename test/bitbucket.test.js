@@ -34,3 +34,22 @@ test('routes commit status reads through the independently configured CI adapter
   assert.match(url, /\/commit\/123abcd\/statuses\?pagelen=100$/);
   assert.throws(() => ci.getCommitStatuses('../main'));
 });
+
+test('submits explicit pull request fields without automatically closing the source branch', async () => {
+  let call;
+  const client = createBitbucketClient({ workspace: 'team', repository: 'site', token: 'secret', fetchImpl: async (...args) => { call = args; return { ok: true, json: async () => ({ id: 42 }) }; } });
+  assert.equal((await client.createPullRequest({ title: 'Change', head: 'feature/123', base: 'main', body: 'Summary', draft: true })).id, 42);
+  assert.equal(call[1].method, 'POST');
+  assert.deepEqual(JSON.parse(call[1].body), { title: 'Change', description: 'Summary', source: { branch: { name: 'feature/123' } }, destination: { branch: { name: 'main' } }, draft: true, close_source_branch: false });
+  assert.throws(() => client.createPullRequest({ title: 'Change', head: '../bad', base: 'main' }));
+  assert.throws(() => client.createPullRequest({ title: 'Change', head: 'main', base: 'main' }));
+});
+
+test('lists all open PRs for exact source and destination branch filters', async () => {
+  const urls = [];
+  const client = createBitbucketClient({ workspace: 'team', repository: 'site', token: 'secret', fetchImpl: async url => { urls.push(url); return { ok: true, json: async () => urls.length === 1 ? { values: [], next: 'https://api.bitbucket.org/2.0/repositories/team/site/pullrequests?page=2' } : { values: [{ id: 8 }] } }; } });
+  assert.equal((await client.listOpenPullRequests({ head: 'feature/123', base: 'main' }))[0].id, 8);
+  const query = new URL(urls[0]).searchParams;
+  assert.equal(query.get('state'), 'OPEN');
+  assert.match(query.get('q'), /source\.branch\.name = "feature\/123"/);
+});

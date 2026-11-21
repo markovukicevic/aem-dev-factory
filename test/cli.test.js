@@ -269,3 +269,16 @@ test('reads Bitbucket commit status using independently configured CI credential
   assert.equal(await runCli(['ci-status', 'providers.json', '123abcd'], options), 0);
   assert.equal(JSON.parse(messages.logs[0]).sha, '123abcd');
 });
+
+test('creates a Bitbucket PR only on the explicit command', async () => {
+  const { messages, output } = capture();
+  let input;
+  const options = { cwd: '/repo', output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => 'Description', createBitbucketPr: async value => { input = value; return { created: true, pullRequest: { id: 9 } }; } };
+  const args = ['bitbucket-pr-create', 'team', 'repo', 'config.yaml', 'plan.md', 'Change', '--body-file', 'body.md', '--draft'];
+  assert.equal(await runCli(args, options), 0);
+  assert.equal(input.token, 'secret');
+  assert.equal(input.draft, true);
+  assert.equal(input.body, 'Description');
+  assert.equal(JSON.parse(messages.logs[0]).pullRequest.id, 9);
+  assert.equal(await runCli(args.slice(0, 6), options), 2);
+});

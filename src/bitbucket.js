@@ -1,4 +1,6 @@
-/** Read-only Bitbucket Cloud API client. Data Center is a separate target. */
+import { branchRef } from './git-ref.js';
+
+/** Bitbucket Cloud API client. Data Center is a separate target. */
 export function createBitbucketClient({ workspace, repository, token, fetchImpl = globalThis.fetch, maxPages = 10 }) {
   for (const value of [workspace, repository]) {
     if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) || value === '.' || value === '..') throw new TypeError('Invalid Bitbucket workspace or repository');
@@ -6,8 +8,8 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
   if (typeof token !== 'string' || !token.trim()) throw new TypeError('Bitbucket access token is required');
   if (typeof fetchImpl !== 'function' || !Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 100) throw new TypeError('Invalid Bitbucket client options');
   const root = `/2.0/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(repository)}`;
-  async function get(url) {
-    const response = await fetchImpl(url, { method: 'GET', headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }, redirect: 'error' });
+  async function request(url, { method = 'GET', body } = {}) {
+    const response = await fetchImpl(url, { method, headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), redirect: 'error' });
     if (!response.ok) {
       const error = new Error(`Bitbucket request failed (${response.status})`);
       error.status = response.status;
@@ -16,32 +18,48 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
     return response.json();
   }
   const endpoint = path => `https://api.bitbucket.org${root}${path}`;
+  const get = url => request(url);
   function number(value) {
     if (!Number.isSafeInteger(value) || value < 1) throw new TypeError('Invalid pull request number');
+  }
+  async function collect(path, query) {
+    let url = `https://api.bitbucket.org${path}?${query}`;
+    const seen = new Set();
+    const values = [];
+    for (let page = 0; page < maxPages; page++) {
+      if (seen.has(url)) throw new Error('Bitbucket pagination repeated');
+      seen.add(url);
+      const response = await get(url);
+      if (!response || !Array.isArray(response.values)) throw new Error('Invalid Bitbucket page');
+      values.push(...response.values);
+      if (response.next === undefined || response.next === null) return values;
+      if (typeof response.next !== 'string' || response.next.length > 8192) throw new Error('Invalid Bitbucket next page');
+      let next;
+      try { next = new URL(response.next); } catch { throw new Error('Invalid Bitbucket next page'); }
+      if (next.protocol !== 'https:' || next.hostname !== 'api.bitbucket.org' || next.port || next.username || next.password || next.hash || next.pathname !== path) throw new Error('Invalid Bitbucket next page');
+      url = next.href;
+    }
+    throw new Error('Bitbucket page limit reached; context is incomplete');
   }
   return {
     getRepository: () => get(endpoint('')),
     getPullRequest(id) { number(id); return get(endpoint(`/pullrequests/${id}`)); },
-    async getPullRequestComments(id) {
+    getPullRequestComments(id) {
       number(id);
-      const path = `${root}/pullrequests/${id}/comments`;
-      let url = `https://api.bitbucket.org${path}?pagelen=100`;
-      const seen = new Set();
-      const values = [];
-      for (let page = 0; page < maxPages; page++) {
-        if (seen.has(url)) throw new Error('Bitbucket pagination repeated');
-        seen.add(url);
-        const response = await get(url);
-        if (!response || !Array.isArray(response.values)) throw new Error('Invalid Bitbucket page');
-        values.push(...response.values);
-        if (response.next === undefined || response.next === null) return values;
-        if (typeof response.next !== 'string' || response.next.length > 8192) throw new Error('Invalid Bitbucket next page');
-        let next;
-        try { next = new URL(response.next); } catch { throw new Error('Invalid Bitbucket next page'); }
-        if (next.protocol !== 'https:' || next.hostname !== 'api.bitbucket.org' || next.port || next.username || next.password || next.hash || next.pathname !== path) throw new Error('Invalid Bitbucket next page');
-        url = next.href;
-      }
-      throw new Error('Bitbucket comment limit reached; context is incomplete');
+      return collect(`${root}/pullrequests/${id}/comments`, new URLSearchParams({ pagelen: '100' }));
+    },
+    listOpenPullRequests({ head, base }) {
+      branchRef(head);
+      branchRef(base);
+      const query = new URLSearchParams({ state: 'OPEN', q: `source.branch.name = ${JSON.stringify(head)} AND destination.branch.name = ${JSON.stringify(base)}`, pagelen: '100' });
+      return collect(`${root}/pullrequests`, query);
+    },
+    createPullRequest({ title, head, base, body = '', draft = false }) {
+      if (typeof title !== 'string' || !title.trim() || typeof body !== 'string' || typeof draft !== 'boolean') throw new TypeError('Invalid pull request fields');
+      branchRef(head);
+      branchRef(base);
+      if (head === base) throw new TypeError('Source and target branches must differ');
+      return request(endpoint('/pullrequests'), { method: 'POST', body: { title, description: body, source: { branch: { name: head } }, destination: { branch: { name: base } }, draft, close_source_branch: false } });
     },
     getCommitStatuses(sha) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('Invalid commit SHA');

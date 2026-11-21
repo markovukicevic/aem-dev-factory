@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { createGitHubPullRequest } from './github-pr-flow.js';
 import { createAdoPullRequest } from './ado-pr-flow.js';
+import { createBitbucketPullRequest } from './bitbucket-pr-flow.js';
 import { ensureSpecDirectory } from './spec-directory.js';
 import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
@@ -12,7 +13,7 @@ import { inspectConfiguredReadiness } from './configured-readiness.js';
 const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js spec-init <ticket-id> <title>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js ci-runs <providers.json> <commit-sha> [--page <number>]\n       node bin/aem-devflow.js ci-status <providers.json> <commit-sha>\n       node bin/aem-devflow.js ci-run <providers.json> <run-id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
-export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, readBody = readFile, cwd = process.cwd() } = {}) {
+export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, createBitbucketPr = createBitbucketPullRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, readBody = readFile, cwd = process.cwd() } = {}) {
   if (args[0] === 'ci-status') {
     if (args.length !== 3 || !/^[a-f0-9]{7,64}$/i.test(args[2])) { output.error(usage); return 2; }
     try {
@@ -51,6 +52,20 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       return 0;
     } catch {
       output.error('Unable to create or select a unique ticket directory. Check the ID and existing directories.');
+      return 1;
+    }
+  }
+  if (args[0] === 'bitbucket-pr-create') {
+    const valid = (args.length === 8 || (args.length === 9 && args[8] === '--draft')) && args[6] === '--body-file' && args.slice(1, 6).every(value => typeof value === 'string' && value.trim()) && args[7]?.trim();
+    if (!valid) { output.error(usage); return 2; }
+    if (!env.BITBUCKET_TOKEN) { output.error('Set BITBUCKET_TOKEN in the environment.'); return 2; }
+    try {
+      const body = await readBody(args[7], 'utf8');
+      const result = await createBitbucketPr({ cwd, workspace: args[1], repository: args[2], configPath: args[3], planPath: args[4], title: args[5], token: env.BITBUCKET_TOKEN, body, draft: args.length === 9 });
+      output.log(JSON.stringify(result, null, 2));
+      return result.created ? 0 : 1;
+    } catch (error) {
+      output.error(Number.isInteger(error?.status) ? `Bitbucket request failed (${error.status})` : 'Unable to create pull request. Check the configuration, plan, branch and connection.');
       return 1;
     }
   }

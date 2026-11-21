@@ -137,4 +137,14 @@ With a configured `ci` provider and a token with Actions read access, `ci-runs /
 
 ### Bitbucket Cloud
 
-Set `scm` to `{"provider":"bitbucket-cloud","workspace":"my-team","repository":"site"}` and provide `BITBUCKET_TOKEN` as a Bitbucket Cloud access token. `scm-pr /path/to/providers.json 123` reads a PR. The library adapter can also read its comment pages, rejecting unexpected next-page URLs and incomplete results. Set `ci` to `{"provider":"bitbucket-pipelines","workspace":"my-team","repository":"site"}` and use `ci-status /path/to/providers.json <commit-sha>` to read the first page of commit statuses. Further status pages are not fetched automatically. No Bitbucket writes or Data Center support are implemented, and these operations have only been tested with simulated responses.
+Set `scm` to `{"provider":"bitbucket-cloud","workspace":"my-team","repository":"site"}` and provide `BITBUCKET_TOKEN` as a Bitbucket Cloud access token. `scm-pr /path/to/providers.json 123` reads a PR. The library adapter can also read its comment pages, rejecting unexpected next-page URLs and incomplete results. Set `ci` to `{"provider":"bitbucket-pipelines","workspace":"my-team","repository":"site"}` and use `ci-status /path/to/providers.json <commit-sha>` to read the first page of commit statuses. Further status pages are not fetched automatically. Bitbucket Data Center is not supported, and these reads have only been tested with simulated responses.
+
+### Create a Bitbucket Cloud pull request (experimental)
+
+After publishing the branch, provide `BITBUCKET_TOKEN`, a config and plan, and a reviewed description:
+
+```sh
+node /path/to/aem-dev-flow-max/bin/aem-devflow.js bitbucket-pr-create WORKSPACE REPO /path/to/config.yaml /path/to/implement.md "PR title" --body-file /path/to/pr-description.md --draft
+```
+
+The command checks readiness, origin, published branch, locally tracked base and existing open PRs before a single create request. It does not push or retry a failed write. Checks are not atomic, and local tracking references may be stale. Creation has been tested with local Git repositories and a simulated API, not a live Bitbucket account. The direct library create method does not perform readiness checks.

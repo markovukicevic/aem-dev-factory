@@ -2,7 +2,9 @@
 
 ## 2026-11-21
 
-- Added read-only Bitbucket Cloud SCM and commit-status adapters with paginated PR comments, plus SCM and CI commands. Bitbucket API responses are simulated in tests; writes, Data Center and complete status pagination remain open.
+- Added an experimental guarded Bitbucket Cloud PR creation command with origin, readiness, published branch, duplicate and empty-diff checks. Tested with local Git and simulated API responses only; no live PR created.
+
+- Added read-only Bitbucket Cloud SCM and commit-status adapters with paginated PR comments, plus SCM and CI commands. Bitbucket API responses are simulated in tests; Data Center and complete status pagination remain open.
 
 - Added GitHub Actions workflow-run reading through the independent CI adapter and CLI. An individual run was read from the project repository; pagination and filtering are also covered by simulated tests. Workflow dispatch remains open.
 

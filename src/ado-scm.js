@@ -1,9 +1,7 @@
 import { createAdoHttp } from './ado-http.js';
+import { branchRef } from './git-ref.js';
 
-function branchRef(value) {
-  if (typeof value !== 'string' || !value || value.startsWith('-') || value.startsWith('/') || value.endsWith('/') || value.endsWith('.') || value.includes('..') || value.includes('//') || value.includes('@{') || /[\x00-\x20\x7f~^:?*\[\\]/.test(value) || value.split('/').some(part => !part || part.startsWith('.') || part.endsWith('.lock'))) throw new TypeError('Invalid branch name');
-  return `refs/heads/${value}`;
-}
+
 
 /** Azure Repos REST adapter. The caller must perform readiness and publication checks. */
 export function createAdoScm({ organization, project, repository, token, fetchImpl = globalThis.fetch }) {
