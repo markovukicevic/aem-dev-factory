@@ -620,3 +620,15 @@ test('initializes a project from explicit non-secret provider configuration', as
   assert.match(JSON.parse(messages.logs.at(-1)).path, /providers\.json$/);
   assert.equal(await runCli(['project-init', configPath], { cwd, output }), 1);
 });
+
+test('inspects local project markers without executing project commands', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'inspect-project-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await writeFile(join(cwd, 'pom.xml'), '<project/>');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['project-inspect'], { cwd, output }), 0);
+  assert.ok(JSON.parse(messages.logs.at(-1)).signals.includes('Maven project marker'));
+});

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added read-only local project-marker inspection to assist setup. Markers do not establish runtime behavior, provider access or full project type.
+
 - Added explicit non-secret project provider setup and an initial `agent-init` skill. This is not yet the original initialization workflow and does not create its rules, MCP settings or legacy config.
 
 - Added local ticket artifact inspection and an initial Definition of Ready review skill. Artifact presence is not evidence of readiness; AI-client behavior remains untested.
