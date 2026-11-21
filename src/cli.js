@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { createGitHubPullRequest } from './github-pr-flow.js';
+import { createAdoPullRequest } from './ado-pr-flow.js';
 import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 import { saveGitHubIssueStory } from './issue-story.js';
@@ -7,10 +8,33 @@ import { saveTrackerStory } from './tracker-story.js';
 import { createTrackerProvider, createScmProvider } from './providers.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]\n       node bin/aem-devflow.js ado-pr-create <organization> <project> <repository> <config> <implement.md> <title> --body-file <path> [--draft] [--work-item <id>]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
-export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, readBody = readFile, cwd = process.cwd() } = {}) {
+export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, readBody = readFile, cwd = process.cwd() } = {}) {
+  if (args[0] === 'ado-pr-create') {
+    if (args.length < 9 || args.slice(1, 7).some(value => typeof value !== 'string' || !value.trim())) { output.error(usage); return 2; }
+    let bodyPath;
+    let draft = false;
+    const workItemIds = [];
+    for (let index = 7; index < args.length; index++) {
+      if (args[index] === '--body-file' && !bodyPath && args[index + 1]?.trim()) bodyPath = args[++index];
+      else if (args[index] === '--draft' && !draft) draft = true;
+      else if (args[index] === '--work-item' && /^[1-9][0-9]*$/.test(args[index + 1] ?? '') && Number.isSafeInteger(Number(args[index + 1])) && Number(args[index + 1]) <= 2147483647) workItemIds.push(Number(args[++index]));
+      else { output.error(usage); return 2; }
+    }
+    if (!bodyPath) { output.error(usage); return 2; }
+    if (!env.ADO_PAT) { output.error('Set ADO_PAT in the environment.'); return 2; }
+    try {
+      const body = await readBody(bodyPath, 'utf8');
+      const result = await createAzurePullRequest({ cwd, organization: args[1], project: args[2], repository: args[3], configPath: args[4], planPath: args[5], title: args[6], token: env.ADO_PAT, body, draft, workItemIds });
+      output.log(JSON.stringify(result, null, 2));
+      return result.created ? 0 : 1;
+    } catch (error) {
+      output.error(Number.isInteger(error?.status) ? `Azure DevOps request failed (${error.status})` : 'Unable to create pull request. Check the configuration, plan, branch and connection.');
+      return 1;
+    }
+  }
   if (args[0] === 'scm-pr') {
     if (args.length !== 3 || !/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2]))) { output.error(usage); return 2; }
     try {

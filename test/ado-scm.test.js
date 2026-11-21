@@ -30,3 +30,13 @@ test('rejects invalid branch names, IDs and same-branch PRs before a request', (
   assert.throws(() => scm.getPullRequest(0));
   assert.equal(calls, 0);
 });
+
+test('checks for active pull requests matching source and target', async () => {
+  let url;
+  const scm = createAdoScm({ organization: 'org', project: 'p', repository: 'r', token: 'secret', fetchImpl: async value => { url = value; return { ok: true, json: async () => ({ value: [{ pullRequestId: 7 }] }) }; } });
+  assert.equal((await scm.listActivePullRequests({ head: 'feature/123', base: 'main' }))[0].pullRequestId, 7);
+  const query = new URL(url).searchParams;
+  assert.equal(query.get('searchCriteria.status'), 'active');
+  assert.equal(query.get('searchCriteria.sourceRefName'), 'refs/heads/feature/123');
+  assert.equal(query.get('searchCriteria.targetRefName'), 'refs/heads/main');
+});

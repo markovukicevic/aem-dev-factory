@@ -108,4 +108,14 @@ Set `tracker` to `{"provider":"ado","organization":"my-org","project":"My Projec
 
 ### Azure Repos SCM
 
-Set `scm` to `{"provider":"ado","organization":"my-org","project":"My Project","repository":"my-repo"}` and provide `ADO_PAT`. `node bin/aem-devflow.js scm-pr /path/to/providers.json 123` reads a pull request. The library adapter can also read threads and submit a PR with explicit refs and optional Azure work-item IDs. Direct library writes do not run readiness checks; the GitHub-specific PR creation command does not support Azure Repos. Azure Repos operations have only been tested with simulated API responses.
+Set `scm` to `{"provider":"ado","organization":"my-org","project":"My Project","repository":"my-repo"}` and provide `ADO_PAT`. `node bin/aem-devflow.js scm-pr /path/to/providers.json 123` reads a pull request. The library adapter can also read threads and submit a PR with explicit refs and optional Azure work-item IDs. The direct library create method does not run readiness checks; an explicit Azure PR command provides a guarded alternative. Azure Repos operations have only been tested with simulated API responses.
+
+### Create an Azure Repos pull request (experimental)
+
+From the target repository, after publishing the branch, supply `ADO_PAT`, a tested config, plan, and reviewed description:
+
+```sh
+node /path/to/aem-devflow-max/bin/aem-devflow.js ado-pr-create ORG PROJECT REPO /path/to/config.yaml /path/to/implement.md "PR title" --body-file /path/to/pr-description.md --draft --work-item 123
+```
+
+`--draft` and `--work-item` are optional. The command runs readiness checks, verifies the origin, published commit, locally tracked base, and active PRs. It does not push, and it does not automatically retry an ambiguous failure. The checks are not atomic; local references can be stale and branches can change after inspection. Creation is tested with a simulated Azure API and local Git repositories, not a live Azure account.

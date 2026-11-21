@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an experimental Azure Repos PR command with readiness, origin, published branch, duplicate-PR and empty-diff checks. It was tested with local Git repositories and a simulated API; no live Azure PR was created.
+
 - Added an Azure Repos SCM adapter for reading PRs and threads and submitting PR requests, plus an SCM read command. These API calls are simulated-test only; the direct create method is not connected to readiness checks and has not created a real PR.
 
 - Added a read-only Azure DevOps Services work-item tracker and source export. It preserves fields, relations and paginated comments, uses a PAT, and has only simulated-response tests. Full Azure Repos workflow integration, work-item write-back and attachments remain open.

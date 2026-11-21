@@ -217,3 +217,17 @@ test('reads an Azure pull request using independently selected SCM settings', as
   assert.equal(JSON.parse(messages.logs[0]).pullRequestId, 7);
   assert.equal(await runCli(['scm-pr', 'providers.json', '-7'], options), 2);
 });
+
+test('creates Azure PRs only on explicit command and passes selected work-item IDs', async () => {
+  const { messages, output } = capture();
+  let input;
+  const options = { cwd: '/repo', output, env: { ADO_PAT: 'secret' }, readBody: async () => 'Description', createAzurePullRequest: async value => { input = value; return { created: true, pullRequest: { pullRequestId: 9 } }; } };
+  const args = ['ado-pr-create', 'org', 'project', 'repo', 'config.yaml', 'plan.md', 'Change', '--body-file', 'body.md', '--work-item', '12', '--draft'];
+  assert.equal(await runCli(args, options), 0);
+  assert.equal(input.token, 'secret');
+  assert.equal(input.body, 'Description');
+  assert.equal(input.draft, true);
+  assert.deepEqual(input.workItemIds, [12]);
+  assert.equal(JSON.parse(messages.logs[0]).pullRequest.pullRequestId, 9);
+  assert.equal(await runCli(args.concat(['--work-item', '-1']), options), 2);
+});
