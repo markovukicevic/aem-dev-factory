@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added normalized readiness-config consistency checks around tests and before PR creation across providers. Later races and changes not represented in normalized settings remain possible.
+
 - Bound PR creation to the same implementation-plan digest seen immediately after testing across all four providers. Changes after the final check remain possible.
 
 - Extended test-readiness consistency checks to reject a plan that changes during the test run, even when the changed plan still marks all steps done.

@@ -4,9 +4,9 @@ import { parseBitbucketOrigin } from '../src/bitbucket-origin.js';
 import { createBitbucketPullRequest } from '../src/bitbucket-pr-flow.js';
 
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', workspace: 'team', repository: 'site', token: 'token', title: 'Change' };
-const readiness = { planDigest: 'c'.repeat(64), steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
+const readiness = { configDigest: 'e'.repeat(64), planDigest: 'c'.repeat(64), steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
-const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ workspace: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ id: 1 }) }) });
+const deps = () => ({ readConfigDigest: async () => 'e'.repeat(64), inspect: async () => good, refresh: async () => good, originReader: async () => ({ workspace: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ id: 1 }) }) });
 
 test('recognizes only standard Bitbucket Cloud origins', () => {
   for (const remote of ['https://bitbucket.org/team/site.git', 'git@bitbucket.org:team/site.git', 'ssh://git@bitbucket.org/team/site']) assert.deepEqual(parseBitbucketOrigin(remote), { workspace: 'team', repository: 'site' });
@@ -86,4 +86,13 @@ test('rejects an implementation plan changed after testing', async () => {
   assert.equal(result.created, false);
   assert.equal(writes, 0);
   assert.match(result.blockers.join(' '), /plan changed/);
+});
+
+test('rejects readiness configuration changed after testing', async () => {
+  let writes = 0;
+  const dependencies = { ...deps(), readConfigDigest: async () => 'f'.repeat(64), makeClient: () => ({ createPullRequest: async () => { writes++; } }) };
+  const result = await createBitbucketPullRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /configuration changed/);
 });

@@ -1,4 +1,4 @@
-import { inspectConfiguredReadiness } from './configured-readiness.js';
+import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
 import { readGitLabOrigin } from './gitlab-origin.js';
 import { inspectPublishedBranch } from './published-branch.js';
@@ -8,6 +8,7 @@ import { createGitLabClient } from './gitlab.js';
 /** Explicit GitLab.com merge request creation; does not push or retry writes. */
 export async function createGitLabMergeRequest(input, dependencies = {}) {
   const inspect = dependencies.inspect ?? inspectConfiguredReadiness;
+  const configDigest = dependencies.readConfigDigest ?? readReadinessConfigDigest;
   const refresh = dependencies.refresh ?? inspectPlanReadiness;
   const originReader = dependencies.originReader ?? readGitLabOrigin;
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
@@ -24,6 +25,7 @@ export async function createGitLabMergeRequest(input, dependencies = {}) {
   const current = await refresh({ cwd: input.cwd, planPath: input.planPath, testsPassed: true, base: first.readiness.branch.base });
   if (!current.ready || current.readiness.branch.head !== head || current.readiness.branch.commit !== published.commit) return { created: false, blockers: [...current.blockers, ...(current.readiness.branch.head !== head || current.readiness.branch.commit !== published.commit ? ['The current branch or commit changed during inspection.'] : [])], warnings: current.warnings };
   if (!/^[a-f0-9]{64}$/.test(first.readiness.planDigest ?? '') || first.readiness.planDigest !== current.readiness.planDigest) return { created: false, blockers: ['The implementation plan changed after testing.'], warnings: current.warnings };
+  if (!/^[a-f0-9]{64}$/.test(first.readiness.configDigest ?? '') || first.readiness.configDigest !== await configDigest(input.configPath)) return { created: false, blockers: ['The readiness configuration changed after testing.'], warnings: current.warnings };
   const last = await publishedReader({ cwd: input.cwd, head });
   if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
   const base = current.readiness.branch.base;

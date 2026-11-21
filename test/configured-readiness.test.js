@@ -44,3 +44,16 @@ test('does not start testing when base-branch resolution fails', async () => {
   }));
   assert.equal(inspected, false);
 });
+
+test('rejects configuration changes while tests run', async () => {
+  let reads = 0;
+  const config = { scm: { baseBranch: 'main' }, test: { executable: 'npm', args: ['test'] } };
+  const result = await inspectConfiguredReadiness({ cwd: '/repo', configPath: '/config', planPath: '/plan' }, {
+    loadConfig: async () => ++reads === 1 ? config : { ...config, test: { executable: 'other', args: [] } },
+    resolveBase: async () => 'main',
+    inspect: async () => ({ ready: true, blockers: [], warnings: [], readiness: { checks: { testsPassed: true } } }),
+  });
+  assert.equal(result.ready, false);
+  assert.equal(result.readiness.checks.testsPassed, false);
+  assert.match(result.blockers.join(' '), /configuration changed/);
+});
