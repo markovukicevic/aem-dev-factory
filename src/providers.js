@@ -5,6 +5,7 @@ import { createAdoScm } from './ado-scm.js';
 import { createAdoCi } from './ado-ci.js';
 import { createBitbucketClient } from './bitbucket.js';
 import { createGitLabClient } from './gitlab.js';
+import { createConfluenceClient } from './confluence.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 
 function githubClient(config, options) {
@@ -54,7 +55,12 @@ export function createCiProvider(config, options = {}) {
   return { provider: 'github-actions', listCheckRuns: (sha, page) => client.listCheckRuns(sha, page), getCommitStatus: sha => client.getCommitStatus(sha), listWorkflowRuns: options => client.listWorkflowRuns(options), getWorkflowRun: id => client.getWorkflowRun(id) };
 }
 
+export function createDocumentationProvider(config, options = {}) {
+  if (config?.provider !== 'confluence') throw new Error('Unsupported documentation provider');
+  return createConfluenceClient({ baseUrl: config.baseUrl, email: options.confluenceEmail, token: options.confluenceToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+}
+
 export function createProviderSet(config, options = {}) {
   if (!config || typeof config !== 'object') throw new TypeError('Provider configuration is required');
-  return { tracker: createTrackerProvider(config.tracker, options), scm: createScmProvider(config.scm, options), ci: createCiProvider(config.ci, options) };
+  return { tracker: createTrackerProvider(config.tracker, options), scm: createScmProvider(config.scm, options), ci: createCiProvider(config.ci, options), ...(config.documentation ? { documentation: createDocumentationProvider(config.documentation, options) } : {}) };
 }

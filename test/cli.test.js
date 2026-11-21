@@ -366,3 +366,11 @@ test('reads hub status from the current repository without credentials', async t
   assert.equal(await runCli(['hub-status'], { cwd, env: {}, output }), 0);
   assert.deepEqual(JSON.parse(messages.logs[0]).dispatches, []);
 });
+
+test('reads an explicitly selected Confluence page with separate credentials', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { CONFLUENCE_EMAIL: 'user@example.com', CONFLUENCE_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ documentation: { provider: 'confluence' } }), makeDocumentation: (_config, credentials) => { assert.equal(credentials.confluenceToken, 'secret'); return { getPage: async id => ({ id, title: 'Docs' }) }; } };
+  assert.equal(await runCli(['confluence-page', 'providers.json', '123'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).id, '123');
+  assert.equal(await runCli(['confluence-page', 'providers.json', '../bad'], options), 2);
+});

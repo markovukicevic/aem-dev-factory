@@ -187,3 +187,7 @@ Set `ci` to `{"provider":"ado-pipelines","organization":"my-org","project":"My P
 ### Read multi-repository hub status
 
 From a hub directory with `hub.enabled: true` in `.ai/config.yaml`, `node /path/to/aem-dev-flow-max/bin/aem-devflow.js hub-status [ticket-id]` reads the reference project's `state/<ticket-id>/status.json` files. Missing or invalid entries are reported as incomplete. This does not launch agents, update status, or clean state; a recorded status does not prove a process is still running. Tests use synthetic hub files.
+
+### Read Confluence Cloud documentation
+
+Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"https://your-team.atlassian.net/wiki"}` and supply `CONFLUENCE_EMAIL` and `CONFLUENCE_API_TOKEN`. `confluence-page /path/to/providers.json 123` reads the explicitly selected page in Confluence storage format; it does not follow ticket links or modify content. This initial operation has only been tested with simulated responses.

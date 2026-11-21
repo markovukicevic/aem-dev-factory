@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an explicit read-only Confluence Cloud page operation with separate credentials and storage-format output. Tested with simulated responses; live verification, search and writes remain open.
+
 - Added read-only multi-repository hub status inspection for the reference status format, with incomplete results reported. An initial hub status skill is structurally validated; dispatch and cleanup are not implemented.
 
 - Added read-only Azure Pipelines build listing by branch and build lookup, including continuation tokens. These calls have simulated API tests only; branch results can include builds from different commits.
