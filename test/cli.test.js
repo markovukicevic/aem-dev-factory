@@ -450,3 +450,27 @@ test('inspects a signed webhook from files without executing a task', async t =>
   assert.equal(JSON.parse(messages.logs[0]).kind, 'issue');
   assert.equal(await runCli(['webhook-inspect', policy, headers, payload], { output, env: { GITHUB_WEBHOOK_SECRET: 'wrong' } }), 1);
 });
+
+test('claims an approved webhook once without running a job', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { createHmac } = await import('node:crypto');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-claim-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const body = JSON.stringify({ action: 'opened', issue: { number: 7 }, repository: { full_name: 'team/site' }, sender: { login: 'alex' } });
+  const signature = `sha256=${createHmac('sha256', 'secret').update(body).digest('hex')}`;
+  const policy = join(dir, 'policy.json');
+  const headers = join(dir, 'headers.json');
+  const payload = join(dir, 'body.json');
+  await writeFile(policy, JSON.stringify({ allowedRepositories: ['team/site'], allowedActors: ['alex'] }));
+  await writeFile(headers, JSON.stringify({ signature, event: 'issues', deliveryId: '12345678-1234-1234-1234-123456789abc' }));
+  await writeFile(payload, body);
+  const { messages, output } = capture();
+  const args = ['webhook-claim', policy, headers, payload, join(dir, 'claims')];
+  const options = { output, env: { GITHUB_WEBHOOK_SECRET: 'secret' } };
+  assert.equal(await runCli(args, options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).claimed, true);
+  assert.equal(await runCli(args, options), 1);
+  assert.equal(JSON.parse(messages.logs.at(-1)).reason, 'duplicate-payload');
+});
