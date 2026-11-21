@@ -239,3 +239,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 `bitbucket-pr-diffstat /path/to/providers.json <number>` reads Bitbucket Cloud PR changed-file statistics after validating the provider redirect and pagination URLs, and checks source and destination commit hashes before and after retrieval. It fails on incomplete pagination. Diff statistics are not a code diff; verify changes separately. Tested with simulated API responses only.
 
 `list-skills` shows bundled skill names, descriptions, plugins and whether the one-file installer supports them. A listed skill has not necessarily been tested in an AI client.
+
+### Initialize a ticket with source identity
+
+`ticket-init /path/to/providers.json <id>` fetches the configured tracker ticket once, creates or reuses its spec directory, stores non-secret tracker identity and writes a new `raw-story.md`. Existing directories without a matching identity and existing story files are not overwritten. A failure can leave an identity-only directory; inspect it before retrying. Identity is scoped to the configured provider and project. Existing legacy spec directories require manual review rather than automatic adoption.

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added single-fetch ticket initialization with a provider/project identity record and non-overwriting source export. Legacy directories are not adopted automatically; verified initialization in a temporary project against public `cli/cli` issue 15121.
+
 - Added a bundled skill catalog with descriptions and one-file installer compatibility; it does not establish AI-client discovery or behavior.
 
 - Added Bitbucket Cloud PR diffstat reads with validated same-repository redirects, bounded pagination and revision checks. Simulated tests only; this is metadata, not a full diff.

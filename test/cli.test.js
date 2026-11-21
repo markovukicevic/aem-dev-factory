@@ -580,3 +580,18 @@ test('lists bundled skills without modifying a target project', async () => {
   assert.ok(JSON.parse(messages.logs.at(-1)).skills.some(skill => skill.name === 'agent-req'));
   assert.equal(await runCli(['list-skills', 'extra'], { output }), 2);
 });
+
+test('fetches a tracker ticket once and initializes its source record', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const cwd = await mkdtemp(join(tmpdir(), 'ticket-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  let calls = 0;
+  const { messages, output } = capture();
+  const options = { cwd, output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'github', owner: 'team', repository: 'site' } }), makeTracker: () => ({ getTicket: async number => { calls++; return { provider: 'github', number, title: 'Title', body: 'Source', state: 'open', labels: [], comments: [] }; } }) };
+  assert.equal(await runCli(['ticket-init', 'providers.json', '7'], options), 0);
+  assert.equal(calls, 1);
+  assert.equal(JSON.parse(messages.logs.at(-1)).id, 'github-7');
+  assert.equal(await runCli(['ticket-init', 'providers.json', 'invalid'], options), 2);
+});
