@@ -1,5 +1,6 @@
 import { createGitHubClient } from './github.js';
 import { createJiraTracker } from './jira.js';
+import { createAdoTracker } from './ado.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 
 function githubClient(config, options) {
@@ -8,6 +9,7 @@ function githubClient(config, options) {
 
 /** Tracker, SCM and CI adapters can be chosen independently. */
 export function createTrackerProvider(config, options = {}) {
+  if (config?.provider === 'ado') return createAdoTracker({ organization: config.organization, project: config.project, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider === 'jira') return createJiraTracker({ baseUrl: config.baseUrl, email: options.jiraEmail, token: options.jiraToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider !== 'github') throw new Error('Unsupported tracker provider');
   const client = githubClient(config, options);

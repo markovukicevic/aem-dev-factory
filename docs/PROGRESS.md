@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added a read-only Azure DevOps Services work-item tracker and source export. It preserves fields, relations and paginated comments, uses a PAT, and has only simulated-response tests. Azure Repos, write-back and attachments remain open.
+
 - Added provider-configured source-story export for Jira and GitHub. Jira ADF is retained as JSON and existing files are not overwritten. Tested with simulated Jira data; attachments and live Jira verification remain open.
 
 ## 2026-11-20

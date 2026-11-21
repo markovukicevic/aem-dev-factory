@@ -92,7 +92,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 }
 ```
 
-`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented adapters cover GitHub Issues or Jira Cloud as trackers, GitHub SCM, and GitHub Actions. ADO, GitLab, and Bitbucket adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM and CI adapters currently cover GitHub and GitHub Actions. Azure Repos, GitLab, and Bitbucket adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
 
 ### Jira Cloud tracker
 
@@ -101,3 +101,7 @@ Set `tracker` to `{"provider":"jira","baseUrl":"https://your-team.atlassian.net"
 ### Export a tracker issue
 
 `node bin/aem-devflow.js tracker-export /path/to/providers.json TEAM-123 /path/to/raw-story.md` uses the configured tracker and creates a new source file without overwriting an existing one. It also accepts GitHub issue numbers for a GitHub tracker. Jira descriptions and comments remain in ADF JSON, rather than being converted to Markdown; attachments are not downloaded. Jira export has only been tested with simulated responses.
+
+### Azure DevOps Services tracker
+
+Set `tracker` to `{"provider":"ado","organization":"my-org","project":"My Project"}` and provide `ADO_PAT` in the environment. `tracker-ticket /path/to/providers.json 123` reads a work item and paginated comments. `tracker-export` writes the fields, relations and comments as untrusted source data, without overwriting an existing file. This initial adapter only supports Azure DevOps Services at `dev.azure.com`; it does not download attachments or write back, and has only been tested with simulated responses.

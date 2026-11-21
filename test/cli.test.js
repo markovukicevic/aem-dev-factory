@@ -188,3 +188,24 @@ test('exports a Jira tracker issue and preserves an existing story file', async 
   assert.equal(await runCli(args, options), 1);
   assert.match(messages.errors.at(-1), /not overwritten/);
 });
+
+test('uses Azure DevOps credentials for a numeric tracker ticket', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'ado' } }), makeTracker: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { getTicket: async id => ({ provider: 'ado', number: id }) }; } };
+  assert.equal(await runCli(['tracker-ticket', 'providers.json', '12'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).number, 12);
+});
+
+test('exports an Azure DevOps work item through the configured tracker', async t => {
+  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-ado-export-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'raw-story.md');
+  const { output } = capture();
+  const issue = { provider: 'ado', number: 12, title: 'Work', fields: { 'System.Title': 'Work' }, relations: [], comments: [] };
+  const options = { output, env: { ADO_PAT: 'secret' }, makeTracker: () => ({ getTicket: async number => { assert.equal(number, 12); return issue; } }), readBody: async () => JSON.stringify({ tracker: { provider: 'ado' } }) };
+  assert.equal(await runCli(['tracker-export', 'providers.json', '12', path], options), 0);
+  assert.match(await readFile(path, 'utf8'), /Azure DevOps work item/);
+});

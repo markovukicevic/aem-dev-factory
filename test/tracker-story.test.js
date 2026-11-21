@@ -29,3 +29,12 @@ test('rejects unexpected provider or malformed ADF', () => {
   assert.throws(() => renderTrackerStory({ ...issue, body: 'text' }));
   assert.throws(() => renderTrackerStory({ ...issue, key: '../bad' }));
 });
+
+test('preserves Azure work item fields, relations and comment text as untrusted source data', () => {
+  const ado = { provider: 'ado', number: 12, title: 'Fix', fields: { 'System.Title': 'Fix', 'Microsoft.VSTS.Common.AcceptanceCriteria': '<p>Keep</p>' }, relations: [{ rel: 'parent' }], comments: [{ id: 1, body: 'Comment ``` content' }] };
+  const story = renderTrackerStory(ado, { created: '2026-11-21T12:00:00Z' });
+  assert.match(story, /Azure DevOps work item/);
+  assert.match(story, /Microsoft.VSTS.Common.AcceptanceCriteria/);
+  assert.match(story, /````text/);
+  assert.match(story, /untrusted Azure DevOps content/);
+});

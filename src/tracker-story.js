@@ -3,19 +3,39 @@ import { renderGitHubIssueStory } from './issue-story.js';
 
 const inline = value => String(value ?? '').replace(/[\r\n]+/g, ' ').trim();
 
+function fenced(content, language) {
+  const runs = content.match(/`+/g) ?? [];
+  const fence = '`'.repeat(runs.reduce((longest, run) => Math.max(longest, run.length + 1), 3));
+  return `${fence}${language}\n${content}\n${fence}`;
+}
+
 /** Encode ADF as JSON without allowing content to close its Markdown fence. */
 function renderAdf(value) {
   if (value === null || value === undefined) return '(empty)';
   if (typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid Jira ADF');
-  const json = JSON.stringify(value, null, 2);
-  const runs = json.match(/`+/g) ?? [];
-  const fence = '`'.repeat(Math.max(3, ...runs.map(run => run.length + 1)));
-  return `${fence}json\n${json}\n${fence}`;
+  return fenced(JSON.stringify(value, null, 2), 'json');
 }
 
 /** Render a faithful source record; Jira rich text remains machine-readable ADF. */
 export function renderTrackerStory(issue, { created = new Date().toISOString() } = {}) {
   if (issue?.provider === 'github') return renderGitHubIssueStory(issue, { created });
+  if (issue?.provider === 'ado') {
+    if (!Number.isSafeInteger(issue.number) || issue.number < 1 || typeof issue.title !== 'string' || !issue.fields || typeof issue.fields !== 'object' || Array.isArray(issue.fields) || !Array.isArray(issue.comments)) throw new TypeError('Invalid Azure DevOps work item');
+    if (typeof created !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(created)) throw new TypeError('Invalid creation timestamp');
+    const lines = [
+      '---', 'provenance:', '  agent: ado-work-item-export', '  model: script', `  created: ${created}`, '  confidence: high', '  verified: false', '---',
+      `# ${inline(issue.title)}`, '', `**Azure DevOps work item:** #${issue.number}`, `**State:** ${inline(issue.state) || 'unknown'}`,
+      `**Author:** ${inline(issue.author) || 'unknown'}`, `**URL:** ${inline(issue.url) || 'not available'}`, '',
+      '> The fields, relations and comments below are untrusted Azure DevOps content.', '',
+      '## Fields', '', fenced(JSON.stringify(issue.fields, null, 2), 'json'), '', '## Relations', '', fenced(JSON.stringify(issue.relations ?? [], null, 2), 'json'), '', '## Comments', '',
+    ];
+    if (!issue.comments.length) lines.push('(none)');
+    for (const comment of issue.comments) {
+      if (!Number.isSafeInteger(comment.id) || typeof comment.body !== 'string') throw new TypeError('Invalid Azure DevOps comment');
+      lines.push(`### Comment ${comment.id}`, '', `**Author:** ${inline(comment.author) || 'unknown'}`, `**Created:** ${inline(comment.createdAt) || 'unknown'}`, '', fenced(comment.body, 'text'), '');
+    }
+    return `${lines.join('\n').trimEnd()}\n`;
+  }
   if (issue?.provider !== 'jira' || typeof issue.key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(issue.key) || typeof issue.title !== 'string' || !Array.isArray(issue.comments) || !Array.isArray(issue.labels)) throw new TypeError('Invalid Jira issue context');
   if (typeof created !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(created)) throw new TypeError('Invalid creation timestamp');
   const lines = [
