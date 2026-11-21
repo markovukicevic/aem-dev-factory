@@ -53,3 +53,16 @@ test('lists all open PRs for exact source and destination branch filters', async
   assert.equal(query.get('state'), 'OPEN');
   assert.match(query.get('q'), /source\.branch\.name = "feature\/123"/);
 });
+
+test('collects all Bitbucket commit status pages and rejects unsafe or incomplete pagination', async () => {
+  let calls = 0;
+  const ci = createCiProvider({ provider: 'bitbucket-pipelines', workspace: 'team', repository: 'site' }, { bitbucketToken: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ++calls === 1 ? { values: [{ state: 'SUCCESSFUL' }], next: 'https://api.bitbucket.org/2.0/repositories/team/site/commit/123abcd/statuses?page=2' } : { values: [{ state: 'FAILED' }] } }) });
+  assert.deepEqual((await ci.getAllCommitStatuses('123abcd')).map(item => item.state), ['SUCCESSFUL', 'FAILED']);
+  assert.throws(() => ci.getAllCommitStatuses('../bad'));
+  for (const next of ['https://evil.example/statuses?page=2', 'https://api.bitbucket.org/2.0/repositories/other/site/commit/123abcd/statuses?page=2']) {
+    const client = createBitbucketClient({ workspace: 'team', repository: 'site', token: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ({ values: [], next }) }) });
+    await assert.rejects(client.getAllCommitStatuses('123abcd'), /Invalid Bitbucket next page/);
+  }
+  const limited = createBitbucketClient({ workspace: 'team', repository: 'site', token: 'secret', maxPages: 1, fetchImpl: async () => ({ ok: true, json: async () => ({ values: [], next: 'https://api.bitbucket.org/2.0/repositories/team/site/commit/123abcd/statuses?page=2' }) }) });
+  await assert.rejects(limited.getAllCommitStatuses('123abcd'), /incomplete/);
+});

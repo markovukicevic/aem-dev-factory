@@ -482,3 +482,12 @@ test('summarizes GitHub CI through the configured provider', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).state, 'success');
   assert.equal(await runCli(['ci-summary', 'providers.json', 'main'], options), 2);
 });
+
+test('reads complete Bitbucket CI status only for the configured provider', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'bitbucket-pipelines' } }), makeCi: (config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); return { getAllCommitStatuses: async sha => [{ sha }] }; } };
+  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).values[0].sha, '123abcd');
+  assert.equal(await runCli(['ci-status-all', 'providers.json', 'main'], options), 2);
+  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], { ...options, readBody: async () => '{"ci":{"provider":"github-actions"}}' }), 1);
+});

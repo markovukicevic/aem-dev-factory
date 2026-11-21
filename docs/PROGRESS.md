@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added explicit paginated Bitbucket Cloud commit-status retrieval with bounded, validated next links; API behavior has only been tested using simulated responses.
+
 - Added an initial plan validation skill covering requirement mapping, scope, dependencies, paths and verification; client behavior has not been tested.
 
 - Added a conservative GitHub CI summary for observed check runs and classic statuses. It signals incomplete results and does not evaluate required branch protection rules.

@@ -138,7 +138,7 @@ With a configured `ci` provider and a token with Actions read access, `ci-runs /
 
 ### Bitbucket Cloud
 
-Set `scm` to `{"provider":"bitbucket-cloud","workspace":"my-team","repository":"site"}` and provide `BITBUCKET_TOKEN` as a Bitbucket Cloud access token. `scm-pr /path/to/providers.json 123` reads a PR. The library adapter can also read its comment pages, rejecting unexpected next-page URLs and incomplete results. Set `ci` to `{"provider":"bitbucket-pipelines","workspace":"my-team","repository":"site"}` and use `ci-status /path/to/providers.json <commit-sha>` to read the first page of commit statuses. Further status pages are not fetched automatically. Bitbucket Data Center is not supported, and these reads have only been tested with simulated responses.
+Set `scm` to `{"provider":"bitbucket-cloud","workspace":"my-team","repository":"site"}` and provide `BITBUCKET_TOKEN` as a Bitbucket Cloud access token. `scm-pr /path/to/providers.json 123` reads a PR. The library adapter can also read its comment pages, rejecting unexpected next-page URLs and incomplete results. Set `ci` to `{"provider":"bitbucket-pipelines","workspace":"my-team","repository":"site"}` and use `ci-status /path/to/providers.json <commit-sha>` to read the first page of commit statuses. For a complete list use `ci-status-all /path/to/providers.json <commit-sha>`; it follows up to 10 pages and fails if the result is incomplete or a next-page URL is unsafe. Bitbucket Data Center is not supported, and these reads have only been tested with simulated responses.
 
 ### Create a Bitbucket Cloud pull request (experimental)
 

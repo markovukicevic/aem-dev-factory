@@ -61,6 +61,10 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
       if (head === base) throw new TypeError('Source and target branches must differ');
       return request(endpoint('/pullrequests'), { method: 'POST', body: { title, description: body, source: { branch: { name: head } }, destination: { branch: { name: base } }, draft, close_source_branch: false } });
     },
+    getAllCommitStatuses(sha) {
+      if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('Invalid commit SHA');
+      return collect(`${root}/commit/${sha}/statuses`, new URLSearchParams({ pagelen: '100' }));
+    },
     getCommitStatuses(sha) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('Invalid commit SHA');
       return get(endpoint(`/commit/${sha}/statuses?pagelen=100`));

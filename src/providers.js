@@ -48,7 +48,7 @@ export function createCiProvider(config, options = {}) {
   }
   if (config?.provider === 'bitbucket-pipelines') {
     const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
-    return { provider: 'bitbucket-pipelines', getCommitStatuses: client.getCommitStatuses };
+    return { provider: 'bitbucket-pipelines', getCommitStatuses: client.getCommitStatuses, getAllCommitStatuses: client.getAllCommitStatuses };
   }
   if (config?.provider !== 'github-actions') throw new Error('Unsupported CI provider');
   const client = githubClient(config, options);
