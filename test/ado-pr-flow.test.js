@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createAdoPullRequest } from '../src/ado-pr-flow.js';
 
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', organization: 'org', project: 'project', repository: 'repo', token: 'token', title: 'Change', workItemIds: [12] };
-const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
+const readiness = { planDigest: 'c'.repeat(64), steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
 const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ organization: 'org', project: 'project', repository: 'repo' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listActivePullRequests: async () => [], createPullRequest: async () => ({ pullRequestId: 1 }) }) });
 
@@ -71,4 +71,13 @@ test('rejects a published commit different from the tested commit', async () => 
   assert.equal(result.created, false);
   assert.equal(writes, 0);
   assert.match(result.blockers.join(' '), /tested commit/);
+});
+
+test('rejects an implementation plan changed after testing', async () => {
+  let writes = 0;
+  const dependencies = { ...deps(), refresh: async () => ({ ...good, readiness: { ...readiness, planDigest: 'd'.repeat(64) } }), makeClient: () => ({ createPullRequest: async () => { writes++; } }) };
+  const result = await createAdoPullRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /plan changed/);
 });

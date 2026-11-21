@@ -4,7 +4,7 @@ import { parseGitLabOrigin } from '../src/gitlab-origin.js';
 import { createGitLabMergeRequest } from '../src/gitlab-pr-flow.js';
 
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', project: 'team/sub/site', token: 'token', title: 'Change' };
-const readiness = { steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
+const readiness = { planDigest: 'c'.repeat(64), steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
 const deps = () => ({ inspect: async () => good, refresh: async () => good, originReader: async () => ({ project: 'team/sub/site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ iid: 1 }) }) });
 
@@ -77,4 +77,13 @@ test('rejects a published commit different from the tested commit', async () => 
   assert.equal(result.created, false);
   assert.equal(writes, 0);
   assert.match(result.blockers.join(' '), /tested commit/);
+});
+
+test('rejects an implementation plan changed after testing', async () => {
+  let writes = 0;
+  const dependencies = { ...deps(), refresh: async () => ({ ...good, readiness: { ...readiness, planDigest: 'd'.repeat(64) } }), makeClient: () => ({ createPullRequest: async () => { writes++; } }) };
+  const result = await createGitLabMergeRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /plan changed/);
 });

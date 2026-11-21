@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Bound PR creation to the same implementation-plan digest seen immediately after testing across all four providers. Changes after the final check remain possible.
+
 - Extended test-readiness consistency checks to reject a plan that changes during the test run, even when the changed plan still marks all steps done.
 
 - Hardened PR readiness to bind tests to the same clean branch and commit before and after testing, and require that commit to match the published branch across all four providers. Concurrent changes after checks remain possible.

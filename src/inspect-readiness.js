@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { runTestCommand } from './command-runner.js';
 import { parseImplementationPlan } from './plan-parser.js';
 import { readGitState } from './git-state.js';
@@ -21,7 +22,9 @@ export async function inspectPlanReadiness({ cwd, planPath, testsPassed, base },
   if (typeof planPath !== 'string' || !planPath.trim()) throw new TypeError('planPath is required');
   const text = await (dependencies.readPlan ?? readFile)(planPath, 'utf8');
   const plan = parseImplementationPlan(text);
-  return inspectPullRequestReadiness({ cwd, ...plan, testsPassed, base }, dependencies);
+  const result = await inspectPullRequestReadiness({ cwd, ...plan, testsPassed, base }, dependencies);
+  result.readiness.planDigest = createHash('sha256').update(text, 'utf8').digest('hex');
+  return result;
 }
 
 /** Validate a plan, run the selected tests, then refresh plan and Git evidence. */
