@@ -550,3 +550,17 @@ test('builds GitHub review context using CI from the same SCM repository', async
   assert.equal(JSON.parse(messages.logs.at(-1)).ciSummary.state, 'unknown');
   assert.equal(await runCli(['github-review-context', 'providers.json', 'bad'], options), 2);
 });
+
+test('reports plan status without changing the plan', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'aem-plan-cli-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'implement.md');
+  await writeFile(path, '### Step 1: Change\n**Status:** pending\n');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['plan-status', path], { output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).next.number, 1);
+  assert.equal(await runCli(['plan-status'], { output }), 2);
+});

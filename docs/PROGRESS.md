@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added bounded, read-only plan progress inspection and an initial sequential `agent-step-all` workflow. Declared statuses do not prove verification; real AI-client behavior is untested.
+
 - Expanded the GitHub CI summary with observed check names, statuses and conclusions so uncertain or failing results can be inspected.
 
 - Connected GitHub PR discussion, changed-file metadata and CI summary into a single revision-checked read-only review context; full diffs, required checks and potentially fork CI remain outside its coverage. Verified against public `cli/cli` PR 15117.

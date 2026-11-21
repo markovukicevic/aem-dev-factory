@@ -231,3 +231,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 `bitbucket-pr-statuses /path/to/providers.json <number>` reads up to 10 pages of statuses associated with a Bitbucket Cloud pull request. The command fails rather than returning a partial list when pagination is incomplete. It does not establish which checks are required or whether branch protection is satisfied. Tested with simulated API responses only.
 
 `github-review-context /path/to/providers.json <number>` gathers GitHub PR discussion, changed-file metadata and a CI summary for the PR head in the configured SCM repository. It stops if the PR head, base or file count changes during collection. It does not fetch a complete diff or review threads, evaluate branch protection, or guarantee that fork CI results are visible in the base repository. Discussion and checks can also change independently.
+
+### Plan execution progress
+
+`plan-status <implement.md>` reads the supported plan format, reports declared step counts and selects the first pending step only when none are blocked or in progress. An in-progress step requires inspection before resuming. This is a read-only status summary; `allStepsDone` does not establish test or review success. The initial `agent-step-all` skill describes a sequential execution workflow, but has not been validated in an AI client.

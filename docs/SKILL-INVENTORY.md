@@ -4,9 +4,9 @@ Compared against the local reference checkout at `7ecd2a0` (1.1.0). A matching n
 
 ## agent-core
 
-Reference skills: 49. Same-named Max skills: 8.
+Reference skills: 49. Same-named Max skills: 9.
 
-**Initial Max skills:** `agent-plan`, `agent-plan-validate`, `agent-pr`, `agent-pr-review`, `agent-req`, `agent-req-dod`, `agent-step`, `agent-step-verify`.
+**Initial Max skills:** `agent-plan`, `agent-plan-validate`, `agent-pr`, `agent-pr-review`, `agent-req`, `agent-req-dod`, `agent-step`, `agent-step-all`, `agent-step-verify`.
 
 **Reference skills without a same-named Max skill:**
 
@@ -45,7 +45,6 @@ Reference skills: 49. Same-named Max skills: 8.
 - `agent-security`
 - `agent-simple`
 - `agent-simplify`
-- `agent-step-all`
 - `agent-step-build`
 - `agent-step-fix`
 - `agent-sync`
