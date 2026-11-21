@@ -4,13 +4,27 @@ import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 import { saveGitHubIssueStory } from './issue-story.js';
 import { saveTrackerStory } from './tracker-story.js';
-import { createTrackerProvider } from './providers.js';
+import { createTrackerProvider, createScmProvider } from './providers.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js scm-pr <providers.json> <number>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
-export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, makeTracker = createTrackerProvider, readBody = readFile, cwd = process.cwd() } = {}) {
+export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, readBody = readFile, cwd = process.cwd() } = {}) {
+  if (args[0] === 'scm-pr') {
+    if (args.length !== 3 || !/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2]))) { output.error(usage); return 2; }
+    try {
+      const config = JSON.parse(await readBody(args[1], 'utf8'));
+      if (config.scm?.provider === 'github' && !env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment.'); return 2; }
+      if (config.scm?.provider === 'ado' && !env.ADO_PAT) { output.error('Set ADO_PAT in the environment.'); return 2; }
+      const scm = makeScm(config.scm, { token: env.GITHUB_TOKEN, adoToken: env.ADO_PAT });
+      output.log(JSON.stringify(await scm.getPullRequest(Number(args[2])), null, 2));
+      return 0;
+    } catch {
+      output.error('Unable to read pull request. Check the configuration and connection.');
+      return 1;
+    }
+  }
   if (args[0] === 'tracker-ticket' || args[0] === 'tracker-export') {
     const exporting = args[0] === 'tracker-export';
     if (args.length !== (exporting ? 4 : 3) || typeof args[2] !== 'string' || !args[2].trim() || (exporting && !args[3]?.trim())) { output.error(usage); return 2; }

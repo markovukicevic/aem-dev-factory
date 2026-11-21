@@ -1,6 +1,7 @@
 import { createGitHubClient } from './github.js';
 import { createJiraTracker } from './jira.js';
 import { createAdoTracker } from './ado.js';
+import { createAdoScm } from './ado-scm.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 
 function githubClient(config, options) {
@@ -17,6 +18,7 @@ export function createTrackerProvider(config, options = {}) {
 }
 
 export function createScmProvider(config, options = {}) {
+  if (config?.provider === 'ado') return createAdoScm({ organization: config.organization, project: config.project, repository: config.repository, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider !== 'github') throw new Error('Unsupported SCM provider');
   const client = githubClient(config, options);
   return { provider: 'github', getPullRequest: number => client.getPullRequest(number), createPullRequest: input => client.createPullRequest(input) };

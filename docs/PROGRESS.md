@@ -2,7 +2,9 @@
 
 ## 2026-11-21
 
-- Added a read-only Azure DevOps Services work-item tracker and source export. It preserves fields, relations and paginated comments, uses a PAT, and has only simulated-response tests. Azure Repos, write-back and attachments remain open.
+- Added an Azure Repos SCM adapter for reading PRs and threads and submitting PR requests, plus an SCM read command. These API calls are simulated-test only; the direct create method is not connected to readiness checks and has not created a real PR.
+
+- Added a read-only Azure DevOps Services work-item tracker and source export. It preserves fields, relations and paginated comments, uses a PAT, and has only simulated-response tests. Full Azure Repos workflow integration, work-item write-back and attachments remain open.
 
 - Added provider-configured source-story export for Jira and GitHub. Jira ADF is retained as JSON and existing files are not overwritten. Tested with simulated Jira data; attachments and live Jira verification remain open.
 

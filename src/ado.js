@@ -1,20 +1,9 @@
+import { createAdoHttp } from './ado-http.js';
+
 /** Read Azure DevOps Services work items without following server-supplied URLs. */
 export function createAdoTracker({ organization, project, token, fetchImpl = globalThis.fetch, maxPages = 10 }) {
-  if (typeof organization !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9-]*$/.test(organization)) throw new TypeError('Invalid Azure DevOps organization');
-  if (typeof project !== 'string' || !project.trim() || project !== project.trim() || /[\\/\u0000-\u001f]/.test(project) || project === '.' || project === '..') throw new TypeError('Invalid Azure DevOps project');
-  if (typeof token !== 'string' || !token.trim()) throw new TypeError('Azure DevOps PAT is required');
-  if (typeof fetchImpl !== 'function' || !Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 100) throw new TypeError('Invalid Azure DevOps client options');
-  const base = `https://dev.azure.com/${encodeURIComponent(organization)}/${encodeURIComponent(project)}`;
-  const authorization = `Basic ${Buffer.from(`:${token}`).toString('base64')}`;
-  async function get(path) {
-    const response = await fetchImpl(`${base}${path}`, { method: 'GET', headers: { Accept: 'application/json', Authorization: authorization }, redirect: 'error' });
-    if (!response.ok) {
-      const error = new Error(`Azure DevOps request failed (${response.status})`);
-      error.status = response.status;
-      throw error;
-    }
-    return response.json();
-  }
+  if (!Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 100) throw new TypeError('Invalid Azure DevOps client options');
+  const { base, request: get } = createAdoHttp({ organization, project, token, fetchImpl });
   return {
     provider: 'ado',
     async getTicket(id) {

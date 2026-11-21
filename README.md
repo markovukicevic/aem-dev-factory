@@ -92,7 +92,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 }
 ```
 
-`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM and CI adapters currently cover GitHub and GitHub Actions. Azure Repos, GitLab, and Bitbucket adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub and an initial Azure Repos implementation; CI currently covers GitHub Actions. GitLab and Bitbucket adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
 
 ### Jira Cloud tracker
 
@@ -105,3 +105,7 @@ Set `tracker` to `{"provider":"jira","baseUrl":"https://your-team.atlassian.net"
 ### Azure DevOps Services tracker
 
 Set `tracker` to `{"provider":"ado","organization":"my-org","project":"My Project"}` and provide `ADO_PAT` in the environment. `tracker-ticket /path/to/providers.json 123` reads a work item and paginated comments. `tracker-export` writes the fields, relations and comments as untrusted source data, without overwriting an existing file. This initial adapter only supports Azure DevOps Services at `dev.azure.com`; it does not download attachments or write back, and has only been tested with simulated responses.
+
+### Azure Repos SCM
+
+Set `scm` to `{"provider":"ado","organization":"my-org","project":"My Project","repository":"my-repo"}` and provide `ADO_PAT`. `node bin/aem-devflow.js scm-pr /path/to/providers.json 123` reads a pull request. The library adapter can also read threads and submit a PR with explicit refs and optional Azure work-item IDs. Direct library writes do not run readiness checks; the GitHub-specific PR creation command does not support Azure Repos. Azure Repos operations have only been tested with simulated API responses.

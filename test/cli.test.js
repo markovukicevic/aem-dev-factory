@@ -209,3 +209,11 @@ test('exports an Azure DevOps work item through the configured tracker', async t
   assert.equal(await runCli(['tracker-export', 'providers.json', '12', path], options), 0);
   assert.match(await readFile(path, 'utf8'), /Azure DevOps work item/);
 });
+
+test('reads an Azure pull request using independently selected SCM settings', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: (config, credentials) => { assert.equal(config.provider, 'ado'); assert.equal(credentials.adoToken, 'secret'); return { getPullRequest: async id => ({ pullRequestId: id }) }; } };
+  assert.equal(await runCli(['scm-pr', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).pullRequestId, 7);
+  assert.equal(await runCli(['scm-pr', 'providers.json', '-7'], options), 2);
+});

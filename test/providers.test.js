@@ -25,7 +25,7 @@ test('routes tracker, SCM and CI requests to their independently configured repo
 });
 
 test('rejects unsupported provider combinations instead of silently falling back', () => {
-  for (const [key, provider] of [['tracker', 'bitbucket'], ['scm', 'ado'], ['ci', 'gitlab']]) {
+  for (const [key, provider] of [['tracker', 'bitbucket'], ['scm', 'bitbucket'], ['ci', 'gitlab']]) {
     assert.throws(() => createProviderSet({ ...config, [key]: { provider } }, { token: 'secret' }), /Unsupported/);
   }
 });
