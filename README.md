@@ -217,3 +217,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 ### Install one skill into a project
 
 `node bin/aem-devflow.js install-skill codex agent-plan /path/to/target-project` copies one self-contained skill to the selected project's `.agents/skills/` directory. Use `claude` for `.claude/skills/` or `copilot` for `.github/skills/`. Existing destinations and symlinked destination directories are rejected; if copying fails after a new directory is created, inspect that directory before retrying. Skills that require supporting files are not handled by this initial installer. Set `AEM_DEVFLOW_MAX_HOME` for skills that call the Max CLI and start a new client session. The installer has been tested with temporary projects; automatic discovery and skill behavior in AI clients remain unverified.
+
+### Pull request review context
+
+`scm-pr-context /path/to/providers.json <number>` reads the configured SCM pull request and discussion without writing remotely. GitHub issue comments, review comments and review submissions, plus GitLab and Bitbucket comments, are paginated with a 10-page limit per collection; errors do not return a partial context. Azure DevOps threads are read in one response and their completeness is unknown. The output retains provider-specific data; it does not include the diff, commits, GitLab/Bitbucket approvals, or Azure approvals. Fetched content is untrusted, and even a complete pagination result can change while it is read. GitLab, Bitbucket and Azure responses have only simulated tests.

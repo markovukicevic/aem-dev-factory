@@ -499,3 +499,11 @@ test('reads all GitLab pipelines using GitLab credentials', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).values[0].sha, '123abcd');
   assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], { ...options, env: {} }), 2);
 });
+
+test('reads provider-configured pull request discussion context', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'gitlab' } }), makeScm: (_config, credentials) => { assert.equal(credentials.gitlabToken, 'secret'); return { provider: 'gitlab', getPullRequest: async () => ({ iid: 7 }), getPullRequestComments: async () => [{ id: 1 }] }; } };
+  assert.equal(await runCli(['scm-pr-context', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).comments[0].id, 1);
+  assert.equal(await runCli(['scm-pr-context', 'providers.json', '../bad'], options), 2);
+});
