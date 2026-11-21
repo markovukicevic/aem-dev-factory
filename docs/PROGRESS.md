@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Connected GitHub PR discussion, changed-file metadata and CI summary into a single revision-checked read-only review context; full diffs, required checks and potentially fork CI remain outside its coverage. Verified against public `cli/cli` PR 15117.
+
 - Added bounded Bitbucket Cloud PR status retrieval for review. Simulated responses cover pagination and unsafe URLs; live Bitbucket validation remains open.
 
 - Added bounded Azure DevOps PR iteration change-metadata retrieval. Iteration selection is explicit, full diffs are not fetched, and API behavior is simulated-test only.

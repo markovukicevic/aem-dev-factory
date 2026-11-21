@@ -541,3 +541,12 @@ test('reads Bitbucket pull request statuses with the configured SCM', async () =
   assert.equal(JSON.parse(messages.logs.at(-1)).statuses[0].number, 7);
   assert.equal(await runCli(['bitbucket-pr-statuses', 'providers.json', '0'], options), 2);
 });
+
+test('builds GitHub review context using CI from the same SCM repository', async () => {
+  const { messages, output } = capture();
+  const p = { number: 7, head: { sha: 'a'.repeat(40) }, base: { sha: 'b'.repeat(40) }, changed_files: 0 };
+  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'github', owner: 'team', repository: 'site' }, ci: { provider: 'gitlab-ci' } }), makeScm: () => ({ provider: 'github', getPullRequest: async () => p, listIssueComments: async () => [], listReviewComments: async () => [], listReviews: async () => [], listPullRequestFiles: async () => [] }), makeCi: config => { assert.deepEqual(config, { provider: 'github-actions', owner: 'team', repository: 'site' }); return { provider: 'github-actions', listCheckRuns: async () => ({ total_count: 0, check_runs: [] }), getCommitStatus: async () => ({ total_count: 0 }) }; } };
+  assert.equal(await runCli(['github-review-context', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).ciSummary.state, 'unknown');
+  assert.equal(await runCli(['github-review-context', 'providers.json', 'bad'], options), 2);
+});
