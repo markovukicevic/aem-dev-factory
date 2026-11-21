@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an initial plan validation skill covering requirement mapping, scope, dependencies, paths and verification; client behavior has not been tested.
+
 - Added a conservative GitHub CI summary for observed check runs and classic statuses. It signals incomplete results and does not evaluate required branch protection rules.
 
 - Added a name-by-name reference skill inventory to guide incremental parity work; matching names do not establish equivalent behavior.
