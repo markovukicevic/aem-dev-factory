@@ -249,3 +249,5 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 ### Initialize a project
 
 From the target project, `project-inspect` reports local technology markers without running commands or inferring provider credentials. `project-init <providers.json>` validates an explicit JSON provider configuration and creates `.ai/providers.json` and `.ai/specs` without replacing existing files. Only recognized, non-secret provider fields are accepted; credentials must be supplied through environment variables. It creates directories before the config file and can leave them behind on failure. This setup does not recreate the original `.ai/config.yaml`, rules, MCP configuration, or test settings; those remain separate work.
+
+`aem-doctor-component <component-directory>` inspects one local AEM component definition, local dialog presence and immediate HTML templates. Missing files are warnings, not proof of a defect: inheritance and alternative rendering are possible. It does not validate the live AEM instance, OSGi, dispatcher or full XML semantics.
