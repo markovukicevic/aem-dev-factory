@@ -2,7 +2,9 @@
 
 A new implementation inspired by AEM DevFlow, aiming to support its development workflows across multiple ticket, source-control and CI providers.
 
-This project is at an early stage. It does not yet provide the original project's plugins, AEM workflows, or end-to-end provider integrations. See [the plan](docs/PLAN.md), [reference inventory](docs/REFERENCE-INVENTORY.md), and [progress record](docs/PROGRESS.md).
+This project is at an early stage. Its initial plugins and workflows do not yet match the original project's functionality, and end-to-end provider integrations remain incomplete. See [the plan](docs/PLAN.md), [reference inventory](docs/REFERENCE-INVENTORY.md), and [progress record](docs/PROGRESS.md).
+
+Run `node bin/aem-devflow.js --help` for command syntax and `node bin/aem-devflow.js list-skills` for bundled skills.
 
 ## Run tests
 
@@ -30,7 +32,7 @@ These read-only commands print pull request or issue JSON; the context command a
 
 The issue context command retrieves the issue and comment pages, returning an error instead of silently truncating if its page limit is reached. It rejects pull requests returned by the Issues API and has been read-tested against a public GitHub issue. It does not fetch attachments.
 
-The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage so far consists of reading a public pull request, its context, and an issue; other operations have only been tested with simulated responses.
+The client is an early component, not a replacement for AEM DevFlow's existing plugins. Real-service coverage includes selected public GitHub issue and pull-request reads, ticket initialization, review context and Actions reads. Other providers and write operations have primarily been tested with simulated responses.
 
 ## PR readiness components
 
@@ -93,7 +95,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 }
 ```
 
-`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub, an initial Azure Repos implementation, and read-only Bitbucket Cloud. CI adapters cover GitHub Actions, Bitbucket commit status reads, GitLab CI, and Azure Pipelines builds. Bitbucket Data Center and GitLab self-managed adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. Tracker adapters cover GitHub Issues, GitLab.com issues, Jira Cloud, and Azure DevOps Services work items. SCM adapters cover GitHub, Azure Repos, GitLab.com and Bitbucket Cloud, including experimental guarded PR or MR creation. CI adapters cover GitHub Actions, Bitbucket commit status reads, GitLab CI, and Azure Pipelines builds. Bitbucket Data Center and GitLab self-managed adapters are not implemented; unsupported choices fail rather than falling back. Full provider workflows are not implemented yet. Bitbucket Cloud removed its native issue-tracker API in August 2026; configure a supported external tracker such as Jira instead.
 
 ### Jira Cloud tracker
 

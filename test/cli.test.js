@@ -748,3 +748,10 @@ test('writes a new local AEM evidence report', async t => {
   assert.equal(JSON.parse(messages.logs.at(-1)).path, report);
   assert.equal(await runCli(['aem-component-report', dir, report], { output }), 1);
 });
+
+test('shows help successfully with the supported PR creation commands', async () => {
+  const { messages, output } = capture();
+  assert.equal(await runCli(['--help'], { output }), 0);
+  assert.match(messages.logs.at(-1), /gitlab-mr-create/);
+  assert.match(messages.logs.at(-1), /bitbucket-pr-create/);
+});

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added built-in CLI help and an initial `agent-help` skill; refreshed the provider overview, including the removal of Bitbucket Cloud native issue tracking.
+
 - Added non-overwriting local AEM component evidence reports and an initial doc-generation skill. Live AEM pages, authoring guides and screenshots are not implemented.
 
 - Added bounded Azure build lookup by branch and exact commit, with unknown versions and pagination reported. Project-wide results do not establish repository identity or required checks; simulated tests only.
