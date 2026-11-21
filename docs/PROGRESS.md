@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added explicit sequential local hub command execution with clean-repository preflight, per-repository state and stop-on-failure behavior. It is not an agent dispatcher, does not validate work and offers no subprocess isolation or automatic recovery.
+
 - Added preflighted batch installation of explicitly selected self-contained skills. It reports partial failure and never rolls back user files; client discovery remains unverified.
 
 - Added non-overwriting automated test-evidence recording tied to observed plan, configuration and Git state. It does not certify review, other checks or final verification.

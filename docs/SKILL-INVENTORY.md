@@ -49,13 +49,12 @@ Reference skills: 49. Same-named Max skills: 13.
 
 ## agent-hub
 
-Reference skills: 5. Same-named Max skills: 4.
+Reference skills: 5. Same-named Max skills: 5.
 
-**Initial Max skills:** `agent-discover-repos`, `agent-hub-config`, `agent-hub-init`, `agent-hub-status`.
+**Initial Max skills:** `agent-discover-repos`, `agent-hub-config`, `agent-hub-dispatch`, `agent-hub-init`, `agent-hub-status`.
 
 **Reference skills without a same-named Max skill:**
 
-- `agent-hub-dispatch`
 
 ## aem-tools
 

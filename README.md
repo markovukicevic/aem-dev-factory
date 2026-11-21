@@ -279,3 +279,13 @@ From the target project, `project-inspect` reports local technology markers with
 `verification-run <config.json> <implement.md> <output.md>` runs the explicitly configured test command and writes a new automated test-evidence record, including the observed branch, commit and plan/config digests. It returns a failure status if tests or consistency checks fail, but still records the outcome when possible. It does not retain command output or mark the plan verified. A passing record does not establish review, other required checks, or overall readiness. Existing output is never replaced.
 
 `install-skills <codex|claude|copilot> <target-project> <skill> [skill ...]` preflights an explicit list of supported, self-contained skills and destination collisions, then installs each without replacement. Installation is not atomic: a concurrent change or copy error can leave some skills installed or a partial destination; the result identifies completed and failed names for inspection. Client discovery and skill behavior remain unverified.
+
+### Explicit local hub task
+
+`hub-run <task.json>` sequentially runs one explicitly selected executable in registered, initially clean repositories. The JSON object requires `ticket`, `title`, `repositories` (an array of registry names), an **absolute** `executable`, an `args` array and `timeoutMs` (1,000–600,000). Example:
+
+```json
+{ "ticket": "LOCAL-7", "title": "Run checks", "repositories": ["web", "api"], "executable": "/usr/bin/git", "args": ["status", "--short"], "timeoutMs": 30000 }
+```
+
+The command is started directly without a shell, inherits the user's environment and can perform any action its own permissions allow. Use only trusted explicit commands; do not put credentials in arguments. The hub itself does not push, create PRs or send messages. It preflights all selected repositories, requires distinct paths with a clean branch and commit, rechecks each immediately before running, records local status under `state/<ticket>/status.json`, and stops on the first failure. Command output is not retained. A `done` state means only that the process exited successfully; it does not verify code, tests or external effects. Existing ticket state is never replaced, and crashes may leave a `running` state or partial files requiring inspection. Timeouts do not guarantee termination of subprocess descendants. This initial local runner is not the original parallel agent dispatcher.

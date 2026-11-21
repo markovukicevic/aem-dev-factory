@@ -830,3 +830,23 @@ test('installs an explicitly selected set of skills', async t => {
   assert.equal(JSON.parse(messages.logs.at(-1)).installed.length, 2);
   assert.equal(await runCli(['install-skills', 'codex', target, 'agent-plan'], { output }), 1);
 });
+
+test('runs an explicitly configured local hub task', async t => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const { initializeHub } = await import('../src/hub-init.js');
+  const root = await mkdtemp(join(tmpdir(), 'hub-run-cli-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const hub = join(root, 'hub'), repo = join(root, 'repo');
+  await mkdir(hub);
+  execFileSync('git', ['init', '-q', '-b', 'feature', repo]);
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd: repo });
+  await initializeHub({ cwd: hub, repos: [{ name: 'repo', path: repo }] });
+  const input = join(root, 'task.json');
+  await writeFile(input, JSON.stringify({ ticket: 'TASK-1', title: 'Check', repositories: ['repo'], executable: process.execPath, args: ['-e', 'process.exit(0)'], timeoutMs: 10000 }));
+  const { messages, output } = capture();
+  assert.equal(await runCli(['hub-run', input], { cwd: hub, output }), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).repos.repo, 'done');
+});
