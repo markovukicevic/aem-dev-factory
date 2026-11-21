@@ -92,7 +92,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 }
 ```
 
-`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub and an initial Azure Repos implementation; CI currently covers GitHub Actions. GitLab and Bitbucket adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
+`node bin/aem-devflow.js tracker-ticket /path/to/providers.json 123` reads the ticket using only the tracker settings. The implemented tracker adapters cover GitHub Issues, Jira Cloud, and read-only Azure DevOps Services work items. SCM adapters cover GitHub, an initial Azure Repos implementation, and read-only Bitbucket Cloud. CI adapters cover GitHub Actions and Bitbucket commit status reads. GitLab and Bitbucket Data Center adapters are not implemented; unsupported choices fail rather than falling back. Full ADO/Jira workflows are not implemented yet.
 
 ### Jira Cloud tracker
 
@@ -134,3 +134,7 @@ Use `ado-123` for Azure work-item IDs. The skill requires `AEM_DEVFLOW_MAX_HOME`
 ### Read GitHub Actions runs
 
 With a configured `ci` provider and a token with Actions read access, `ci-runs /path/to/providers.json <commit-sha> [--page N]` reads one page of workflow runs for a commit, and `ci-run /path/to/providers.json <run-id>` reads one run. These commands only read; they do not trigger workflows. Individual run retrieval was verified against this project's GitHub repository.
+
+### Bitbucket Cloud
+
+Set `scm` to `{"provider":"bitbucket-cloud","workspace":"my-team","repository":"site"}` and provide `BITBUCKET_TOKEN` as a Bitbucket Cloud access token. `scm-pr /path/to/providers.json 123` reads a PR. The library adapter can also read its comment pages, rejecting unexpected next-page URLs and incomplete results. Set `ci` to `{"provider":"bitbucket-pipelines","workspace":"my-team","repository":"site"}` and use `ci-status /path/to/providers.json <commit-sha>` to read the first page of commit statuses. Further status pages are not fetched automatically. No Bitbucket writes or Data Center support are implemented, and these operations have only been tested with simulated responses.

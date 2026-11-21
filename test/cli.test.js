@@ -255,3 +255,17 @@ test('reads CI runs using the separately configured CI adapter', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).id, 42);
   assert.equal(await runCli(['ci-runs', 'providers.json', 'main'], options), 2);
 });
+
+test('uses Bitbucket credentials for an independently configured SCM provider', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: (config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); return { getPullRequest: async id => ({ id, provider: config.provider }) }; } };
+  assert.equal(await runCli(['scm-pr', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).provider, 'bitbucket-cloud');
+});
+
+test('reads Bitbucket commit status using independently configured CI credentials', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'bitbucket-pipelines' } }), makeCi: (config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); assert.equal(config.provider, 'bitbucket-pipelines'); return { getCommitStatuses: async sha => ({ sha, values: [] }) }; } };
+  assert.equal(await runCli(['ci-status', 'providers.json', '123abcd'], options), 0);
+  assert.equal(JSON.parse(messages.logs[0]).sha, '123abcd');
+});

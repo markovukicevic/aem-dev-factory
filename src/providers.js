@@ -2,6 +2,7 @@ import { createGitHubClient } from './github.js';
 import { createJiraTracker } from './jira.js';
 import { createAdoTracker } from './ado.js';
 import { createAdoScm } from './ado-scm.js';
+import { createBitbucketClient } from './bitbucket.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 
 function githubClient(config, options) {
@@ -18,6 +19,10 @@ export function createTrackerProvider(config, options = {}) {
 }
 
 export function createScmProvider(config, options = {}) {
+  if (config?.provider === 'bitbucket-cloud') {
+    const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+    return { provider: 'bitbucket-cloud', getPullRequest: client.getPullRequest, getPullRequestComments: client.getPullRequestComments, getRepository: client.getRepository };
+  }
   if (config?.provider === 'ado') return createAdoScm({ organization: config.organization, project: config.project, repository: config.repository, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider !== 'github') throw new Error('Unsupported SCM provider');
   const client = githubClient(config, options);
@@ -25,6 +30,10 @@ export function createScmProvider(config, options = {}) {
 }
 
 export function createCiProvider(config, options = {}) {
+  if (config?.provider === 'bitbucket-pipelines') {
+    const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+    return { provider: 'bitbucket-pipelines', getCommitStatuses: client.getCommitStatuses };
+  }
   if (config?.provider !== 'github-actions') throw new Error('Unsupported CI provider');
   const client = githubClient(config, options);
   return { provider: 'github-actions', listCheckRuns: (sha, page) => client.listCheckRuns(sha, page), getCommitStatus: sha => client.getCommitStatus(sha), listWorkflowRuns: options => client.listWorkflowRuns(options), getWorkflowRun: id => client.getWorkflowRun(id) };
