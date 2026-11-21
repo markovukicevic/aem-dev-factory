@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added bounded Azure build lookup by branch and exact commit, with unknown versions and pagination reported. Project-wide results do not establish repository identity or required checks; simulated tests only.
+
 - Added local provider-configuration and credential-presence diagnostics, plus setup-to-ticket workflow coverage. Credential values and live service access are not inspected.
 
 - Added bounded, explicit `repos:` directive resolution as an untrusted proposal against the hub registry. HTML, implicit routing and dispatch remain unsupported.

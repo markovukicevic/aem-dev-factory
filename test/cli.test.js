@@ -726,3 +726,12 @@ test('inspects provider credential presence without printing values', async t =>
   assert.equal(JSON.parse(messages.logs.at(-1)).providers[0].credentials[0].present, true);
   assert.ok(!messages.logs.at(-1).includes('secret-value'));
 });
+
+test('inspects Azure builds for an exact commit without asserting branch policy', async () => {
+  const { messages, output } = capture();
+  const sha = 'a'.repeat(40);
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'ado-pipelines' } }), makeCi: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { provider: 'ado-pipelines', listBuilds: async () => ({ values: [{ id: 1, sourceVersion: sha }], continuationToken: null }) }; } };
+  assert.equal(await runCli(['ado-ci-commit', 'providers.json', 'main', sha], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).builds[0].id, 1);
+  assert.equal(await runCli(['ado-ci-commit', 'providers.json', 'main', 'abc'], options), 2);
+});

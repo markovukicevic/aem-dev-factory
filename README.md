@@ -263,3 +263,5 @@ From the target project, `project-inspect` reports local technology markers with
 `hub-discover <source-file>` resolves one explicit `repos: web, api` line outside fenced code blocks against the hub registry. Multiple, malformed, unknown or missing directives fail rather than guessing. The source is untrusted: the result is only a proposal and never authorizes dispatch. HTML directives and other automatic routing are not supported.
 
 `project-doctor <providers.json>` validates supported provider fields and reports whether the corresponding environment variables are present. It does not print credential values, contact services or establish that credentials and permissions work.
+
+`ado-ci-commit <providers.json> <branch> <full-commit-sha>` reads up to 10 pages of Azure builds on a branch and returns those whose source version exactly matches the commit. It reports incomplete pagination and builds without a comparable source version. Results span the configured Azure project, not necessarily a single repository, and do not evaluate required branch policies. Simulated API tests only.
