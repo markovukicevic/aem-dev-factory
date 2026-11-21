@@ -10,6 +10,7 @@ Use Node.js 18 or newer:
 
 ```sh
 npm ci --ignore-scripts
+npm run validate:plugins
 npm test
 ```
 
@@ -166,3 +167,7 @@ The command checks readiness, origin, published branch, locally tracked base and
 ### Initial planning, execution and AEM discovery workflows
 
 The early `agent-core` plugin also includes instruction files for `agent-plan`, `agent-step`, `agent-step-verify`, and `agent-pr`. The initial `aem-tools` plugin includes `aem-component` for local component discovery and optional read-only live inspection. These are first implementations, not feature parity with the original plugins. Their instruction files have been structurally validated, but they have not yet been installed or behaviorally tested in AI clients.
+
+### Plugin packaging
+
+The repository contains an initial Claude Code marketplace manifest for `agent-core-max` and `aem-tools-max`. `npm run validate:plugins` checks the manifest, source paths and skill frontmatter; it does not prove runtime behavior. Claude Code is not installed in the development environment used for this work, so marketplace registration, installation and skill invocation have not been verified. The CLI-based skills also require `AEM_DEVFLOW_MAX_HOME` to point to a checkout with dependencies installed.

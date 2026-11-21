@@ -1,0 +1,9 @@
+{
+  "name": "aem-dev-flow-max",
+  "description": "Early AEM development workflow plugins",
+  "owner": { "name": "AEM DevFlow Max" },
+  "plugins": [
+    { "name": "agent-core-max", "source": "./plugins/agent-core", "description": "Requirements, planning, execution and PR workflows" },
+    { "name": "aem-tools-max", "source": "./plugins/aem-tools", "description": "AEM component discovery" }
+  ]
+}

@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+- Added an initial Claude Code marketplace manifest and structural plugin validation in CI. Claude Code is not installed here, so registration, installation and real skill behavior remain unverified.
+
 - Added initial planning, single-step execution, verification, PR and AEM component-discovery skill instructions. Structurally validated only; client installation and behavioral validation remain open, and the original plugin functionality is not yet reproduced.
 
 - Added an experimental GitLab.com merge request command with readiness, origin, published branch, duplicate and empty-diff checks. Tested with local Git and a simulated API; no live MR created.

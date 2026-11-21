@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "validate:plugins": "node scripts/validate-plugins.js"
   },
   "engines": {
     "node": ">=18"
