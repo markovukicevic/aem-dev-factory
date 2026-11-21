@@ -10,7 +10,7 @@ Based on the local AEM DevFlow checkout at `7ecd2a0` (1.1.0). This is an initial
 | Autonomous execution | agent-automation: 11 skill directories | Initial skills and partial supporting functionality; see skill inventory |
 | Ticket retrieval | agent-req selects ADO or Jira, with provider-specific calls | Provider adapters and source export exist; full requirements workflow remains incomplete |
 | Source control / PR | agent-pr discovers ADO repositories and creates PRs via ADO MCP | Experimental guarded PR/MR flows exist for GitHub, Azure Repos, GitLab.com and Bitbucket Cloud; live writes remain unverified |
-| Jira attachments | agent-req records that image downloading is not wired | Not yet recreated |
+| Jira attachments | agent-req records that image downloading is not wired | Metadata and explicit bounded download exist; simulated tests only |
 
 Counts cover directories containing `SKILL.md` under the four plugins. Skills, helper scripts, configuration, MCP servers, supported clients, and autonomous workflows still need detailed inventory and behavioral verification.
 
