@@ -1,5 +1,9 @@
 # Progress
 
+## 2026-11-21
+
+- Added provider-configured source-story export for Jira and GitHub. Jira ADF is retained as JSON and existing files are not overwritten. Tested with simulated Jira data; attachments and live Jira verification remain open.
+
 ## 2026-11-20
 
 - Started a separate project inspired by the local AEM DevFlow reference at commit `7ecd2a0` (version 1.1.0). The original workflows are not yet implemented here.

@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { renderTrackerStory, saveTrackerStory } from '../src/tracker-story.js';
+
+const adf = { type: 'doc', version: 1, content: [{ type: 'text', text: 'Original ``` markup' }] };
+const issue = { provider: 'jira', key: 'TEAM-12', title: 'Story', state: 'Open', author: 'Alex', url: 'https://team.atlassian.net/browse/TEAM-12', labels: [], body: adf, comments: [{ id: '11', author: 'Sam', body: adf }] };
+
+test('preserves Jira description and comment ADF in fences that cannot be closed by content', () => {
+  const text = renderTrackerStory(issue, { created: '2026-11-21T12:00:00Z' });
+  assert.match(text, /````json/);
+  assert.match(text, /Original ``` markup/);
+  assert.match(text, /untrusted Jira content/);
+  assert.doesNotMatch(text, /Acceptance Criteria/);
+});
+
+test('writes a new story and preserves an existing file', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'tracker-story-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'story.md');
+  assert.deepEqual(await saveTrackerStory(issue, path), { path, provider: 'jira', issue: 'TEAM-12' });
+  await assert.rejects(saveTrackerStory(issue, path), { code: 'EEXIST' });
+  assert.match(await readFile(path, 'utf8'), /Original/);
+});
+
+test('rejects unexpected provider or malformed ADF', () => {
+  assert.throws(() => renderTrackerStory({ ...issue, body: 'text' }));
+  assert.throws(() => renderTrackerStory({ ...issue, key: '../bad' }));
+});

@@ -171,3 +171,20 @@ test('uses Jira credentials for a Jira tracker without requiring a GitHub token'
   assert.equal(await runCli(['tracker-ticket', 'providers.json', 'TEAM-7'], options), 0);
   assert.equal(JSON.parse(messages.logs[0]).key, 'TEAM-7');
 });
+
+test('exports a Jira tracker issue and preserves an existing story file', async t => {
+  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-jira-export-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'raw-story.md');
+  const { messages, output } = capture();
+  const issue = { provider: 'jira', key: 'TEAM-7', title: 'Story', labels: [], body: { type: 'doc', version: 1, content: [] }, comments: [] };
+  const options = { output, env: { JIRA_EMAIL: 'user@example.com', JIRA_API_TOKEN: 'secret' }, makeTracker: () => ({ getTicket: async () => issue }), readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }) };
+  const args = ['tracker-export', 'providers.json', 'TEAM-7', path];
+  assert.equal(await runCli(args, options), 0);
+  assert.match(await readFile(path, 'utf8'), /Jira issue.*TEAM-7/);
+  assert.equal(await runCli(args, options), 1);
+  assert.match(messages.errors.at(-1), /not overwritten/);
+});

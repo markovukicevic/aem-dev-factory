@@ -3,15 +3,17 @@ import { createGitHubPullRequest } from './github-pr-flow.js';
 import { createGitHubClient } from './github.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 import { saveGitHubIssueStory } from './issue-story.js';
+import { saveTrackerStory } from './tracker-story.js';
 import { createTrackerProvider } from './providers.js';
 import { inspectConfiguredReadiness } from './configured-readiness.js';
 
-const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <number>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
+const usage = 'Usage: node bin/aem-devflow.js <github-pr|github-pr-context|github-issue|github-issue-context> <owner> <repository> <number> [--page <number>]\n       node bin/aem-devflow.js readiness <config.json> <implement.md>\n       node bin/aem-devflow.js tracker-ticket <providers.json> <id>\n       node bin/aem-devflow.js tracker-export <providers.json> <id> <output.md>\n       node bin/aem-devflow.js github-issue-export <owner> <repository> <number> <output.md>\n       node bin/aem-devflow.js github-pr-create <owner> <repository> <config> <implement.md> <title> --body-file <path> [--draft]';
 
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, makeTracker = createTrackerProvider, readBody = readFile, cwd = process.cwd() } = {}) {
-  if (args[0] === 'tracker-ticket') {
-    if (args.length !== 3 || typeof args[2] !== 'string' || !args[2].trim()) { output.error(usage); return 2; }
+  if (args[0] === 'tracker-ticket' || args[0] === 'tracker-export') {
+    const exporting = args[0] === 'tracker-export';
+    if (args.length !== (exporting ? 4 : 3) || typeof args[2] !== 'string' || !args[2].trim() || (exporting && !args[3]?.trim())) { output.error(usage); return 2; }
     try {
       const config = JSON.parse(await readBody(args[1], 'utf8'));
       if (config.tracker?.provider === 'github' && !env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment before running this command.'); return 2; }
@@ -19,10 +21,11 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       const github = config.tracker?.provider === 'github';
       if (github && (!/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])))) { output.error(usage); return 2; }
       const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN, jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN });
-      output.log(JSON.stringify(await tracker.getTicket(github ? Number(args[2]) : args[2]), null, 2));
+      const ticket = await tracker.getTicket(github ? Number(args[2]) : args[2]);
+      output.log(JSON.stringify(exporting ? await saveTrackerStory(ticket, args[3]) : ticket, null, 2));
       return 0;
-    } catch {
-      output.error('Unable to read tracker ticket. Check the configuration and connection.');
+    } catch (error) {
+      output.error(error?.code === 'EEXIST' ? 'Output file already exists; it was not overwritten.' : 'Unable to read or export tracker ticket. Check the configuration and connection.');
       return 1;
     }
   }

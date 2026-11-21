@@ -97,3 +97,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 ### Jira Cloud tracker
 
 Set `tracker` to `{"provider":"jira","baseUrl":"https://your-team.atlassian.net"}`, and provide `JIRA_EMAIL` and `JIRA_API_TOKEN` through the environment. Then run `tracker-ticket /path/to/providers.json TEAM-123`. This reads an issue and its comments using Jira Cloud REST API v3. Rich text is returned in Atlassian Document Format (ADF), not converted to Markdown. It does not retrieve attachments or update Jira. Pagination is bounded and fails if incomplete. This adapter has only been tested with simulated Jira responses; it has not been tested against a live Jira account.
+
+### Export a tracker issue
+
+`node bin/aem-devflow.js tracker-export /path/to/providers.json TEAM-123 /path/to/raw-story.md` uses the configured tracker and creates a new source file without overwriting an existing one. It also accepts GitHub issue numbers for a GitHub tracker. Jira descriptions and comments remain in ADF JSON, rather than being converted to Markdown; attachments are not downloaded. Jira export has only been tested with simulated responses.
