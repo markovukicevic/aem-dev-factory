@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added paginated Bitbucket Cloud PR commit reads with revision checks and scoped page links; live behavior is unverified.
+
 - Added revision-checked GitLab MR commit response reading; response completeness is unknown and live GitLab behavior is unverified.
 
 - Integrated bounded commit metadata into GitHub review context with matching revision and commit-count checks. The separate commit reader was verified against public cli/cli PR 15117.

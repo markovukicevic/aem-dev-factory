@@ -58,6 +58,10 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
       target.searchParams.set('pagelen', '100');
       return collect(target.pathname, target.searchParams);
     },
+    getPullRequestCommits(id) {
+      number(id);
+      return collect(`${root}/pullrequests/${id}/commits`, new URLSearchParams({ pagelen: '100' }));
+    },
     getPullRequestStatuses(id) {
       number(id);
       return collect(`${root}/pullrequests/${id}/statuses`, new URLSearchParams({ pagelen: '100' }));

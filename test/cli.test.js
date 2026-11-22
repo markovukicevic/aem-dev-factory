@@ -1028,3 +1028,12 @@ test('reads GitLab MR commit metadata through configured SCM', async () => {
   assert.equal(await runCli(['gitlab-mr-commits', 'providers.json', '7'], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).commitListComplete, null);
 });
+
+
+test('reads Bitbucket PR commits through configured SCM', async () => {
+  const { messages, output } = capture();
+  const head = 'a'.repeat(40), base = 'b'.repeat(40);
+  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: () => ({ provider: 'bitbucket-cloud', getPullRequest: async () => ({ id: 7, source: { commit: { hash: head } }, destination: { commit: { hash: base } } }), getPullRequestCommits: async () => [{ hash: head }] }) };
+  assert.equal(await runCli(['bitbucket-pr-commits', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).paginationComplete, true);
+});
