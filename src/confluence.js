@@ -8,6 +8,7 @@ export function createConfluenceClient({ baseUrl, email, token, fetchImpl = glob
   const authorization = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
   return {
     provider: 'confluence',
+    site: url.origin,
     async searchPages(cql) {
       if (typeof cql !== 'string' || !cql.trim() || cql.length > 512 || /[\u0000-\u001f\u007f]/.test(cql)) throw new TypeError('Invalid Confluence query');
       const query = new URLSearchParams({ cql, limit: '25' });
@@ -61,7 +62,7 @@ export function createConfluenceClient({ baseUrl, email, token, fetchImpl = glob
       }
       const page = await response.json();
       if (!page || page.id !== id || typeof page.title !== 'string' || typeof page.body?.storage?.value !== 'string') throw new Error('Invalid Confluence page response');
-      return { provider: 'confluence', id, title: page.title, status: page.status ?? null, version: page.version?.number ?? null, body: page.body.storage.value, bodyFormat: 'storage', url: typeof page._links?.webui === 'string' && page._links.webui.startsWith('/') && !page._links.webui.startsWith('//') ? `${url.origin}/wiki${page._links.webui}` : null };
+      return { provider: 'confluence', site: url.origin, id, title: page.title, status: page.status ?? null, version: page.version?.number ?? null, body: page.body.storage.value, bodyFormat: 'storage', url: typeof page._links?.webui === 'string' && page._links.webui.startsWith('/') && !page._links.webui.startsWith('//') ? `${url.origin}/wiki${page._links.webui}` : null };
     },
   };
 }
