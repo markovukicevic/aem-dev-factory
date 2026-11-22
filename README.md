@@ -282,7 +282,7 @@ From the target project, `project-inspect` reports local technology markers with
 
 ### Explicit local hub task
 
-`hub-run <task.json>` sequentially runs one explicitly selected executable in registered, initially clean repositories. The JSON object requires `ticket`, `title`, `repositories` (an array of registry names), an **absolute** `executable`, an `args` array and `timeoutMs` (1,000–600,000). Example:
+`hub-plan <task.json>` performs a read-only preflight of the same task, reporting selected paths, branches and commits without running a command or printing arguments. It does not verify the executable or future repository state. `hub-run <task.json>` sequentially runs one explicitly selected executable in registered, initially clean repositories. The JSON object requires `ticket`, `title`, `repositories` (an array of registry names), an **absolute** `executable`, an `args` array and `timeoutMs` (1,000–600,000). Example:
 
 ```json
 { "ticket": "LOCAL-7", "title": "Run checks", "repositories": ["web", "api"], "executable": "/usr/bin/git", "args": ["status", "--short"], "timeoutMs": 30000 }

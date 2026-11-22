@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added read-only hub task preflight using the same target and clean-worktree checks as execution, without printing argument values.
+
 - Added same-named OSGi configuration candidates for matching runmode folder names; installation precedence and runtime behavior are not inferred.
 
 - Bound PR diff checks to stable head and local tracked-base commits and repeated the check before provider writes. The tracked base may still be stale relative to the remote.

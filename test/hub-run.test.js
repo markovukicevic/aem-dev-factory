@@ -59,3 +59,16 @@ test('preflight refuses dirty repositories and rechecks before each run', async 
   assert.equal(result.details.api.state, 'repository-changed-before-run');
   assert.equal(result.repos.api, 'blocked');
 });
+
+test('previews targets without running a command, writing state or exposing arguments', async t => {
+  const { previewHubTask } = await import('../src/hub-run.js');
+  const { hub } = await fixture(t);
+  const secret = 'do-not-print-argument';
+  const preview = await previewHubTask({ cwd: hub, task: { ...task, args: [secret] } });
+  assert.deepEqual(preview.repositories.map(repo => repo.name), ['web', 'api']);
+  assert.equal(preview.argumentCount, 1);
+  assert.ok(!JSON.stringify(preview).includes(secret));
+  const { lstat } = await import('node:fs/promises');
+  await assert.rejects(lstat(join(hub, 'state', task.ticket)), { code: 'ENOENT' });
+  assert.match(preview.scope, /not verified/);
+});
