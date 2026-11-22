@@ -1084,9 +1084,10 @@ test('collects CI observations from the independently selected provider', async 
 
 test('collects independently configured review and CI evidence for an explicit SHA', async () => {
   const { messages, output } = capture(), sha = 'a'.repeat(40);
-  const options = { output, env: { ADO_PAT: 'ado', GITLAB_TOKEN: 'gitlab' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' }, ci: { provider: 'gitlab-ci' } }), makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }), makeCi: () => ({ provider: 'gitlab-ci', listAllPipelines: async () => [{ sha, status: 'running' }] }) };
+  const options = { output, env: { ADO_PAT: 'ado', GITLAB_TOKEN: 'gitlab' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado', organization: 'org', project: 'site', repository: 'repo' }, ci: { provider: 'gitlab-ci', project: 'team/site' } }), makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }), makeCi: () => ({ provider: 'gitlab-ci', listAllPipelines: async () => [{ sha, status: 'running' }] }) };
   assert.equal(await runCli(['scm-review-ci', 'providers.json', '7', sha], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).prHeadMatchesSha, null);
+  assert.equal(JSON.parse(messages.logs.at(-1)).sources.ci.project, 'team/site');
   assert.equal(await runCli(['scm-review-ci', 'providers.json', '7', sha], { ...options, env: { ADO_PAT: 'ado' } }), 2);
 });
 
@@ -1098,7 +1099,7 @@ test('saves PR and CI evidence locally without overwriting', async t => {
   const root = await mkdtemp(join(tmpdir(), 'review-evidence-cli-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const { messages, output } = capture(), sha = 'a'.repeat(40), path = join(root, 'evidence.md');
-  const options = { output, env: { ADO_PAT: 'ado', GITLAB_TOKEN: 'gitlab' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' }, ci: { provider: 'gitlab-ci' } }), makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }), makeCi: () => ({ provider: 'gitlab-ci', listAllPipelines: async () => [{ sha, status: 'running' }] }) };
+  const options = { output, env: { ADO_PAT: 'ado', GITLAB_TOKEN: 'gitlab' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado', organization: 'org', project: 'site', repository: 'repo' }, ci: { provider: 'gitlab-ci', project: 'team/site' } }), makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }), makeCi: () => ({ provider: 'gitlab-ci', listAllPipelines: async () => [{ sha, status: 'running' }] }) };
   assert.equal(await runCli(['scm-review-evidence', 'providers.json', '7', sha, path], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).prHeadMatchesSha, null);
   assert.match(await readFile(path, 'utf8'), /untrusted provider data/);

@@ -31,6 +31,7 @@ import { readScmPrCommits } from './scm-pr-commits.js';
 import { readScmReviewContext } from './scm-review-context.js';
 import { readReviewCiContext } from './review-ci-context.js';
 import { saveReviewEvidence } from './review-evidence.js';
+import { describeProviderSources } from './provider-sources.js';
 import { listSkills } from './list-skills.js';
 import { initializeTicket } from './ticket-init.js';
 import { inspectTicketDirectory } from './ticket-status.js';
@@ -544,7 +545,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       const opts = { token: env.GITHUB_TOKEN, adoToken: env.ADO_PAT, bitbucketToken: env.BITBUCKET_TOKEN, gitlabToken: env.GITLAB_TOKEN };
       const scm = makeScm(config.scm, opts), ci = makeCi(config.ci, opts);
       const reviewCi = scm.provider === 'github' ? makeCi({ provider: 'github-actions', owner: config.scm.owner, repository: config.scm.repository }, { token: env.GITHUB_TOKEN }) : undefined;
-      const input = { scm, ci, reviewCi, number: Number(args[2]), sha: args[3], ...(withBranch ? { branch: args[baseArgs + 1] } : {}) };
+      const input = { scm, ci, reviewCi, sources: describeProviderSources(config), number: Number(args[2]), sha: args[3], ...(withBranch ? { branch: args[baseArgs + 1] } : {}) };
       const result = saving ? await saveReviewEvidence({ ...input, outputPath: args[4] }) : await readReviewCiContext(input);
       output.log(JSON.stringify(result, null, 2)); return 0;
     } catch (error) { output.error(error?.code === 'EEXIST' ? 'Evidence file already exists; it was not overwritten.' : 'Unable to collect PR and CI evidence. Check provider configuration, commit and permissions.'); return 1; }
