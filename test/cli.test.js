@@ -1080,3 +1080,12 @@ test('collects CI observations from the independently selected provider', async 
   assert.equal(await runCli(['ci-observations', 'providers.json', 'abc'], options), 2);
   assert.equal(await runCli(['ci-observations', 'providers.json', sha, '--branch', 'main'], options), 2);
 });
+
+
+test('collects independently configured review and CI evidence for an explicit SHA', async () => {
+  const { messages, output } = capture(), sha = 'a'.repeat(40);
+  const options = { output, env: { ADO_PAT: 'ado', GITLAB_TOKEN: 'gitlab' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' }, ci: { provider: 'gitlab-ci' } }), makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }), makeCi: () => ({ provider: 'gitlab-ci', listAllPipelines: async () => [{ sha, status: 'running' }] }) };
+  assert.equal(await runCli(['scm-review-ci', 'providers.json', '7', sha], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).prHeadMatchesSha, null);
+  assert.equal(await runCli(['scm-review-ci', 'providers.json', '7', sha], { ...options, env: { ADO_PAT: 'ado' } }), 2);
+});
