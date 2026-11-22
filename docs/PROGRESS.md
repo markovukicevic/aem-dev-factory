@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Extended SCM review context with GitLab diff entries and Bitbucket diffstat matched against PR revisions; complete diffs are not established.
+
 - Added provider-selected review context combining discussion and commit evidence. GitLab and Bitbucket revisions are compared; Azure revision consistency and pagination remain unknown.
 
 - Added a provider-selected PR commit command for GitHub, GitLab, Bitbucket Cloud and Azure DevOps, preserving each provider’s completeness and revision limits.
