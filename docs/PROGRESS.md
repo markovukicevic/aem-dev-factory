@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added a non-overwriting local AEM dialog field reference and initial editorial-guide skill; live authoring and inheritance remain unverified.
+
 - Added local AEM QA handoff status summaries and ticket artifact recognition; declared checks and their evidence are not independently verified.
 
 - Added an AEM QA handoff formatter and initial verification/QA skills; supplied evidence is not independently verified and live AEM behavior remains untested.
