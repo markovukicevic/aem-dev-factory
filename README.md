@@ -212,6 +212,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Compare local dialog snapshots
 
+`aem-component-overview <component-directory> [--jcr-root <directory>]` combines local component, dialog-audit and optional supertype candidate observations. Missing or invalid parts are reported separately; it does not establish AEM runtime behavior, effective inheritance or accessibility. `aem-component-overview-report <component-directory> <output.md> [--jcr-root <directory>]` saves the same observations to a new local file.
+
 `aem-supertype <component-directory> <jcr-root>` inspects local candidates for an explicit component supertype under one supplied JCR root. Relative resource types are checked under `apps` and `libs`; absolute paths must start with one of those roots. Missing paths and symlinks are reported. This does not establish AEM search-path ordering, inheritance, repository completeness or runtime behavior.
 
 `aem-dialog-audit <dialog.xml>` identifies exact duplicate field names and explicit fields without a nonblank `fieldLabel`. These are inspection candidates, not proven defects or accessibility results: hidden fields, multifield scopes, inheritance and runtime behavior need separate review. It reads local XML and does not print field values.

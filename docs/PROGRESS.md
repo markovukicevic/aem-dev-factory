@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added a combined local AEM component overview and non-overwriting report for definitions, dialog audit and optional supertype candidates; runtime and effective inheritance remain unverified.
+
 - Added batch freshness checks for selected ID-named Confluence exports, including missing, mismatched and unavailable results; live Confluence remains unverified.
 
 - Added explicit batch Confluence page export with collision preflight and partial-result reporting. Live Confluence behavior remains unverified.
