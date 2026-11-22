@@ -6,7 +6,7 @@ import { branchRef } from './git-ref.js';
 /** Azure Repos REST adapter. The caller must perform readiness and publication checks. */
 export function createAdoScm({ organization, project, repository, token, fetchImpl = globalThis.fetch }) {
   if (typeof repository !== 'string' || !repository.trim() || repository !== repository.trim() || /[\\/\u0000-\u001f]/.test(repository) || ['.', '..'].includes(repository)) throw new TypeError('Invalid Azure repository');
-  const { request } = createAdoHttp({ organization, project, token, fetchImpl });
+  const { request, requestWithMetadata } = createAdoHttp({ organization, project, token, fetchImpl });
   const root = `/_apis/git/repositories/${encodeURIComponent(repository)}/pullrequests`;
   function validId(number) {
     if (!Number.isSafeInteger(number) || number < 1 || number > 2147483647) throw new TypeError('Invalid pull request ID');
@@ -16,6 +16,16 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
     getPullRequest(number) {
       validId(number);
       return request(`${root}/${number}?api-version=7.1`);
+    },
+    async getPullRequestCommitPage(number, { top = 100, continuationToken } = {}) {
+      validId(number);
+      if (!Number.isSafeInteger(top) || top < 1 || top > 100) throw new TypeError('Invalid commit page size');
+      if (continuationToken !== undefined && (typeof continuationToken !== 'string' || !continuationToken || continuationToken.length > 4096)) throw new TypeError('Invalid continuation token');
+      const query = new URLSearchParams({ '$top': String(top), 'api-version': '7.1' });
+      if (continuationToken) query.set('continuationToken', continuationToken);
+      const result = await requestWithMetadata(`${root}/${number}/commits?${query}`);
+      if (!Array.isArray(result.data?.value)) throw new Error('Invalid Azure commits response');
+      return { values: result.data.value, continuationToken: result.headers?.get?.('x-ms-continuationtoken') || null };
     },
     async getIterationChanges(number, iteration, { maxPages = 10 } = {}) {
       validId(number);

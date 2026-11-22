@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added explicit Azure DevOps PR commit page reading with continuation tokens; completeness and current branch heads are not verified. Simulated tests only.
+
 - Added paginated Bitbucket Cloud PR commit reads with revision checks and scoped page links; live behavior is unverified.
 
 - Added revision-checked GitLab MR commit response reading; response completeness is unknown and live GitLab behavior is unverified.

@@ -1037,3 +1037,13 @@ test('reads Bitbucket PR commits through configured SCM', async () => {
   assert.equal(await runCli(['bitbucket-pr-commits', 'providers.json', '7'], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).paginationComplete, true);
 });
+
+
+test('reads an explicit Azure PR commit page', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: () => ({ provider: 'ado', getPullRequestCommitPage: async (_id, { continuationToken }) => ({ values: [{ commitId: 'a'.repeat(40) }], continuationToken: continuationToken ? null : 'next' }) }) };
+  assert.equal(await runCli(['ado-pr-commits', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).continuationToken, 'next');
+  assert.equal(await runCli(['ado-pr-commits', 'providers.json', '7', '--continuation', 'next'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).paginationComplete, null);
+});
