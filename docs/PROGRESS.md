@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added explicit JCR content mappings to AEM settings and configured searches. Mapping correctness and live usage remain unverified.
+
 - Added read-only status and literal location search across known local AEM project knowledge files; freshness and contents are not verified.
 
 - Added read-only byte comparison and non-overwriting reports for local AEM project knowledge; existing files remain unchanged and source contents are not reviewed.

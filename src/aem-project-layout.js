@@ -36,7 +36,7 @@ export async function inspectAemProjectLayout({ path, maxEntries = 10000, maxDep
 
 /** Validate and normalize explicitly selected non-secret AEM settings. */
 export function parseAemProjectSettings(config) {
-  if (!config || typeof config !== 'object' || Array.isArray(config) || Object.keys(config).some(key => !['componentRoots', 'contentRoots', 'authorUrl'].includes(key))) throw new TypeError('Invalid AEM configuration');
+  if (!config || typeof config !== 'object' || Array.isArray(config) || Object.keys(config).some(key => !['componentRoots', 'contentRoots', 'contentMappings', 'authorUrl'].includes(key))) throw new TypeError('Invalid AEM configuration');
   const selected = {};
   for (const key of ['componentRoots', 'contentRoots']) {
     const values = config[key] ?? [];
@@ -44,6 +44,14 @@ export function parseAemProjectSettings(config) {
     selected[key] = values;
   }
   if (!selected.componentRoots.length && !selected.contentRoots.length) throw new TypeError('At least one source root is required');
+  const mappings = config.contentMappings ?? [];
+  if (!Array.isArray(mappings) || mappings.length > 20) throw new TypeError('Invalid AEM content mappings');
+  const mappedRoots = new Set();
+  selected.contentMappings = mappings.map(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item) || Object.keys(item).some(key => !['root', 'jcrBase'].includes(key)) || typeof item.root !== 'string' || !selected.contentRoots.includes(item.root) || mappedRoots.has(item.root) || typeof item.jcrBase !== 'string' || !/^\/content(?:\/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$/.test(item.jcrBase) || item.jcrBase.split('/').some(part => part === '.' || part === '..')) throw new TypeError('Invalid AEM content mapping');
+    mappedRoots.add(item.root);
+    return { root: item.root, jcrBase: item.jcrBase };
+  });
   if (config.authorUrl !== undefined) {
     if (typeof config.authorUrl !== 'string' || config.authorUrl.length > 1024 || config.authorUrl !== config.authorUrl.trim() || /[\u0000-\u001f\u007f]/.test(config.authorUrl)) throw new TypeError('Invalid AEM author URL');
     let url;
@@ -100,5 +108,5 @@ export async function inspectAemProjectSettings({ cwd }) {
       roots.push({ kind, path: value, status });
     }
   }
-  return { path: configPath, roots, authorConfigured: typeof settings.authorUrl === 'string', scope: 'Configured local paths and author URL presence only; AEM access, mappings and runtime behavior are not verified.' };
+  return { path: configPath, roots, contentMappings: settings.contentMappings, authorConfigured: typeof settings.authorUrl === 'string', scope: 'Configured local paths, user-supplied mappings and author URL presence only; mapping correctness, AEM access and runtime behavior are not verified.' };
 }

@@ -13,9 +13,10 @@ export async function searchConfiguredAemContent({ cwd, resourceType }) {
     if (index >= 10) { results.push({ root: root.path, status: 'not-inspected' }); continue; }
     if (root.status !== 'present') { results.push({ root: root.path, status: root.status }); continue; }
     try {
-      const found = await findAemSourceUsage({ path: join(projectRoot, ...root.path.split('/')), resourceType });
-      results.push({ root: root.path, status: found.limited || found.skipped.length ? 'partial' : 'inspected', matches: found.matches, skipped: found.skipped, limited: found.limited });
+      const mapping = settings.contentMappings.find(item => item.root === root.path);
+      const found = await findAemSourceUsage({ path: join(projectRoot, ...root.path.split('/')), resourceType, ...(mapping ? { jcrBase: mapping.jcrBase } : {}) });
+      results.push({ root: root.path, jcrBase: found.jcrBase, status: found.limited || found.skipped.length ? 'partial' : 'inspected', matches: found.matches, skipped: found.skipped, limited: found.limited });
     } catch { results.push({ root: root.path, status: 'unavailable' }); }
   }
-  return { resourceType, results, complete: results.length > 0 && results.every(item => item.status === 'inspected'), scope: 'Configured local content roots only; no JCR path mapping, live page usage, inheritance or later changes are established.' };
+  return { resourceType, results, complete: results.length > 0 && results.every(item => item.status === 'inspected'), scope: 'Configured local content roots and explicit user-supplied mappings only; mapping correctness, live page usage, inheritance and later changes are not established.' };
 }
