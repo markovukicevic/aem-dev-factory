@@ -22,3 +22,30 @@ test('passes arguments directly without shell expansion', async () => {
   assert.deepEqual(captured[1], ['$(not-executed)']);
   await assert.rejects(runTestCommand({ cwd: tmpdir(), executable: 'test', args: 'bad' }), TypeError);
 });
+
+test('bounds waiting when the command promise does not settle', async () => {
+  const started = Date.now();
+  const result = await runTestCommand({ cwd: tmpdir(), executable: 'example', timeoutMs: 20 }, { run: () => new Promise(() => {}) });
+  assert.deepEqual(result, { passed: false, exitCode: null });
+  assert.ok(Date.now() - started < 3000);
+});
+
+test('force-kills a direct child that ignores termination', { skip: process.platform === 'win32' }, async t => {
+  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'command-timeout-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const marker = join(dir, 'sigterm.txt');
+  const script = "process.on('SIGTERM', () => require('node:fs').writeFileSync(process.argv[1], 'received')); setInterval(() => {}, 1000)";
+  const started = Date.now();
+  const result = await runTestCommand({ cwd: dir, executable: process.execPath, args: ['-e', script, marker], timeoutMs: 1000 });
+  assert.deepEqual(result, { passed: false, exitCode: null });
+  assert.equal(await readFile(marker, 'utf8'), 'received');
+  assert.ok(Date.now() - started < 5000);
+});
+
+test('does not report a pass when a process exits successfully after the deadline', { skip: process.platform === 'win32' }, async () => {
+  const script = "process.on('SIGTERM', () => process.exit(0)); setInterval(() => {}, 1000)";
+  const result = await runTestCommand({ cwd: tmpdir(), executable: process.execPath, args: ['-e', script], timeoutMs: 1000 });
+  assert.deepEqual(result, { passed: false, exitCode: null });
+});

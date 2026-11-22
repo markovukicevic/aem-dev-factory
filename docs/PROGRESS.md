@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Bounded test and hub command waiting with a forced direct-child kill after timeout. Descendant processes can still outlive the direct process and require independent management.
+
 - Added read-only hub task preflight using the same target and clean-worktree checks as execution, without printing argument values.
 
 - Added same-named OSGi configuration candidates for matching runmode folder names; installation precedence and runtime behavior are not inferred.
