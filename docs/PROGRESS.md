@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added bounded Confluence search pagination with same-site URL and query checks; live Confluence behavior remains unverified.
+
 - Added read-only Confluence Cloud search and non-overwriting page export. Search is limited to the first response; live Confluence behavior remains unverified.
 
 - Added a read-only preview of selected Jira issue attachments, reported sizes and current destination collisions. Live Jira behavior remains unverified.
