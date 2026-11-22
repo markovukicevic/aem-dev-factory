@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added local dialog inspection for exact duplicate-name and missing-label candidates; these are not confirmed defects or accessibility results.
+
 - Added initial bug triage, reproduction, fix and verification workflows with local artifact status inspection. Browser automation, tracker updates and AI-client behavior remain unverified.
 
 - Added initial build and blocked-step diagnosis skills. Automatic plan healing is not implemented; AI-client behavior remains untested.

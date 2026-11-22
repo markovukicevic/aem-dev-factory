@@ -977,3 +977,20 @@ test('previews a hub task without executing it', async t => {
   assert.equal(JSON.parse(messages.logs.at(-1)).repositories[0].name, 'repo');
   await assert.rejects(lstat(join(hub, 'state', 'TASK-2')), { code: 'ENOENT' });
 });
+
+
+test('audits a local dialog without asserting candidate defects', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = await mkdtemp(join(tmpdir(), 'dialog-audit-cli-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const path = join(root, 'dialog.xml');
+  await writeFile(path, '<root><x name="./title" sling:resourceType="form/textfield"/></root>');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['aem-dialog-audit', path], { output }), 0);
+  const result = JSON.parse(messages.logs.at(-1));
+  assert.equal(result.missingLabels.length, 1);
+  assert.match(result.scope, /not proven defects/);
+  assert.equal(await runCli(['aem-dialog-audit'], { output }), 2);
+});
