@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added a provider-selected PR commit command for GitHub, GitLab, Bitbucket Cloud and Azure DevOps, preserving each provider’s completeness and revision limits.
+
 - Added explicit Azure DevOps PR commit page reading with continuation tokens; completeness and current branch heads are not verified. Simulated tests only.
 
 - Added paginated Bitbucket Cloud PR commit reads with revision checks and scoped page links; live behavior is unverified.

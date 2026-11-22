@@ -1047,3 +1047,13 @@ test('reads an explicit Azure PR commit page', async () => {
   assert.equal(await runCli(['ado-pr-commits', 'providers.json', '7', '--continuation', 'next'], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).paginationComplete, null);
 });
+
+
+test('routes PR commit reads to the selected provider and checks credentials', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { provider: 'ado', getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }; } };
+  assert.equal(await runCli(['scm-pr-commits', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).provider, 'ado');
+  assert.equal(await runCli(['scm-pr-commits', 'providers.json', '7'], { ...options, env: {} }), 2);
+  assert.equal(await runCli(['scm-pr-commits', 'providers.json', 'bad'], options), 2);
+});

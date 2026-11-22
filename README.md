@@ -300,6 +300,8 @@ The command is started directly without a shell, inherits the user's environment
 
 `pr-response-draft <context.json> <output.md>` creates a new local discussion workspace from a saved `scm-pr-context` result for GitHub, GitLab, Bitbucket Cloud or Azure DevOps. It preserves comment text as untrusted source data but writes no replies, does not infer resolution and never posts. The output can contain private discussion; review it before sharing. Provider completeness and freshness remain subject to the source context's limitations.
 
+`scm-pr-commits <providers.json> <number> [--continuation <token>]` selects the configured GitHub, GitLab, Bitbucket Cloud or Azure DevOps SCM and returns its provider-specific result and limitations. The optional continuation token applies only to Azure; completeness and revision guarantees differ by provider as described below.
+
 `ado-pr-commits <providers.json> <number> [--continuation <token>]` reads one Azure DevOps PR commit page and returns any continuation token. Pagination completeness and current branch revisions are not established; Azure merge-result SHAs may be stale. Live Azure behavior remains unverified. See the [Azure REST API](https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-commits/get-pull-request-commits?view=azure-devops-rest-7.1).
 
 `bitbucket-pr-commits <providers.json> <number>` reads Bitbucket Cloud PR commits through bounded pagination and compares source and destination revisions before and after. Next-page URLs are restricted to the same API path; pagination completion does not establish server-side completeness or review. Live Bitbucket behavior is unverified. See [Bitbucket Cloud PR API](https://developer.atlassian.com/cloud/bitbucket/rest/api-group-pullrequests/).
