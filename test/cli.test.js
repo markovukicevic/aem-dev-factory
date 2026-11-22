@@ -1010,3 +1010,12 @@ test('checks explicit local supertype candidates', async t => {
   assert.deepEqual(JSON.parse(messages.logs.at(-1)).candidates.map(item => item.status), ['missing', 'missing']);
   assert.equal(await runCli(['aem-supertype', component], { output }), 2);
 });
+
+test('reads GitHub PR commit metadata through the configured SCM', async () => {
+  const { messages, output } = capture();
+  const head = 'a'.repeat(40), base = 'b'.repeat(40);
+  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'github' } }), makeScm: () => ({ provider: 'github', getPullRequest: async () => ({ number: 7, head: { sha: head }, base: { sha: base }, commits: 1 }), listPullRequestCommits: async () => [{ sha: head }] }) };
+  assert.equal(await runCli(['github-pr-commits', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).commitListComplete, true);
+  assert.equal(await runCli(['github-pr-commits', 'providers.json', 'bad'], options), 2);
+});

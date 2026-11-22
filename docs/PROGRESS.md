@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added bounded GitHub PR commit retrieval with revision checks and explicit 250-commit API limit. Simulated tests only.
+
 - Added possible-move candidates to local dialog snapshot comparisons for unique field names and matching resource types; field identity is not assumed.
 
 - Added explicit local AEM supertype candidate inspection under one JCR root; actual search order and runtime inheritance remain unverified.

@@ -57,6 +57,10 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       validateNumber(number, 'pull request number');
       return request('GET', `/pulls/${number}`);
     },
+    listPullRequestCommits(number, { page = 1, perPage = 100 } = {}) {
+      validateNumber(number, 'pull request number');
+      return request('GET', `/pulls/${number}/commits${pageQuery(page, perPage)}`);
+    },
     listPullRequestFiles(number, { page = 1, perPage = 100 } = {}) {
       validateNumber(number, 'pull request number');
       return request('GET', `/pulls/${number}/files${pageQuery(page, perPage)}`);
