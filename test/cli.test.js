@@ -915,3 +915,23 @@ test('scans committed PR changes from an explicit full base commit', async t => 
   assert.equal(JSON.parse(messages.logs.at(-1)).headChanged, false);
   assert.equal(await runCli(['security-scan-commit', 'abc1234'], { cwd, output }), 2);
 });
+
+test('scans a bounded PR commit history without printing detected values', async t => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const cwd = await mkdtemp(join(tmpdir(), 'security-history-cli-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const git = args => execFileSync('git', args, { cwd, encoding: 'utf8' });
+  git(['init', '-q', '-b', 'feature']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial']);
+  const base = git(['rev-parse', 'HEAD']).trim(), token = 'ghp_' + 'C'.repeat(36);
+  await writeFile(join(cwd, 'secret.txt'), token);
+  git(['add', 'secret.txt']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'change']);
+  const { messages, output } = capture();
+  assert.equal(await runCli(['security-scan-history', base], { cwd, output }), 1);
+  assert.equal(JSON.parse(messages.logs.at(-1)).findings[0].pattern, 'github-token-pattern');
+  assert.ok(!messages.logs.at(-1).includes(token));
+});

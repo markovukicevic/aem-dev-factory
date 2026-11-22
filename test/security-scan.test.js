@@ -72,3 +72,24 @@ test('reports deleted committed files as skipped rather than claiming complete c
   assert.equal(result.complete, false);
   assert.equal(result.skipped[0].path, 'removed.txt');
 });
+
+test('finds a supported pattern added and later removed within the PR history', async t => {
+  const { scanCommitHistory } = await import('../src/security-scan.js');
+  const { cwd, git } = await fixture(t);
+  const base = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+  const token = 'ghp_' + 'C'.repeat(36);
+  await writeFile(join(cwd, 'history.txt'), `token=${token}\n`);
+  git(['add', 'history.txt']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'add']);
+  const introduced = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+  await writeFile(join(cwd, 'history.txt'), 'removed\n');
+  git(['add', 'history.txt']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'remove']);
+  const result = await scanCommitHistory({ cwd, base });
+  assert.equal(result.commitsScanned, 2);
+  assert.equal(result.complete, true);
+  assert.ok(result.findings.some(item => item.source === `commit:${introduced}` && item.path === 'history.txt'));
+  assert.ok(!JSON.stringify(result).includes(token));
+  await assert.rejects(scanCommitHistory({ cwd, base, maxCommits: 1 }), /limit/);
+  await assert.rejects(scanCommitHistory({ cwd, base, maxFiles: 1 }), /limit/);
+});

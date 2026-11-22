@@ -44,8 +44,8 @@ async function scanCandidates({ root, rootOptions, candidates, maxFiles, head })
     if (!subpath || subpath === '..' || subpath.startsWith('../') || isAbsolute(subpath)) { skipped.push({ path, source, reason: 'unsafe-path' }); continue; }
     let bytes;
     try {
-      if (source === 'staged' || source === 'committed') {
-        const object = source === 'staged' ? `:${path}` : `${head}:${path}`;
+      if (source === 'staged' || source === 'committed' || source.startsWith('commit:')) {
+        const object = source === 'staged' ? `:${path}` : `${source === 'committed' ? head : source.slice(7)}:${path}`;
         const kind = await exec('git', ['cat-file', '-t', object], rootOptions);
         if (kind.stdout.toString('utf8').trim() !== 'blob') throw new Error('Not a Git blob');
         const result = await exec('git', ['show', '--no-ext-diff', '--no-textconv', object], { ...rootOptions, maxBuffer: maxFileBytes });
@@ -90,4 +90,33 @@ export async function scanCommittedChanges({ cwd, base, maxFiles = 500 } = {}) {
   const result = await scanCandidates({ root, rootOptions, candidates, maxFiles, head });
   const headChanged = (await resolveCommit('HEAD')) !== head;
   return { ...result, base: resolvedBase, head, headChanged, complete: result.skipped.length === 0 && !headChanged, scope: 'Limited pattern scan of final committed file versions only; intermediate commits, history, ignored files and all credential types are not covered.' };
+}
+
+/** Scan changed blobs in a bounded PR commit range, including removed-later values. */
+export async function scanCommitHistory({ cwd, base, maxCommits = 100, maxFiles = 500 } = {}) {
+  if (typeof cwd !== 'string' || !cwd.trim() || typeof base !== 'string' || !/^[a-f0-9]{40,64}$/i.test(base) || !Number.isSafeInteger(maxCommits) || maxCommits < 1 || maxCommits > 500 || !Number.isSafeInteger(maxFiles) || maxFiles < 1 || maxFiles > 5000) throw new TypeError('A full base commit and valid scan options are required');
+  const options = { cwd, encoding: 'buffer', maxBuffer: 2 * 1024 * 1024, timeout: 30000, windowsHide: true };
+  const readText = value => new TextDecoder('utf-8', { fatal: true }).decode(value);
+  const root = await realpath(readText((await exec('git', ['rev-parse', '--show-toplevel'], options)).stdout).trim());
+  const rootOptions = { ...options, cwd: root };
+  const resolveCommit = async ref => readText((await exec('git', ['rev-parse', '--verify', `${ref}^{commit}`], rootOptions)).stdout).trim();
+  const resolvedBase = await resolveCommit(base);
+  if (resolvedBase.toLowerCase() !== base.toLowerCase()) throw new Error('Base must be a full commit SHA');
+  const head = await resolveCommit('HEAD');
+  if (!/^[a-f0-9]{40,64}$/i.test(head)) throw new Error('Invalid head commit');
+  const merge = readText((await exec('git', ['merge-base', '--all', resolvedBase, head], rootOptions)).stdout).trim().split('\n');
+  if (merge.length !== 1 || !/^[a-f0-9]{40,64}$/i.test(merge[0])) throw new Error('A unique merge base is required');
+  const history = await exec('git', ['rev-list', '--reverse', `--max-count=${maxCommits + 1}`, `${merge[0]}..${head}`], rootOptions);
+  const commits = readText(history.stdout).trim().split('\n').filter(Boolean);
+  if (commits.length > maxCommits || commits.some(id => !/^[a-f0-9]{40,64}$/i.test(id))) throw new Error('Commit history limit exceeded');
+  const candidates = [];
+  for (const commit of commits) {
+    const changed = await exec('git', ['diff-tree', '--no-commit-id', '-r', '-m', '--name-only', '--diff-filter=ACMRT', '-z', commit, '--'], rootOptions);
+    const paths = readText(changed.stdout).split('\0').filter(Boolean);
+    for (const path of new Set(paths)) candidates.push(`commit:${commit}\0${path}`);
+    if (candidates.length > maxFiles) throw new Error('Changed file limit exceeded');
+  }
+  const result = await scanCandidates({ root, rootOptions, candidates, maxFiles });
+  const headChanged = (await resolveCommit('HEAD')) !== head;
+  return { ...result, base: resolvedBase, mergeBase: merge[0], head, commitsScanned: commits.length, headChanged, complete: result.skipped.length === 0 && !headChanged, scope: 'Limited pattern scan of changed blobs in commits after the merge base only; earlier history, ignored files and many credential types are not covered.' };
 }
