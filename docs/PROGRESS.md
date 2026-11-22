@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added independently configured cross-provider CI observations for exact commits, with provider-specific attribution and completeness limits and no new aggregate verdict.
+
 - Added optional, explicitly selected Azure iteration change metadata to the shared review context; the chosen iteration is not verified as current.
 
 - Extended SCM review context with GitLab diff entries and Bitbucket diffstat matched against PR revisions; complete diffs are not established.

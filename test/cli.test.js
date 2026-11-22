@@ -1069,3 +1069,14 @@ test('routes provider-selected review context without inventing Azure revision c
   assert.equal(JSON.parse(messages.logs.at(-1)).fileData.iteration, 2);
   assert.equal(await runCli(['scm-review-context', 'providers.json', '7'], { ...options, env: {} }), 2);
 });
+
+
+test('collects CI observations from the independently selected provider', async () => {
+  const { messages, output } = capture();
+  const sha = 'a'.repeat(40);
+  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'gitlab-ci' } }), makeCi: () => ({ provider: 'gitlab-ci', listAllPipelines: async () => [{ sha, status: 'running' }] }) };
+  assert.equal(await runCli(['ci-observations', 'providers.json', sha], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).states[0].state, 'running');
+  assert.equal(await runCli(['ci-observations', 'providers.json', 'abc'], options), 2);
+  assert.equal(await runCli(['ci-observations', 'providers.json', sha, '--branch', 'main'], options), 2);
+});
