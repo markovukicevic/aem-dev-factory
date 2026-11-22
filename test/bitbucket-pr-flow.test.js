@@ -6,7 +6,7 @@ import { createBitbucketPullRequest } from '../src/bitbucket-pr-flow.js';
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', workspace: 'team', repository: 'site', token: 'token', title: 'Change' };
 const readiness = { configDigest: 'e'.repeat(64), planDigest: 'c'.repeat(64), steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
-const deps = () => ({ readConfigDigest: async () => 'e'.repeat(64), inspect: async () => good, refresh: async () => good, originReader: async () => ({ workspace: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ id: 1 }) }) });
+const deps = () => ({ readConfigDigest: async () => 'e'.repeat(64), inspect: async () => good, refresh: async () => good, originReader: async () => ({ workspace: 'team', repository: 'site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true, baseCommit: 'b'.repeat(40), headCommit: 'a'.repeat(40) }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ id: 1 }) }) });
 
 test('recognizes only standard Bitbucket Cloud origins', () => {
   for (const remote of ['https://bitbucket.org/team/site.git', 'git@bitbucket.org:team/site.git', 'ssh://git@bitbucket.org/team/site']) assert.deepEqual(parseBitbucketOrigin(remote), { workspace: 'team', repository: 'site' });
@@ -105,4 +105,13 @@ test('refuses to write when the plan changes during duplicate lookup', async () 
   assert.equal(result.created, false);
   assert.equal(writes, 0);
   assert.match(result.blockers.join(' '), /changed before/);
+});
+
+test('refuses to write if the tracked base changes during remote lookup', async () => {
+  let diffs = 0, writes = 0;
+  const dependencies = { ...deps(), inspectDiff: async () => ({ hasCommits: true, hasChanges: true, baseCommit: (++diffs === 1 ? 'b' : 'c').repeat(40), headCommit: 'a'.repeat(40) }), makeClient: () => ({ listOpenPullRequests: async () => [], listActivePullRequests: async () => [], createPullRequest: async () => { writes++; } }) };
+  const result = await createBitbucketPullRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /tracked base changed/);
 });

@@ -14,12 +14,28 @@ test('detects whether actual HEAD has commits beyond the tracked base', async t 
   const commit = () => git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'test']);
   commit();
   git(['update-ref', 'refs/remotes/origin/main', 'HEAD']);
-  assert.deepEqual(await inspectBranchDiff({ cwd, base: 'main' }), { hasCommits: false, hasChanges: false, count: 0 });
+  let result = await inspectBranchDiff({ cwd, base: 'main' });
+  assert.deepEqual([result.hasCommits, result.hasChanges, result.count], [false, false, 0]);
+  assert.equal(result.baseCommit, result.headCommit);
   commit();
-  assert.deepEqual(await inspectBranchDiff({ cwd, base: 'main' }), { hasCommits: true, hasChanges: false, count: 1 });
+  result = await inspectBranchDiff({ cwd, base: 'main' });
+  assert.deepEqual([result.hasCommits, result.hasChanges, result.count], [true, false, 1]);
+  assert.notEqual(result.baseCommit, result.headCommit);
   await writeFile(join(cwd, 'file.txt'), 'new content');
   git(['add', 'file.txt']);
   commit();
-  assert.deepEqual(await inspectBranchDiff({ cwd, base: 'main' }), { hasCommits: true, hasChanges: true, count: 2 });
+  result = await inspectBranchDiff({ cwd, base: 'main' });
+  assert.deepEqual([result.hasCommits, result.hasChanges, result.count], [true, true, 2]);
   await assert.rejects(inspectBranchDiff({ cwd, base: 'missing' }), /common ancestor/);
+});
+
+test('rejects a base reference changed during diff inspection', async () => {
+  let baseReads = 0;
+  const run = async (_command, args) => {
+    if (args[0] === 'rev-parse') return { stdout: args[2].startsWith('refs/remotes/') ? (++baseReads === 1 ? 'b' : 'c').repeat(40) : 'a'.repeat(40) };
+    if (args[0] === 'rev-list') return { stdout: '1\n' };
+    if (args[0] === 'diff') throw Object.assign(new Error('changed'), { code: 1 });
+    return { stdout: '' };
+  };
+  await assert.rejects(inspectBranchDiff({ cwd: '/repo', base: 'main' }, { run }), /references changed/);
 });

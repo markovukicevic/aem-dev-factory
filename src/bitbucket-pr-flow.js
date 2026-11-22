@@ -32,12 +32,13 @@ export async function createBitbucketPullRequest(input, dependencies = {}) {
   if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
   const base = current.readiness.branch.base;
   const diff = await inspectDiff({ cwd: input.cwd, base });
+  if (diff.headCommit !== published.commit && diff.hasCommits && diff.hasChanges) return { created: false, blockers: ['The diff does not match the tested commit.'], warnings: current.warnings };
   if (!diff.hasCommits || !diff.hasChanges) return { created: false, blockers: ['There are no file changes beyond the tracked base branch.'], warnings: current.warnings };
   const client = makeClient({ workspace: input.workspace, repository: input.repository, token: input.token });
   const existing = await client.listOpenPullRequests({ head, base });
   if (!Array.isArray(existing)) throw new Error('Invalid Bitbucket pull request response');
   if (existing.length) return { created: false, blockers: ['An open pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.id, url: pr.links?.html?.href })), warnings: current.warnings };
-  const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
+  const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, inspectDiff, expectedBaseCommit: diff.baseCommit, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
   if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
   const pullRequest = await client.createPullRequest({ title: input.title, body: input.body, draft: input.draft, head, base });
   return { created: true, pullRequest, warnings: final.warnings };

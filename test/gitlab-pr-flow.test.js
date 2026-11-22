@@ -6,7 +6,7 @@ import { createGitLabMergeRequest } from '../src/gitlab-pr-flow.js';
 const input = { cwd: '/repo', configPath: '/config', planPath: '/plan', project: 'team/sub/site', token: 'token', title: 'Change' };
 const readiness = { configDigest: 'e'.repeat(64), planDigest: 'c'.repeat(64), steps: [{ status: 'done' }], checks: { testsPassed: true, workingTreeClean: true }, branch: { head: 'feature', base: 'main', commit: 'a'.repeat(40) } };
 const good = { ready: true, blockers: [], warnings: [], readiness };
-const deps = () => ({ readConfigDigest: async () => 'e'.repeat(64), inspect: async () => good, refresh: async () => good, originReader: async () => ({ project: 'team/sub/site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ iid: 1 }) }) });
+const deps = () => ({ readConfigDigest: async () => 'e'.repeat(64), inspect: async () => good, refresh: async () => good, originReader: async () => ({ project: 'team/sub/site' }), publishedReader: async () => ({ published: true, commit: 'a'.repeat(40) }), inspectDiff: async () => ({ hasCommits: true, hasChanges: true, baseCommit: 'b'.repeat(40), headCommit: 'a'.repeat(40) }), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => ({ iid: 1 }) }) });
 
 test('parses only standard GitLab.com origins', () => {
   for (const remote of ['https://gitlab.com/team/sub/site.git', 'git@gitlab.com:team/sub/site.git', 'ssh://git@gitlab.com/team/sub/site']) assert.deepEqual(parseGitLabOrigin(remote), { project: 'team/sub/site' });
@@ -105,4 +105,13 @@ test('refuses to write when the plan changes during duplicate lookup', async () 
   assert.equal(result.created, false);
   assert.equal(writes, 0);
   assert.match(result.blockers.join(' '), /changed before/);
+});
+
+test('refuses to write if the tracked base changes during remote lookup', async () => {
+  let diffs = 0, writes = 0;
+  const dependencies = { ...deps(), inspectDiff: async () => ({ hasCommits: true, hasChanges: true, baseCommit: (++diffs === 1 ? 'b' : 'c').repeat(40), headCommit: 'a'.repeat(40) }), makeClient: () => ({ listOpenPullRequests: async () => [], listActivePullRequests: async () => [], createPullRequest: async () => { writes++; } }) };
+  const result = await createGitLabMergeRequest(input, dependencies);
+  assert.equal(result.created, false);
+  assert.equal(writes, 0);
+  assert.match(result.blockers.join(' '), /tracked base changed/);
 });

@@ -33,12 +33,13 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const last = await publishedReader({ cwd: input.cwd, head });
   if (!last.published || last.commit !== published.commit) return { created: false, blockers: ['The branch changed during inspection.'], warnings: current.warnings };
   const diff = await inspectDiff({ cwd: input.cwd, base: current.readiness.branch.base });
+  if (diff.headCommit !== published.commit && diff.hasCommits && diff.hasChanges) return { created: false, blockers: ['The diff does not match the tested commit.'], warnings: current.warnings };
   if (!diff.hasCommits || !diff.hasChanges) return { created: false, blockers: ['There are no file changes beyond the tracked base branch.'], warnings: current.warnings };
   const client = makeClient({ owner: input.owner, repository: input.repository, token: input.token });
   const existing = await client.listOpenPullRequests({ owner: input.owner, head, base: current.readiness.branch.base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitHub pull request response');
   if (existing.length) return { created: false, blockers: ['An open pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.number, url: pr.html_url })), warnings: current.warnings };
-  const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
+  const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, inspectDiff, expectedBaseCommit: diff.baseCommit, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
   if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
   return createReadyPullRequest({ provider: client, readiness: final.readiness, title: input.title, body: input.body, draft: input.draft });
 }
