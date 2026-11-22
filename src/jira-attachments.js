@@ -27,3 +27,18 @@ export async function saveJiraAttachments({ tracker, directory, ids }) {
   }
   return { complete: true, saved, scope: 'Explicitly selected attachments only; filenames and bytes are untrusted, and matching sizes do not validate content.' };
 }
+
+/** Verify each selected attachment is reported on the requested Jira issue. */
+export async function saveJiraTicketAttachments({ tracker, key, directory, ids }) {
+  if (tracker?.provider !== 'jira' || typeof tracker.getTicket !== 'function' || typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key) || !Array.isArray(ids) || !ids.length || ids.length > 50 || ids.some(id => typeof id !== 'string' || !/^[1-9][0-9]{0,30}$/.test(id)) || new Set(ids).size !== ids.length) throw new TypeError('Invalid Jira issue attachments request');
+  const ticket = await tracker.getTicket(key);
+  if (ticket?.provider !== 'jira' || typeof ticket.key !== 'string' || ticket.key.toUpperCase() !== key.toUpperCase() || !Array.isArray(ticket.attachments)) throw new Error('Invalid Jira issue attachment metadata');
+  const available = new Set();
+  for (const item of ticket.attachments) {
+    if (!item || typeof item.id !== 'string' || !/^[1-9][0-9]{0,30}$/.test(item.id) || available.has(item.id)) throw new Error('Invalid Jira issue attachment metadata');
+    available.add(item.id);
+  }
+  if (ids.some(id => !available.has(id))) throw new Error('Selected attachment is not reported on the issue');
+  const result = await saveJiraAttachments({ tracker, directory, ids });
+  return { ticket: ticket.key, ...result, sourceScope: 'Attachment IDs were reported by Jira for the selected issue at fetch time; membership and metadata may change afterward.' };
+}

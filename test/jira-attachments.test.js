@@ -41,3 +41,18 @@ test('rejects symlinked target directory', async t => {
   const link = join(root, 'link'); await symlink(root, link);
   await assert.rejects(saveJiraAttachments({ tracker: tracker(), directory: link, ids: ['1'] }), /local directory/);
 });
+
+test('only downloads attachment IDs reported on the selected Jira issue', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'jira-ticket-batch-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const { saveJiraTicketAttachments } = await import('../src/jira-attachments.js');
+  let downloads = 0;
+  const client = { ...tracker(), getTicket: async key => ({ provider: 'jira', key, attachments: [{ id: '1' }, { id: '2' }] }), saveAttachment: async (id, path) => { downloads++; await writeFile(path, 'abc', { flag: 'wx' }); return { id, path, size: 3 }; } };
+  await assert.rejects(saveJiraTicketAttachments({ tracker: client, key: 'TEAM-7', directory, ids: ['1', '3'] }), /not reported/);
+  assert.equal(downloads, 0);
+  const result = await saveJiraTicketAttachments({ tracker: client, key: 'TEAM-7', directory, ids: ['1'] });
+  assert.equal(result.ticket, 'TEAM-7');
+  assert.equal(result.complete, true);
+  assert.equal(downloads, 1);
+  await assert.rejects(saveJiraTicketAttachments({ tracker: { ...client, getTicket: async () => ({ provider: 'jira', key: 'OTHER-1', attachments: [] }) }, key: 'TEAM-7', directory, ids: ['2'] }), /metadata/);
+});

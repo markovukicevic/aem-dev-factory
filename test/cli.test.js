@@ -1121,3 +1121,17 @@ test('downloads an explicit Jira attachment set into an existing directory', asy
   assert.equal(JSON.parse(messages.logs.at(-1)).saved.length, 2);
   assert.equal(await runCli(['jira-attachments', 'providers.json', directory, '../bad'], options), 2);
 });
+
+
+test('downloads Jira attachments only when selected issue reports them', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'jira-ticket-attachments-cli-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const { messages, output } = capture();
+  const options = { output, env: { JIRA_EMAIL: 'x', JIRA_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }), makeTracker: () => ({ provider: 'jira', getTicket: async key => ({ provider: 'jira', key, attachments: [{ id: '7' }] }), getAttachmentMetadata: async id => ({ id, filename: 'file', size: 1 }), saveAttachment: async (id, path) => { await writeFile(path, 'x', { flag: 'wx' }); return { id, path, size: 1 }; } }) };
+  assert.equal(await runCli(['jira-ticket-attachments', 'providers.json', 'TEAM-7', directory, '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).ticket, 'TEAM-7');
+  assert.equal(await runCli(['jira-ticket-attachments', 'providers.json', 'TEAM-7', directory, '8'], options), 1);
+});

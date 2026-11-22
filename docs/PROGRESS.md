@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added issue-bound Jira attachment selection that checks reported membership before batch download; live Jira behavior remains unverified.
+
 - Added explicitly selected Jira attachment batch downloads with collision preflight, ID-only filenames and partial failure reporting; live Jira behavior remains unverified.
 
 - Added a read-only saved review evidence check against configured identities and current PR revisions; CI freshness and record authenticity remain unverified.
