@@ -93,3 +93,15 @@ test('finds a supported pattern added and later removed within the PR history', 
   await assert.rejects(scanCommitHistory({ cwd, base, maxCommits: 1 }), /limit/);
   await assert.rejects(scanCommitHistory({ cwd, base, maxFiles: 1 }), /limit/);
 });
+
+test('scans staged filenames that resemble Git index-stage selectors', async t => {
+  const { cwd, git } = await fixture(t);
+  const token = 'ghp_' + 'E'.repeat(36);
+  await writeFile(join(cwd, '1:example.txt'), token);
+  git(['add', '1:example.txt']);
+  const result = await scanChangedFiles({ cwd });
+  assert.equal(result.complete, true);
+  assert.equal(result.findings[0].path, '1:example.txt');
+  assert.equal(result.findings[0].source, 'staged');
+  assert.ok(!JSON.stringify(result).includes(token));
+});

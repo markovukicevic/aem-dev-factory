@@ -45,7 +45,7 @@ async function scanCandidates({ root, rootOptions, candidates, maxFiles, head })
     let bytes;
     try {
       if (source === 'staged' || source === 'committed' || source.startsWith('commit:')) {
-        const object = source === 'staged' ? `:${path}` : `${source === 'committed' ? head : source.slice(7)}:${path}`;
+        const object = source === 'staged' ? `:./${path}` : `${source === 'committed' ? head : source.slice(7)}:${path}`;
         const kind = await exec('git', ['cat-file', '-t', object], rootOptions);
         if (kind.stdout.toString('utf8').trim() !== 'blob') throw new Error('Not a Git blob');
         const result = await exec('git', ['show', '--no-ext-diff', '--no-textconv', object], { ...rootOptions, maxBuffer: maxFileBytes });
