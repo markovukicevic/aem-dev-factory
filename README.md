@@ -212,7 +212,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Compare local dialog snapshots
 
-`aem-clientlibs <directory>` inspects explicit local `cq:ClientLibraryFolder` definitions and reports raw categories, dependencies, embeds and proxy attributes. It does not resolve those values or establish build output, runtime inclusion or rendering. The initial `aem-fe-verify` skill describes frontend verification without implementing live AEM or screenshot automation.
+`aem-clientlibs <directory>` inspects explicit local `cq:ClientLibraryFolder` definitions and reports raw categories, dependencies, embeds and proxy attributes. It does not resolve those values or establish build output, runtime inclusion or rendering. `aem-clientlib-files <directory>` inspects local `js.txt` and `css.txt` references, reporting missing, duplicate, unsupported or symlinked paths. It does not evaluate generated or deployed assets. See [Adobe client library documentation](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/developing/full-stack/clientlibs). The initial `aem-fe-verify` skill describes frontend verification without implementing live AEM or screenshot automation.
 
 `aem-editorial-guide <dialog.xml> <output.md>` creates a local reference from explicit dialog field attributes, without overwriting. It does not establish live authoring behavior, inherited fields or translations. The initial skill is not yet validated in an AI client.
 

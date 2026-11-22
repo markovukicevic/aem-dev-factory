@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added bounded local AEM client library manifest path inspection; generated assets, runtime aggregation and rendered behavior remain unverified.
+
 - Added bounded local AEM client library inspection and an initial frontend verification skill; asset resolution and live rendering remain unverified.
 
 - Added a non-overwriting local AEM dialog field reference and initial editorial-guide skill; live authoring and inheritance remain unverified.
