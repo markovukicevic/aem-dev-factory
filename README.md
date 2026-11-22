@@ -341,3 +341,5 @@ The command is started directly without a shell, inherits the user's environment
 `security-scan-history <full-base-sha>` scans changed blobs in up to 100 commits and 500 file versions after the unique merge base with the current HEAD. It can identify supported patterns added and later removed within that range, without printing matching values. Earlier history, ignored files, other secret types and complete security coverage are outside its scope. Limits or ambiguous merge bases stop the scan rather than claiming completeness.
 
 `security-evidence <full-base-sha> <output.md>` runs the local changed-file and bounded PR-history scans and records their potential finding locations in a new file without detected values. It never replaces existing files. Findings, skipped files or changed Git state produce a nonzero exit status. The scans are not a complete security review, and dirty worktree content may change while scanning. The report can contain sensitive file paths.
+
+The GitHub Actions test workflow runs for pull requests or by explicit manual dispatch; it does not run automatically on every push.

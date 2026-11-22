@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Reduced automated test frequency: GitHub Actions runs on pull requests or explicit manual dispatch, rather than every push.
+
 - Added Confluence export site identity and a read-only comparison against current page content and version. Exports are editable and live Confluence behavior remains unverified.
 
 - Added bounded Confluence search pagination with same-site URL and query checks; live Confluence behavior remains unverified.
