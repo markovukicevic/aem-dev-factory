@@ -200,6 +200,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Compare local dialog snapshots
 
+`aem-supertype <component-directory> <jcr-root>` inspects local candidates for an explicit component supertype under one supplied JCR root. Relative resource types are checked under `apps` and `libs`; absolute paths must start with one of those roots. Missing paths and symlinks are reported. This does not establish AEM search-path ordering, inheritance, repository completeness or runtime behavior.
+
 `aem-dialog-audit <dialog.xml>` identifies exact duplicate field names and explicit fields without a nonblank `fieldLabel`. These are inspection candidates, not proven defects or accessibility results: hidden fields, multifield scopes, inheritance and runtime behavior need separate review. It reads local XML and does not print field values.
 
 `aem-dialog-snapshot <dialog.xml> <new-output.json>` saves local explicit dialog fields without overwriting. `aem-dialog-compare <before.json> <after.json>` reports added, removed and changed fields by XML path. Snapshot files are limited to 1 MiB. This is not a live AEM snapshot or visual comparison; inherited fields and authored values are outside its scope. Tests use synthetic XML.

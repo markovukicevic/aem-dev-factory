@@ -994,3 +994,19 @@ test('audits a local dialog without asserting candidate defects', async t => {
   assert.match(result.scope, /not proven defects/);
   assert.equal(await runCli(['aem-dialog-audit'], { output }), 2);
 });
+
+
+test('checks explicit local supertype candidates', async t => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = await mkdtemp(join(tmpdir(), 'supertype-cli-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const component = join(root, 'component'), jcrRoot = join(root, 'jcr_root');
+  await mkdir(component); await mkdir(jcrRoot);
+  await writeFile(join(component, '.content.xml'), '<jcr:root xmlns:jcr="x" xmlns:sling="y" sling:resourceSuperType="example/base"/>');
+  const { messages, output } = capture();
+  assert.equal(await runCli(['aem-supertype', component, jcrRoot], { output }), 0);
+  assert.deepEqual(JSON.parse(messages.logs.at(-1)).candidates.map(item => item.status), ['missing', 'missing']);
+  assert.equal(await runCli(['aem-supertype', component], { output }), 2);
+});
