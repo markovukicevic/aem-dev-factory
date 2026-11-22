@@ -12,3 +12,5 @@ When `AEM_DEVFLOW_MAX_HOME` points to the Max checkout, `node "$AEM_DEVFLOW_MAX_
 When an AEM MCP connection is already available and the user has requested live context, use read-only discovery to inspect the configured component or dialog. Do not create pages, change content, deploy, or modify AEM. If no live connection is available, say so and report local findings only. Do not infer authored pages, runtime behavior, or dialog fields that were not observed.
 
 Return a compact component reference containing confirmed files, observed dialog fields and defaults, relevant tests, and unknowns. Link local file paths where supported. This initial skill does not reproduce the original AEM plugin's complete verification or authoring workflows.
+
+When explicit `.ai/aem.json` component roots are configured, `aem-configured-components <name>` searches those local directories and reports unavailable or limited roots. This does not establish live AEM behavior.

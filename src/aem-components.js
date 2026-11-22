@@ -5,10 +5,10 @@ const ignored = new Set(['.git', '.ai', 'node_modules', 'target', 'dist', 'build
 const sourceFile = /(?:\.content\.xml|\.html|\.js|\.ts|\.scss|\.css|\.java)$/;
 
 /** Locate source candidates by exact component directory name without following symlinks. */
-export async function findAemComponents({ cwd, name, maxEntries = 50000 }) {
+export async function findAemComponents({ cwd, name, maxEntries = 50000, insideComponents = false }) {
   if (typeof cwd !== 'string' || !cwd.trim() || !(await stat(cwd)).isDirectory()) throw new TypeError('A repository directory is required');
   if (typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(name)) throw new TypeError('A simple component name is required');
-  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1) throw new TypeError('maxEntries must be positive');
+  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || typeof insideComponents !== 'boolean') throw new TypeError('Invalid component search options');
   let count = 0;
   const found = [];
   async function walk(directory, underComponents, active) {
@@ -27,7 +27,7 @@ export async function findAemComponents({ cwd, name, maxEntries = 50000 }) {
       }
     }
   }
-  await walk(cwd, false, []);
+  await walk(cwd, insideComponents, []);
   const candidates = found.filter(candidate => candidate.files.includes('.content.xml') || candidate.files.includes(join('_cq_dialog', '.content.xml'))).map(candidate => {
     const directory = relative(cwd, candidate.absolute);
     return {

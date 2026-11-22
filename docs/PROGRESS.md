@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Connected explicitly configured AEM component roots to bounded local component discovery; live AEM and inherited behavior remain unverified.
+
 - Added non-overwriting reports for configured AEM content searches, retaining partial-root results and user-supplied mapping limitations.
 
 - Added explicit JCR content mappings to AEM settings and configured searches. Mapping correctness and live usage remain unverified.
