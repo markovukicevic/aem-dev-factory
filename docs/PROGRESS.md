@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added non-overwriting local security-evidence records combining changed-file and bounded commit-range scans; these are not a complete security review.
+
 - Added bounded commit-range scanning for supported secret patterns, including values later removed within the range. It does not inspect earlier history or guarantee detection.
 
 - Added bounded scanning of final committed file versions relative to an explicit base SHA, with head-change and skipped-file reporting. Intermediate commit history is not scanned.
