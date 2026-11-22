@@ -34,3 +34,15 @@ test('rejects file evidence collected at a different Bitbucket revision', async 
   const scm = { provider: 'bitbucket-cloud', getPullRequest: async () => ++calls <= 3 ? initial : changed, getPullRequestComments: async () => [], getPullRequestCommits: async () => [], getPullRequestDiffstat: async () => [] };
   await assert.rejects(readScmReviewContext({ scm, number: 7 }), /changed/);
 });
+
+
+test('includes only an explicitly selected Azure iteration without asserting it is current', async () => {
+  const scm = { provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }), getIterationChanges: async (_id, iteration) => ({ changes: [{ iteration }], complete: true }) };
+  const result = await readScmReviewContext({ scm, number: 7, iteration: 2 });
+  assert.equal(result.fileData.iteration, 2);
+  assert.equal(result.fileData.changes[0].iteration, 2);
+  assert.equal(result.revisionConsistency, null);
+  assert.match(result.limitations.join(' '), /not verified as current/);
+  await assert.rejects(readScmReviewContext({ scm, number: 7, iteration: 0 }), /Iteration/);
+  await assert.rejects(readScmReviewContext({ scm: { provider: 'github' }, number: 7, iteration: 2 }), /Iteration/);
+});

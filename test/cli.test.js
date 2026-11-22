@@ -1064,5 +1064,8 @@ test('routes provider-selected review context without inventing Azure revision c
   const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }) };
   assert.equal(await runCli(['scm-review-context', 'providers.json', '7'], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).revisionConsistency, null);
+  const withIteration = { ...options, makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }), getIterationChanges: async () => ({ changes: [], complete: true }) }) };
+  assert.equal(await runCli(['scm-review-context', 'providers.json', '7', '--iteration', '2'], withIteration), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).fileData.iteration, 2);
   assert.equal(await runCli(['scm-review-context', 'providers.json', '7'], { ...options, env: {} }), 2);
 });

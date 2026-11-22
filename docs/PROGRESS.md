@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added optional, explicitly selected Azure iteration change metadata to the shared review context; the chosen iteration is not verified as current.
+
 - Extended SCM review context with GitLab diff entries and Bitbucket diffstat matched against PR revisions; complete diffs are not established.
 
 - Added provider-selected review context combining discussion and commit evidence. GitLab and Bitbucket revisions are compared; Azure revision consistency and pagination remain unknown.
