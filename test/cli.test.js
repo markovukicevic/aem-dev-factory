@@ -1135,3 +1135,19 @@ test('downloads Jira attachments only when selected issue reports them', async t
   assert.equal(JSON.parse(messages.logs.at(-1)).ticket, 'TEAM-7');
   assert.equal(await runCli(['jira-ticket-attachments', 'providers.json', 'TEAM-7', directory, '8'], options), 1);
 });
+
+
+test('records and checks local attachment hashes', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'attachment-manifest-cli-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await writeFile(join(directory, '7.bin'), 'initial');
+  const manifest = join(directory, 'manifest.json'), { messages, output } = capture();
+  assert.equal(await runCli(['jira-attachment-manifest', directory, manifest, '7'], { output }), 0);
+  assert.equal(await runCli(['jira-attachment-check', directory, manifest], { output }), 0);
+  await writeFile(join(directory, '7.bin'), 'changed');
+  assert.equal(await runCli(['jira-attachment-check', directory, manifest], { output }), 1);
+  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'changed');
+});

@@ -196,6 +196,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Download a Jira attachment
 
+`jira-attachment-manifest <directory> <output.json> <id> [id ...]` records SHA-256 and size for selected local `<id>.bin` files without overwriting; `jira-attachment-check <directory> <manifest.json>` detects missing, changed or unsafe files. Hash comparisons do not establish Jira provenance, file safety or manifest authenticity, and concurrent changes remain possible.
+
 `jira-ticket-attachments <providers.json> <issue-key> <directory> <id> [id ...]` first verifies that Jira reports each explicitly selected ID on that issue, then uses the same non-overwriting batch download. Membership reflects the fetched issue and can change later. No files are downloaded if a selected ID is absent.
 
 `jira-attachments <providers.json> <directory> <id> [id ...]` downloads up to 50 explicitly selected Jira attachments into an existing directory as `<id>.bin`, after checking all destinations for collisions. It stops on failure and reports saved files without rollback; a size mismatch is reported but does not validate the content. Each download is limited to 5 MiB. Provider filenames and bytes are untrusted, directory changes can race with the check, and live Jira behavior remains unverified.
