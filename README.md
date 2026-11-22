@@ -278,6 +278,8 @@ From the target project, `project-inspect` reports local technology markers with
 
 `verification-run <config.json> <implement.md> <output.md>` runs the explicitly configured test command and writes a new automated test-evidence record, including the observed branch, commit and plan/config digests. It returns a failure status if tests or consistency checks fail, but still records the outcome when possible. It does not retain command output or mark the plan verified. A passing record does not establish review, other required checks, or overall readiness. Existing output is never replaced.
 
+`verification-check <config.json> <implement.md> <evidence.md>` compares a saved test record with the current plan, normalized settings, branch, commit and clean working tree without rerunning tests. It returns a failure status for a failed record or mismatches. Keep evidence outside the repository or in an ignored location if its presence would make the working tree dirty. The record is editable and can be forged, so a match is not proof that tests ran, a substitute for review, or an overall readiness verdict. Any later plan or code change can make it stale.
+
 `install-skills <codex|claude|copilot> <target-project> <skill> [skill ...]` preflights an explicit list of supported, self-contained skills and destination collisions, then installs each without replacement. Installation is not atomic: a concurrent change or copy error can leave some skills installed or a partial destination; the result identifies completed and failed names for inspection. Client discovery and skill behavior remain unverified.
 
 ### Explicit local hub task

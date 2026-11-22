@@ -816,6 +816,9 @@ test('runs and records configured tests without marking a plan verified', async 
   const { messages, output } = capture();
   assert.equal(await runCli(['verification-run', config, plan, evidence], { cwd, output }), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).testPassed, true);
+  assert.equal(await runCli(['verification-check', config, plan, evidence], { cwd, output }), 0);
+  await writeFile(plan, '### Step 1: Changed\n**Status:** done\n');
+  assert.equal(await runCli(['verification-check', config, plan, evidence], { cwd, output }), 1);
   assert.equal(await runCli(['verification-run', config, plan, evidence], { cwd, output }), 1);
 });
 

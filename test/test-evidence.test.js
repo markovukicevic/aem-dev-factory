@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { saveTestEvidence } from '../src/test-evidence.js';
+import { saveTestEvidence, checkTestEvidence } from '../src/test-evidence.js';
 
 async function setup(t, exitCode) {
   const root = await mkdtemp(join(tmpdir(), 'test-evidence-'));
@@ -38,4 +38,29 @@ test('records a failing command instead of reporting a pass', async t => {
   const result = await saveTestEvidence(options);
   assert.equal(result.testPassed, false);
   assert.match(await readFile(options.outputPath, 'utf8'), /"exitCode": 3/);
+});
+
+
+test('compares recorded evidence to the current plan, configuration and Git state', async t => {
+  const options = await setup(t, 0);
+  await saveTestEvidence(options);
+  const check = () => checkTestEvidence({ ...options, evidencePath: options.outputPath });
+  assert.equal((await check()).consistent, true);
+  await writeFile(options.planPath, '### Step 1: Changed\n**Status:** done\n');
+  assert.equal((await check()).checks.planMatches, false);
+  await writeFile(options.configPath, JSON.stringify({ scm: { baseBranch: 'main' }, test: { executable: process.execPath, args: ['-e', 'process.exit(1)'] } }));
+  assert.equal((await check()).checks.configMatches, false);
+  await writeFile(join(options.cwd, 'untracked.txt'), 'change');
+  assert.equal((await check()).checks.workingTreeClean, false);
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'new commit'], { cwd: options.cwd });
+  assert.equal((await check()).checks.commitMatches, false);
+});
+
+test('rejects malformed or failed evidence without reporting a pass', async t => {
+  const options = await setup(t, 3);
+  await saveTestEvidence(options);
+  const check = () => checkTestEvidence({ ...options, evidencePath: options.outputPath });
+  assert.equal((await check()).checks.recordedPass, false);
+  await writeFile(options.outputPath, '# Automated test evidence\n{}');
+  await assert.rejects(check(), /format/);
 });
