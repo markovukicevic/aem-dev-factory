@@ -49,9 +49,9 @@ Reference skills: 5. Same-named Max skills: 5.
 
 ## aem-tools
 
-Reference skills: 12. Same-named Max skills: 4.
+Reference skills: 12. Same-named Max skills: 7.
 
-**Initial Max skills:** `aem-component`, `aem-doc-gen`, `aem-doctor`, `aem-snapshot`.
+**Initial Max skills:** `aem-component`, `aem-doc-gen`, `aem-doctor`, `aem-qa`, `aem-qa-handoff`, `aem-snapshot`, `aem-verify`.
 
 **Reference skills without a same-named Max skill:**
 
@@ -59,10 +59,7 @@ Reference skills: 12. Same-named Max skills: 4.
 - `aem-fe-verify`
 - `aem-init`
 - `aem-page-search`
-- `aem-qa`
-- `aem-qa-handoff`
 - `aem-refresh`
-- `aem-verify`
 
 ## agent-automation
 

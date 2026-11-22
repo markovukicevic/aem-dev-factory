@@ -2,6 +2,10 @@
 
 ## 2026-11-22
 
+- Added local AEM QA handoff status summaries and ticket artifact recognition; declared checks and their evidence are not independently verified.
+
+- Added an AEM QA handoff formatter and initial verification/QA skills; supplied evidence is not independently verified and live AEM behavior remains untested.
+
 - Added a combined local AEM component overview and non-overwriting report for definitions, dialog audit and optional supertype candidates; runtime and effective inheritance remain unverified.
 
 - Added batch freshness checks for selected ID-named Confluence exports, including missing, mismatched and unavailable results; live Confluence remains unverified.

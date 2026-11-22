@@ -212,6 +212,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Compare local dialog snapshots
 
+`aem-qa-handoff <input.json> <output.md>` creates a local QA handoff from explicit `component`, `environment`, optional `revision`, `checks` (`name`, `result`, `evidence`) and `limitations`. Results are `passed`, `failed` or `not-run`. `aem-qa-status <handoff.md>` summarizes the declared results without validating them; `ticket-status` recognizes `qa-handoff.md` as a local artifact. The handoff does not perform or validate checks, and never overwrites an existing file. Initial `aem-verify`, `aem-qa` and `aem-qa-handoff` skills describe the workflow; live AEM and AI-client behavior are unverified.
+
 `aem-component-overview <component-directory> [--jcr-root <directory>]` combines local component, dialog-audit and optional supertype candidate observations. Missing or invalid parts are reported separately; it does not establish AEM runtime behavior, effective inheritance or accessibility. `aem-component-overview-report <component-directory> <output.md> [--jcr-root <directory>]` saves the same observations to a new local file.
 
 `aem-supertype <component-directory> <jcr-root>` inspects local candidates for an explicit component supertype under one supplied JCR root. Relative resource types are checked under `apps` and `libs`; absolute paths must start with one of those roots. Missing paths and symlinks are reported. This does not establish AEM search-path ordering, inheritance, repository completeness or runtime behavior.
