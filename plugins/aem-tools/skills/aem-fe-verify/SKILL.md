@@ -5,7 +5,7 @@ description: Inspect an AEM frontend change and report observed rendering checks
 
 # Verify AEM frontend behavior
 
-Identify the target component, requirements, repository instructions and available verification environment. Inspect the actual frontend sources and tests. `aem-clientlibs <directory>` reports explicit local client library definitions and raw attributes, `aem-clientlib-files <directory>` inspects local `js.txt` and `css.txt` source paths, while `aem-component-overview` reports local component and dialog observations. Neither establishes deployed assets, effective dependencies or rendered appearance.
+Identify the target component, requirements, repository instructions and available verification environment. Inspect the actual frontend sources and tests. `aem-clientlibs <directory>` reports explicit local client library definitions and raw attributes, `aem-clientlib-files <directory>` inspects local `js.txt` and `css.txt` source paths, while `aem-component-overview` reports local component and dialog observations. `aem-clientlibs-overview <directory>` combines these observations, and `aem-clientlibs-report <directory> <output.md>` saves a new local report. None establishes deployed assets, effective dependencies or rendered appearance.
 
 When the user has authorized a live AEM environment and the necessary tools are available, inspect the actual rendered component against the supplied requirements or design. Record the page, environment, revision when known, viewport, actions and observations. Do not claim visual, accessibility or responsive verification from local XML alone. If live AEM, browser access or reference designs are unavailable, report those checks as not run.
 

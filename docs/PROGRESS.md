@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added a bounded combined local AEM client library overview and non-overwriting report; generated assets and AEM runtime remain unverified.
+
 - Added bounded local AEM client library manifest path inspection; generated assets, runtime aggregation and rendered behavior remain unverified.
 
 - Added bounded local AEM client library inspection and an initial frontend verification skill; asset resolution and live rendering remain unverified.
