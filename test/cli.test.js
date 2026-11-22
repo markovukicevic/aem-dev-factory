@@ -1057,3 +1057,12 @@ test('routes PR commit reads to the selected provider and checks credentials', a
   assert.equal(await runCli(['scm-pr-commits', 'providers.json', '7'], { ...options, env: {} }), 2);
   assert.equal(await runCli(['scm-pr-commits', 'providers.json', 'bad'], options), 2);
 });
+
+
+test('routes provider-selected review context without inventing Azure revision consistency', async () => {
+  const { messages, output } = capture();
+  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: () => ({ provider: 'ado', getPullRequest: async () => ({ pullRequestId: 7 }), getPullRequestThreads: async () => ({ value: [] }), getPullRequestCommitPage: async () => ({ values: [], continuationToken: null }) }) };
+  assert.equal(await runCli(['scm-review-context', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).revisionConsistency, null);
+  assert.equal(await runCli(['scm-review-context', 'providers.json', '7'], { ...options, env: {} }), 2);
+});
