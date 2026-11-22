@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added read-only byte comparison and non-overwriting reports for local AEM project knowledge; existing files remain unchanged and source contents are not reviewed.
+
 - Added local AEM project knowledge import preview and non-overwriting import; remote sources, updates of existing files and content validation remain unimplemented.
 
 - Connected explicit AEM content-root settings to bounded local resource-type search; JCR mapping and live AEM usage are not inferred.
