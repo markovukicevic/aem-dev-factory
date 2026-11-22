@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added read-only Confluence Cloud search and non-overwriting page export. Search is limited to the first response; live Confluence behavior remains unverified.
+
 - Added a read-only preview of selected Jira issue attachments, reported sizes and current destination collisions. Live Jira behavior remains unverified.
 
 - Reject Jira attachment responses with mismatched unencoded content length and cover the complete issue-to-manifest path with simulated HTTP. Live Jira remains unverified.
