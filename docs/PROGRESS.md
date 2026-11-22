@@ -2,7 +2,9 @@
 
 ## 2026-11-22
 
-- Added bounded GitHub PR commit retrieval with revision checks and explicit 250-commit API limit. Simulated tests only.
+- Integrated bounded commit metadata into GitHub review context with matching revision and commit-count checks. The separate commit reader was verified against public cli/cli PR 15117.
+
+- Added bounded GitHub PR commit retrieval with revision checks and explicit 250-commit API limit.
 
 - Added possible-move candidates to local dialog snapshot comparisons for unique field names and matching resource types; field identity is not assumed.
 
