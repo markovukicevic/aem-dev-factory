@@ -71,6 +71,7 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       return { provider: 'gitlab', number, title: issue.title, body: issue.description ?? '', bodyFormat: 'markdown', state: issue.state ?? null, author: issue.author?.username ?? null, labels: Array.isArray(issue.labels) ? issue.labels : [], url: issue.web_url ?? null, comments };
     },
     async getPullRequest(number) { iid(number); return (await get(`/merge_requests/${number}`)).data; },
+    async getMergeRequestCommits(number) { iid(number); return (await get(`/merge_requests/${number}/commits`)).data; },
     async listMergeRequestDiffs(number, { page = 1, perPage = 100 } = {}) {
       iid(number);
       if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100) throw new TypeError('Invalid GitLab diff page');

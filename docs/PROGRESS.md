@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added revision-checked GitLab MR commit response reading; response completeness is unknown and live GitLab behavior is unverified.
+
 - Integrated bounded commit metadata into GitHub review context with matching revision and commit-count checks. The separate commit reader was verified against public cli/cli PR 15117.
 
 - Added bounded GitHub PR commit retrieval with revision checks and explicit 250-commit API limit.

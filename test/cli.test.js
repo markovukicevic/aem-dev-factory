@@ -1019,3 +1019,12 @@ test('reads GitHub PR commit metadata through the configured SCM', async () => {
   assert.equal(JSON.parse(messages.logs.at(-1)).commitListComplete, true);
   assert.equal(await runCli(['github-pr-commits', 'providers.json', 'bad'], options), 2);
 });
+
+
+test('reads GitLab MR commit metadata through configured SCM', async () => {
+  const { messages, output } = capture();
+  const refs = { base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40), start_sha: 'c'.repeat(40) };
+  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'gitlab' } }), makeScm: () => ({ provider: 'gitlab', getPullRequest: async () => ({ iid: 7, diff_refs: refs }), getMergeRequestCommits: async () => [{ id: refs.head_sha }] }) };
+  assert.equal(await runCli(['gitlab-mr-commits', 'providers.json', '7'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).commitListComplete, null);
+});
