@@ -1,7 +1,10 @@
 # Progress
 
-- Added a read-only consistency check for saved automated test evidence against the current plan, settings and Git state; editable records are not proof tests ran.
 ## 2026-11-22
+
+- Added initial build and blocked-step diagnosis skills. Automatic plan healing is not implemented; AI-client behavior remains untested.
+
+- Added a read-only consistency check for saved automated test evidence against the current plan, settings and Git state; editable records are not proof tests ran.
 
 - Hardened staged security scanning for filenames resembling Git index-stage selectors; the scan remains limited to documented patterns and scope.
 
