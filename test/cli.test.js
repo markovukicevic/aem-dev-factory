@@ -1107,3 +1107,17 @@ test('saves PR and CI evidence locally without overwriting', async t => {
   assert.equal(await runCli(['scm-review-evidence-check', 'providers.json', path], options), 1);
   assert.equal(JSON.parse(messages.logs.at(-1)).revisionMatches, null);
 });
+
+
+test('downloads an explicit Jira attachment set into an existing directory', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'jira-attachments-cli-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const { messages, output } = capture();
+  const options = { output, env: { JIRA_EMAIL: 'x', JIRA_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }), makeTracker: () => ({ provider: 'jira', getAttachmentMetadata: async id => ({ id, filename: 'file', size: 1 }), saveAttachment: async (id, path) => { await writeFile(path, 'x', { flag: 'wx' }); return { id, path, size: 1 }; } }) };
+  assert.equal(await runCli(['jira-attachments', 'providers.json', directory, '7', '8'], options), 0);
+  assert.equal(JSON.parse(messages.logs.at(-1)).saved.length, 2);
+  assert.equal(await runCli(['jira-attachments', 'providers.json', directory, '../bad'], options), 2);
+});

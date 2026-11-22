@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added explicitly selected Jira attachment batch downloads with collision preflight, ID-only filenames and partial failure reporting; live Jira behavior remains unverified.
+
 - Added a read-only saved review evidence check against configured identities and current PR revisions; CI freshness and record authenticity remain unverified.
 
 - Added whitelisted configured SCM and CI source identifiers to PR/CI evidence; matching fields are not proof of repository identity.
