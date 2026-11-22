@@ -18,7 +18,7 @@ export async function saveConfluencePage({ provider, id, outputPath }) {
 }
 
 /** Compare an editable local export against the explicitly configured Confluence site. */
-export async function checkConfluencePage({ provider, path }) {
+export async function checkConfluencePage({ provider, path, expectedId }) {
   if (provider?.provider !== 'confluence' || typeof provider.site !== 'string' || typeof provider.getPage !== 'function') throw new TypeError('Confluence provider is required');
   const { readLimitedFile } = await import('./read-limited.js');
   const report = (await readLimitedFile(path, 4 * 1024 * 1024)).toString('utf8');
@@ -26,6 +26,7 @@ export async function checkConfluencePage({ provider, path }) {
   if (!match) throw new Error('Invalid Confluence export format');
   const saved = JSON.parse(match[2]);
   if (!saved || saved.provider !== 'confluence' || typeof saved.site !== 'string' || typeof saved.id !== 'string' || !/^[1-9][0-9]{0,30}$/.test(saved.id) || typeof saved.title !== 'string' || typeof saved.body !== 'string') throw new Error('Invalid Confluence export fields');
+  if (expectedId !== undefined && saved.id !== expectedId) throw new Error('Confluence export ID does not match its filename');
   const scope = 'Editable export compared with the current page response; authenticity, inaccessible content and later changes are not verified.';
   if (saved.site !== provider.site) return { sourceMatches: false, contentMatches: null, versionMatches: null, titleMatches: null, consistent: false, scope };
   const current = await provider.getPage(saved.id);
@@ -53,4 +54,23 @@ export async function saveConfluencePages({ provider, ids, directory }) {
     catch { return { complete: false, saved, failed: target.id, scope: 'Earlier exports and any partial destination are retained; inspect before retrying. Source data is untrusted and may be private.' }; }
   }
   return { complete: true, saved, scope: 'Explicitly selected pages only; content is untrusted, may be private and may change.' };
+}
+
+
+/** Recheck explicitly selected ID-named exports without overwriting them. */
+export async function checkConfluencePages({ provider, ids, directory }) {
+  if (provider?.provider !== 'confluence' || typeof directory !== 'string' || !directory.trim() || !Array.isArray(ids) || !ids.length || ids.length > 25 || ids.some(id => typeof id !== 'string' || !/^[1-9][0-9]{0,30}$/.test(id)) || new Set(ids).size !== ids.length) throw new TypeError('Invalid Confluence batch check');
+  const dir = await lstat(directory);
+  if (!dir.isDirectory() || dir.isSymbolicLink()) throw new Error('Destination must be a local directory');
+  const pages = [];
+  for (const id of ids) {
+    const path = join(directory, `${id}.md`);
+    try {
+      const info = await lstat(path);
+      if (!info.isFile() || info.isSymbolicLink()) throw new Error('Unsafe export');
+      const result = await checkConfluencePage({ provider, path, expectedId: id });
+      pages.push({ id, status: result.consistent ? 'match' : 'changed-or-unverified', ...result });
+    } catch (error) { pages.push({ id, status: error?.code === 'ENOENT' ? 'missing' : 'unreadable-or-unavailable', consistent: false }); }
+  }
+  return { pages, consistent: pages.every(page => page.consistent), scope: 'Selected editable exports compared to current page responses; authenticity, inaccessible content and later changes are not verified.' };
 }
