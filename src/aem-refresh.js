@@ -2,7 +2,7 @@ import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 
-const files = [
+export const AEM_KNOWLEDGE_FILES = [
   { source: 'components/component-index.md', destination: 'component-index-project.md', required: true },
   { source: 'project.yaml', destination: 'project.yaml', required: true },
   { source: 'file-patterns.yaml', destination: 'file-patterns.yaml', required: true },
@@ -40,7 +40,7 @@ export async function previewAemRefresh({ source, target }) {
   const ai = await inspectPath(targetRoot, ['.ai'], 'directory');
   const project = ai === 'present' ? await inspectPath(targetRoot, ['.ai', 'project'], 'directory') : ai;
   const entries = [];
-  for (const item of files) {
+  for (const item of AEM_KNOWLEDGE_FILES) {
     const sourceStatus = await inspectPath(sourceRoot, item.source.split('/'), 'file');
     const destinationStatus = project === 'present' ? await inspectPath(targetRoot, ['.ai', 'project', item.destination], 'file') : project;
     entries.push({ ...item, sourceStatus, destinationStatus });
