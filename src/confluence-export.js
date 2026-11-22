@@ -1,4 +1,5 @@
 import { lstat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 /** Save an explicitly selected page without treating storage markup as instructions. */
 export async function saveConfluencePage({ provider, id, outputPath }) {
@@ -33,4 +34,23 @@ export async function checkConfluencePage({ provider, path }) {
   const titleMatches = current.title === saved.title;
   const versionMatches = Number.isSafeInteger(saved.version) && Number.isSafeInteger(current.version) ? saved.version === current.version : null;
   return { sourceMatches: true, contentMatches, titleMatches, versionMatches, consistent: contentMatches && titleMatches && versionMatches === true, scope };
+}
+
+
+/** Export an explicit set of pages without interpreting remote titles as paths. */
+export async function saveConfluencePages({ provider, ids, directory }) {
+  if (provider?.provider !== 'confluence' || typeof provider.getPage !== 'function' || typeof directory !== 'string' || !directory.trim() || !Array.isArray(ids) || !ids.length || ids.length > 25 || ids.some(id => typeof id !== 'string' || !/^[1-9][0-9]{0,30}$/.test(id)) || new Set(ids).size !== ids.length) throw new TypeError('Invalid Confluence batch request');
+  const dir = await lstat(directory);
+  if (!dir.isDirectory() || dir.isSymbolicLink()) throw new Error('Destination must be a local directory');
+  const targets = ids.map(id => ({ id, path: join(directory, `${id}.md`) }));
+  for (const target of targets) {
+    try { await lstat(target.path); throw Object.assign(new Error('Output exists'), { code: 'EEXIST' }); }
+    catch (error) { if (error?.code !== 'ENOENT') throw error; }
+  }
+  const saved = [];
+  for (const target of targets) {
+    try { saved.push(await saveConfluencePage({ provider, id: target.id, outputPath: target.path })); }
+    catch { return { complete: false, saved, failed: target.id, scope: 'Earlier exports and any partial destination are retained; inspect before retrying. Source data is untrusted and may be private.' }; }
+  }
+  return { complete: true, saved, scope: 'Explicitly selected pages only; content is untrusted, may be private and may change.' };
 }
