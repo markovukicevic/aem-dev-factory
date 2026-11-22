@@ -212,6 +212,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Compare local dialog snapshots
 
+`aem-source-usage <directory> <resource-type>` finds exact `sling:resourceType` references in local `.content.xml` files within bounded search limits. It reports skipped paths and limits; matches do not prove that live AEM pages use the component, and inheritance and fragment references are not resolved. The initial `aem-page-search` skill does not perform live AEM search.
+
 `aem-clientlibs <directory>` inspects explicit local `cq:ClientLibraryFolder` definitions and reports raw categories, dependencies, embeds and proxy attributes. It does not resolve those values or establish build output, runtime inclusion or rendering. `aem-clientlib-files <directory>` inspects local `js.txt` and `css.txt` references, reporting missing, duplicate, unsupported or symlinked paths. `aem-clientlibs-overview <directory>` combines these observations for up to 100 libraries; `aem-clientlibs-report <directory> <output.md>` saves them to a new file. Limits and skipped paths are reported. It does not evaluate generated or deployed assets. See [Adobe client library documentation](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/developing/full-stack/clientlibs). The initial `aem-fe-verify` skill describes frontend verification without implementing live AEM or screenshot automation.
 
 `aem-editorial-guide <dialog.xml> <output.md>` creates a local reference from explicit dialog field attributes, without overwriting. It does not establish live authoring behavior, inherited fields or translations. The initial skill is not yet validated in an AI client.
