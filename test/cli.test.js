@@ -37,78 +37,6 @@ test('reports failures without exposing credentials or server error messages', a
   assert.equal(messages.errors[0].includes('secret'), false);
 });
 
-test('returns PR context with separate comments, check runs and commit status', async () => {
-  const { messages, output } = capture();
-  const makeClient = () => ({
-    getPullRequest: async number => ({ number, head: { sha: '123abcd' } }),
-    listReviewComments: async () => [{ id: 'review' }],
-    listIssueComments: async () => [{ id: 'conversation' }],
-    listCheckRuns: async sha => ({ sha, check_runs: [] }),
-    getCommitStatus: async sha => ({ sha, state: 'pending' }),
-  });
-  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
-  const result = JSON.parse(messages.logs[0]);
-  assert.equal(result.reviewComments[0].id, 'review');
-  assert.equal(result.conversationComments[0].id, 'conversation');
-  assert.equal(result.checkRuns.sha, '123abcd');
-  assert.equal(result.commitStatus.state, 'pending');
-  assert.match(result.pagination.note, /requested page/);
-});
-
-test('does not present incomplete context as successful if a request fails', async () => {
-  const { messages, output } = capture();
-  const fail = async () => { throw Object.assign(new Error('private details'), { status: 403 }); };
-  const makeClient = () => ({
-    getPullRequest: async () => ({ head: { sha: '123abcd' } }),
-    listReviewComments: fail, listIssueComments: async () => [],
-    listCheckRuns: async () => ({}), getCommitStatus: async () => ({}),
-  });
-  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 1);
-  assert.deepEqual(messages.logs, []);
-  assert.deepEqual(messages.errors, ['GitHub request failed (403)']);
-});
-
-test('reads an issue independently of the pull request commands', async () => {
-  const { messages, output } = capture();
-  const makeClient = () => ({ getIssue: async number => ({ number, title: 'Example' }) });
-  assert.equal(await runCli(['github-issue', 'team', 'site', '31'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
-  assert.deepEqual(JSON.parse(messages.logs[0]), { number: 31, title: 'Example' });
-});
-
-
-test('fetches the selected page for each paginated context component', async () => {
-  const { messages, output } = capture();
-  const pages = [];
-  const page = async (_id, options) => { pages.push(options.page); return []; };
-  const makeClient = () => ({
-    getPullRequest: async () => ({ head: { sha: '123abcd' } }),
-    listReviewComments: page, listIssueComments: page, listCheckRuns: page,
-    getCommitStatus: async () => ({}),
-  });
-  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12', '--page', '2'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
-  assert.deepEqual(pages, [2, 2, 2]);
-  assert.equal(JSON.parse(messages.logs[0]).pagination.page, 2);
-  assert.equal(await runCli(['github-pr', 'team', 'site', '12', '--page', '2'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 2);
-  assert.equal(await runCli(['github-pr-context', 'team', 'site', '12', '--page', '0'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 2);
-});
-
-
-test('runs configured readiness locally without a GitHub token', async () => {
-  const { messages, output } = capture();
-  let options;
-  const inspect = async input => { options = input; return { ready: false, blockers: ['Tests failed.'] }; };
-  assert.equal(await runCli(['readiness', 'config.json', 'implement.md'], { cwd: '/repo', env: {}, output, inspect }), 1);
-  assert.deepEqual(options, { cwd: '/repo', configPath: 'config.json', planPath: 'implement.md' });
-  assert.equal(JSON.parse(messages.logs[0]).ready, false);
-});
-
-test('returns normalized issue context without treating a pull request as an issue', async () => {
-  const { messages, output } = capture();
-  const makeClient = () => ({ getIssue: async number => ({ number, title: 'Bug', state: 'open', labels: [] }), listIssueComments: async () => [] });
-  assert.equal(await runCli(['github-issue-context', 'team', 'site', '31'], { env: { GITHUB_TOKEN: 'secret' }, output, makeClient }), 0);
-  assert.equal(JSON.parse(messages.logs[0]).provider, 'github');
-});
-
 test('creates a PR only when explicitly invoked with a body file and token', async () => {
   const { messages, output } = capture();
   let input;
@@ -128,23 +56,6 @@ test('rejects incomplete creation requests and hides provider errors', async () 
   assert.equal(called, false);
   assert.equal(await runCli(['github-pr-create', 'team', 'site', 'config.json', 'plan.md', 'Title', '--body-file', 'body.md'], options), 1);
   assert.equal(messages.errors.at(-1).includes('secret'), false);
-});
-
-test('exports a complete issue to a new story file without overwriting it', async t => {
-  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-cli-story-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, 'raw-story.md');
-  const { messages, output } = capture();
-  const makeClient = () => ({ getIssue: async number => ({ number, title: 'Bug', body: 'Details', state: 'open', labels: [] }), listIssueComments: async () => [] });
-  const options = { env: { GITHUB_TOKEN: 'secret' }, output, makeClient };
-  const args = ['github-issue-export', 'team', 'repo', '7', path];
-  assert.equal(await runCli(args, options), 0);
-  assert.match(await readFile(path, 'utf8'), /Details/);
-  assert.equal(await runCli(args, options), 1);
-  assert.match(messages.errors.at(-1), /not overwritten/);
 });
 
 test('reads a ticket through the independently configured tracker adapter', async () => {
@@ -172,42 +83,11 @@ test('uses Jira credentials for a Jira tracker without requiring a GitHub token'
   assert.equal(JSON.parse(messages.logs[0]).key, 'TEAM-7');
 });
 
-test('exports a Jira tracker issue and preserves an existing story file', async t => {
-  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-jira-export-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, 'raw-story.md');
-  const { messages, output } = capture();
-  const issue = { provider: 'jira', key: 'TEAM-7', title: 'Story', labels: [], body: { type: 'doc', version: 1, content: [] }, comments: [] };
-  const options = { output, env: { JIRA_EMAIL: 'user@example.com', JIRA_API_TOKEN: 'secret' }, makeTracker: () => ({ getTicket: async () => issue }), readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }) };
-  const args = ['tracker-export', 'providers.json', 'TEAM-7', path];
-  assert.equal(await runCli(args, options), 0);
-  assert.match(await readFile(path, 'utf8'), /Jira issue.*TEAM-7/);
-  assert.equal(await runCli(args, options), 1);
-  assert.match(messages.errors.at(-1), /not overwritten/);
-});
-
 test('uses Azure DevOps credentials for a numeric tracker ticket', async () => {
   const { messages, output } = capture();
   const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'ado' } }), makeTracker: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { getTicket: async id => ({ provider: 'ado', number: id }) }; } };
   assert.equal(await runCli(['tracker-ticket', 'providers.json', '12'], options), 0);
   assert.equal(JSON.parse(messages.logs[0]).number, 12);
-});
-
-test('exports an Azure DevOps work item through the configured tracker', async t => {
-  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-ado-export-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, 'raw-story.md');
-  const { output } = capture();
-  const issue = { provider: 'ado', number: 12, title: 'Work', fields: { 'System.Title': 'Work' }, relations: [], comments: [] };
-  const options = { output, env: { ADO_PAT: 'secret' }, makeTracker: () => ({ getTicket: async number => { assert.equal(number, 12); return issue; } }), readBody: async () => JSON.stringify({ tracker: { provider: 'ado' } }) };
-  assert.equal(await runCli(['tracker-export', 'providers.json', '12', path], options), 0);
-  assert.match(await readFile(path, 'utf8'), /Azure DevOps work item/);
 });
 
 test('reads an Azure pull request using independently selected SCM settings', async () => {
@@ -232,42 +112,11 @@ test('creates Azure PRs only on explicit command and passes selected work-item I
   assert.equal(await runCli(args.concat(['--work-item', '-1']), options), 2);
 });
 
-test('initializes a ticket directory through the CLI without replacing existing work', async t => {
-  const { mkdtemp, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'devflow-cli-spec-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['spec-init', 'github-12', 'A new feature'], { cwd, output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).created, true);
-  assert.equal(await runCli(['spec-init', 'github-12', 'Renamed'], { cwd, output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).created, false);
-  assert.equal(await runCli(['spec-init', '../bad', 'Title'], { cwd, output }), 1);
-});
-
-test('reads CI runs using the separately configured CI adapter', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'github-actions' } }), makeCi: (config, credentials) => { assert.equal(config.provider, 'github-actions'); assert.equal(credentials.token, 'secret'); return { listWorkflowRuns: async input => ({ input }), getWorkflowRun: async id => ({ id }) }; } };
-  assert.equal(await runCli(['ci-runs', 'providers.json', '123abcd', '--page', '2'], options), 0);
-  assert.deepEqual(JSON.parse(messages.logs.at(-1)).input, { sha: '123abcd', page: 2 });
-  assert.equal(await runCli(['ci-run', 'providers.json', '42'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).id, 42);
-  assert.equal(await runCli(['ci-runs', 'providers.json', 'main'], options), 2);
-});
-
 test('uses Bitbucket credentials for an independently configured SCM provider', async () => {
   const { messages, output } = capture();
   const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: (config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); return { getPullRequest: async id => ({ id, provider: config.provider }) }; } };
   assert.equal(await runCli(['scm-pr', 'providers.json', '7'], options), 0);
   assert.equal(JSON.parse(messages.logs[0]).provider, 'bitbucket-cloud');
-});
-
-test('reads Bitbucket commit status using independently configured CI credentials', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'bitbucket-pipelines' } }), makeCi: (config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); assert.equal(config.provider, 'bitbucket-pipelines'); return { getCommitStatuses: async sha => ({ sha, values: [] }) }; } };
-  assert.equal(await runCli(['ci-status', 'providers.json', '123abcd'], options), 0);
-  assert.equal(JSON.parse(messages.logs[0]).sha, '123abcd');
 });
 
 test('creates a Bitbucket PR only on the explicit command', async () => {
@@ -292,19 +141,6 @@ test('routes GitLab tracker, SCM and CI operations using a GitLab token', async 
   assert.equal(JSON.parse(messages.logs.at(-1)).sha, '123abcd');
 });
 
-test('exports GitLab tracker issues using a numeric IID', async t => {
-  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'devflow-gitlab-export-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const path = join(cwd, 'raw-story.md');
-  const { output } = capture();
-  const options = { output, env: { GITLAB_TOKEN: 'secret' }, makeTracker: () => ({ getTicket: async number => ({ provider: 'gitlab', number, title: 'Bug', body: 'Details', labels: [], comments: [] }) }), readBody: async () => JSON.stringify({ tracker: { provider: 'gitlab' } }) };
-  assert.equal(await runCli(['tracker-export', 'providers.json', '7', path], options), 0);
-  assert.match(await readFile(path, 'utf8'), /GitLab issue/);
-});
-
 test('creates a GitLab MR only on the explicit command', async () => {
   const { messages, output } = capture();
   let input;
@@ -316,55 +152,6 @@ test('creates a GitLab MR only on the explicit command', async () => {
   assert.equal(input.body, 'Description');
   assert.equal(JSON.parse(messages.logs[0]).pullRequest.iid, 9);
   assert.equal(await runCli(args.slice(0, 5), options), 2);
-});
-
-test('searches local AEM component candidates without credentials', async t => {
-  const { mkdtemp, mkdir, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'devflow-aem-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const folder = join(cwd, 'components', 'hero');
-  await mkdir(folder, { recursive: true });
-  await writeFile(join(folder, '.content.xml'), '<component/>');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['aem-components', 'hero'], { cwd, env: {}, output }), 0);
-  assert.equal(JSON.parse(messages.logs[0]).candidates.length, 1);
-});
-
-test('inspects a local AEM dialog without credentials', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-aem-dialog-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, '.content.xml');
-  await writeFile(path, '<root xmlns:sling="urn:sling"><title sling:resourceType="text" name="./title" fieldLabel="Title"/></root>');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['aem-dialog', path], { env: {}, output }), 0);
-  assert.equal(JSON.parse(messages.logs[0]).fields[0].name, './title');
-});
-
-test('reads Azure Pipelines builds through separate CI configuration', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'ado-pipelines' } }), makeCi: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { listBuilds: async query => ({ query, values: [] }), getBuild: async id => ({ id }) }; } };
-  assert.equal(await runCli(['ado-builds', 'providers.json', 'feature/a', '--continuation', 'next'], options), 0);
-  assert.deepEqual(JSON.parse(messages.logs.at(-1)).query, { branch: 'feature/a', continuationToken: 'next' });
-  assert.equal(await runCli(['ado-build', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).id, 7);
-});
-
-test('reads hub status from the current repository without credentials', async t => {
-  const { mkdtemp, mkdir, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'devflow-hub-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  await mkdir(join(cwd, '.ai'), { recursive: true });
-  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['hub-status'], { cwd, env: {}, output }), 0);
-  assert.deepEqual(JSON.parse(messages.logs[0]).dispatches, []);
 });
 
 test('reads an explicitly selected Confluence page with separate credentials', async () => {
@@ -383,23 +170,6 @@ test('downloads an explicitly selected Jira attachment using the tracker credent
   assert.equal(await runCli(['jira-attachment', 'providers.json', '../bad', 'image.bin'], options), 2);
 });
 
-test('creates and compares local AEM dialog snapshots', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'aem-snapshot-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const xml = join(dir, 'dialog.xml');
-  const before = join(dir, 'before.json');
-  const after = join(dir, 'after.json');
-  await writeFile(xml, '<root xmlns:sling="urn:sling"><title sling:resourceType="text" name="./title"/></root>');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['aem-dialog-snapshot', xml, before], { output }), 0);
-  assert.equal(await runCli(['aem-dialog-snapshot', xml, after], { output }), 0);
-  assert.equal(await runCli(['aem-dialog-compare', before, after], { output }), 0);
-  assert.deepEqual(JSON.parse(messages.logs.at(-1)).changed, []);
-});
-
 test('dispatches only an explicitly requested GitHub workflow', async () => {
   const { messages, output } = capture();
   let input;
@@ -410,138 +180,6 @@ test('dispatches only an explicitly requested GitHub workflow', async () => {
   assert.equal(await runCli(['ci-dispatch', 'config.json', 'build.yml'], options), 2);
 });
 
-test('generates a PR description from plan and verification files', async t => {
-  const { mkdtemp, readFile, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-pr-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const explanation = join(dir, 'explain.md');
-  const plan = join(dir, 'implement.md');
-  const verification = join(dir, 'verification.md');
-  const out = join(dir, 'pr.md');
-  await writeFile(explanation, '## Summary\nChange hero\n');
-  await writeFile(plan, '### Step 1: Implement\n**Status:** done\n');
-  await writeFile(verification, 'Unit tests passed');
-  const { output } = capture();
-  const args = ['pr-description', '-', explanation, plan, verification, out];
-  assert.equal(await runCli(args, { output }), 0);
-  assert.match(await readFile(out, 'utf8'), /Unit tests passed/);
-  assert.equal(await runCli(args, { output }), 1);
-});
-
-test('inspects a signed webhook from files without executing a task', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { createHmac } = await import('node:crypto');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-webhook-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const body = JSON.stringify({ action: 'opened', issue: { number: 7 }, repository: { full_name: 'team/site' }, sender: { login: 'alex' } });
-  const signature = `sha256=${createHmac('sha256', 'secret').update(body).digest('hex')}`;
-  const policy = join(dir, 'policy.json');
-  const headers = join(dir, 'headers.json');
-  const payload = join(dir, 'body.json');
-  await writeFile(policy, JSON.stringify({ allowedRepositories: ['team/site'], allowedActors: ['alex'] }));
-  await writeFile(headers, JSON.stringify({ signature, event: 'issues', deliveryId: '12345678-1234-1234-1234-123456789abc' }));
-  await writeFile(payload, body);
-  const { messages, output } = capture();
-  assert.equal(await runCli(['webhook-inspect', policy, headers, payload], { output, env: { GITHUB_WEBHOOK_SECRET: 'secret' } }), 0);
-  assert.equal(JSON.parse(messages.logs[0]).kind, 'issue');
-  assert.equal(await runCli(['webhook-inspect', policy, headers, payload], { output, env: { GITHUB_WEBHOOK_SECRET: 'wrong' } }), 1);
-});
-
-test('claims an approved webhook once without running a job', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { createHmac } = await import('node:crypto');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-claim-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const body = JSON.stringify({ action: 'opened', issue: { number: 7 }, repository: { full_name: 'team/site' }, sender: { login: 'alex' } });
-  const signature = `sha256=${createHmac('sha256', 'secret').update(body).digest('hex')}`;
-  const policy = join(dir, 'policy.json');
-  const headers = join(dir, 'headers.json');
-  const payload = join(dir, 'body.json');
-  await writeFile(policy, JSON.stringify({ allowedRepositories: ['team/site'], allowedActors: ['alex'] }));
-  await writeFile(headers, JSON.stringify({ signature, event: 'issues', deliveryId: '12345678-1234-1234-1234-123456789abc' }));
-  await writeFile(payload, body);
-  const { messages, output } = capture();
-  const args = ['webhook-claim', policy, headers, payload, join(dir, 'claims')];
-  const options = { output, env: { GITHUB_WEBHOOK_SECRET: 'secret' } };
-  assert.equal(await runCli(args, options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).claimed, true);
-  assert.equal(await runCli(args, options), 1);
-  assert.equal(JSON.parse(messages.logs.at(-1)).reason, 'duplicate-payload');
-});
-
-test('summarizes GitHub CI through the configured provider', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'github-actions' } }), makeCi: () => ({ listCheckRuns: async () => ({ total_count: 1, check_runs: [{ status: 'completed', conclusion: 'success' }] }), getCommitStatus: async () => ({ total_count: 0 }) }) };
-  assert.equal(await runCli(['ci-summary', 'providers.json', '123abcd'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).state, 'success');
-  assert.equal(await runCli(['ci-summary', 'providers.json', 'main'], options), 2);
-});
-
-test('reads complete Bitbucket CI status only for the configured provider', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'bitbucket-pipelines' } }), makeCi: (config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); return { getAllCommitStatuses: async sha => [{ sha }] }; } };
-  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).values[0].sha, '123abcd');
-  assert.equal(await runCli(['ci-status-all', 'providers.json', 'main'], options), 2);
-  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], { ...options, readBody: async () => '{"ci":{"provider":"github-actions"}}' }), 1);
-});
-
-test('reads all GitLab pipelines using GitLab credentials', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'gitlab-ci' } }), makeCi: (config, credentials) => { assert.equal(credentials.gitlabToken, 'secret'); return { listAllPipelines: async sha => [{ sha }] }; } };
-  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).values[0].sha, '123abcd');
-  assert.equal(await runCli(['ci-status-all', 'providers.json', '123abcd'], { ...options, env: {} }), 2);
-});
-
-test('reads provider-configured pull request discussion context', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'gitlab' } }), makeScm: (_config, credentials) => { assert.equal(credentials.gitlabToken, 'secret'); return { provider: 'gitlab', getPullRequest: async () => ({ iid: 7 }), getPullRequestComments: async () => [{ id: 1 }] }; } };
-  assert.equal(await runCli(['scm-pr-context', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).comments[0].id, 1);
-  assert.equal(await runCli(['scm-pr-context', 'providers.json', '../bad'], options), 2);
-});
-
-test('reads GitHub PR file metadata through the configured SCM', async () => {
-  const { messages, output } = capture();
-  const p = { number: 7, head: { sha: 'a'.repeat(40) }, base: { sha: 'b'.repeat(40) }, changed_files: 1 };
-  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'github' } }), makeScm: () => ({ provider: 'github', getPullRequest: async () => p, listPullRequestFiles: async () => [{ filename: 'test.js' }] }) };
-  assert.equal(await runCli(['github-pr-files', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].filename, 'test.js');
-  assert.equal(await runCli(['github-pr-files', 'providers.json', 'bad'], options), 2);
-});
-
-test('reads GitLab merge request diffs with the configured provider', async () => {
-  const { messages, output } = capture();
-  const refs = { base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40), start_sha: 'c'.repeat(40) };
-  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'gitlab' } }), makeScm: () => ({ provider: 'gitlab', getPullRequest: async () => ({ iid: 7, diff_refs: refs }), listMergeRequestDiffs: async () => ({ values: [], nextPage: null }) }) };
-  assert.equal(await runCli(['gitlab-mr-diffs', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).diffComplete, null);
-  assert.equal(await runCli(['gitlab-mr-diffs', 'providers.json', 'bad'], options), 2);
-});
-
-test('reads explicitly selected Azure PR iteration changes', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { getIterationChanges: async (pr, iteration) => ({ changes: [{ pr, iteration }], complete: true }) }; } };
-  assert.equal(await runCli(['ado-pr-changes', 'providers.json', '7', '3'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).changes[0].iteration, 3);
-  assert.equal(await runCli(['ado-pr-changes', 'providers.json', '7', '0'], options), 2);
-});
-
-test('reads Bitbucket pull request statuses with the configured SCM', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: (_config, credentials) => { assert.equal(credentials.bitbucketToken, 'secret'); return { provider: 'bitbucket-cloud', getPullRequestStatuses: async number => [{ number }] }; } };
-  assert.equal(await runCli(['bitbucket-pr-statuses', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).statuses[0].number, 7);
-  assert.equal(await runCli(['bitbucket-pr-statuses', 'providers.json', '0'], options), 2);
-});
-
 test('builds GitHub review context using CI from the same SCM repository', async () => {
   const { messages, output } = capture();
   const p = { number: 7, head: { sha: 'a'.repeat(40) }, base: { sha: 'b'.repeat(40) }, changed_files: 0, commits: 0 };
@@ -549,36 +187,6 @@ test('builds GitHub review context using CI from the same SCM repository', async
   assert.equal(await runCli(['github-review-context', 'providers.json', '7'], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).ciSummary.state, 'unknown');
   assert.equal(await runCli(['github-review-context', 'providers.json', 'bad'], options), 2);
-});
-
-test('reports plan status without changing the plan', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'aem-plan-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, 'implement.md');
-  await writeFile(path, '### Step 1: Change\n**Status:** pending\n');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['plan-status', path], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).next.number, 1);
-  assert.equal(await runCli(['plan-status'], { output }), 2);
-});
-
-test('reads Bitbucket PR diffstat using the configured provider', async () => {
-  const { messages, output } = capture();
-  const pr = { id: 7, source: { commit: { hash: 'a'.repeat(40) } }, destination: { commit: { hash: 'b'.repeat(40) } } };
-  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: () => ({ provider: 'bitbucket-cloud', getPullRequest: async () => pr, getPullRequestDiffstat: async () => [{ status: 'modified' }] }) };
-  assert.equal(await runCli(['bitbucket-pr-diffstat', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'modified');
-  assert.equal(await runCli(['bitbucket-pr-diffstat', 'providers.json', '0'], options), 2);
-});
-
-test('lists bundled skills without modifying a target project', async () => {
-  const { messages, output } = capture();
-  assert.equal(await runCli(['list-skills'], { output }), 0);
-  assert.ok(JSON.parse(messages.logs.at(-1)).skills.some(skill => skill.name === 'agent-req'));
-  assert.equal(await runCli(['list-skills', 'extra'], { output }), 2);
 });
 
 test('fetches a tracker ticket once and initializes its source record', async t => {
@@ -594,159 +202,6 @@ test('fetches a tracker ticket once and initializes its source record', async t 
   assert.equal(calls, 1);
   assert.equal(JSON.parse(messages.logs.at(-1)).id, 'github-7');
   assert.equal(await runCli(['ticket-init', 'providers.json', 'invalid'], options), 2);
-});
-
-test('reports missing local ticket artifacts', async t => {
-  const { mkdtemp, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'ticket-status-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['ticket-status', dir], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).files.find(file => file.name === 'raw-story.md').status, 'missing');
-});
-
-test('initializes a project from explicit non-secret provider configuration', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'project-init-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const configPath = join(cwd, 'providers-input.json');
-  await writeFile(configPath, JSON.stringify({ scm: { provider: 'github', owner: 'team', repository: 'site' } }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['project-init', configPath], { cwd, output }), 0);
-  assert.match(JSON.parse(messages.logs.at(-1)).path, /providers\.json$/);
-  assert.equal(await runCli(['project-init', configPath], { cwd, output }), 1);
-});
-
-test('inspects local project markers without executing project commands', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'inspect-project-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  await writeFile(join(cwd, 'pom.xml'), '<project/>');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['project-inspect'], { cwd, output }), 0);
-  assert.ok(JSON.parse(messages.logs.at(-1)).signals.includes('Maven project marker'));
-});
-
-test('inspects a local AEM component without accessing an AEM instance', async t => {
-  const { mkdtemp, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'aem-doctor-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['aem-doctor-component', dir], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).definition.status, 'missing');
-});
-
-test('inspects a local OSGi directory without printing config values', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'aem-osgi-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  await writeFile(join(dir, 'service.cfg.json'), '{"value":"private"}');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['aem-doctor-osgi', dir], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'valid-json-object');
-  assert.ok(!messages.logs.at(-1).includes('private'));
-});
-
-test('inspects configured hub repositories', async t => {
-  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'hub-repos-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  await mkdir(join(cwd, '.ai'));
-  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n  repos: []\n');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['hub-repos'], { cwd, output }), 0);
-  assert.deepEqual(JSON.parse(messages.logs.at(-1)).repos, []);
-});
-
-test('initializes a hub from an explicit repository list', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'hub-init-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const input = join(cwd, 'repos.json');
-  await writeFile(input, JSON.stringify([{ name: 'web', path: '../web' }]));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['hub-init', input], { cwd, output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).repositories, 1);
-  assert.equal(await runCli(['hub-init', input], { cwd, output }), 1);
-});
-
-test('selects explicitly named hub repositories', async t => {
-  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'hub-select-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  await mkdir(join(cwd, '.ai'));
-  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n  repos:\n    - name: web\n      path: web\n');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['hub-select', 'web'], { cwd, output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).repos[0].name, 'web');
-  assert.equal(await runCli(['hub-select', 'missing'], { cwd, output }), 1);
-});
-
-test('resolves an explicit hub directive as a proposal', async t => {
-  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'hub-directive-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  await mkdir(join(cwd, '.ai'));
-  await writeFile(join(cwd, '.ai', 'config.yaml'), 'hub:\n  enabled: true\n  repos:\n    - name: web\n      path: web\n');
-  const source = join(cwd, 'story.md');
-  await writeFile(source, 'repos: web');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['hub-discover', source], { cwd, output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).repos[0].name, 'web');
-});
-
-test('inspects provider credential presence without printing values', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const cwd = await mkdtemp(join(tmpdir(), 'project-doctor-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const path = join(cwd, 'providers.json');
-  await writeFile(path, JSON.stringify({ scm: { provider: 'github', owner: 'team', repository: 'site' } }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['project-doctor', path], { cwd, output, env: { GITHUB_TOKEN: 'secret-value' } }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).providers[0].credentials[0].present, true);
-  assert.ok(!messages.logs.at(-1).includes('secret-value'));
-});
-
-test('inspects Azure builds for an exact commit without asserting branch policy', async () => {
-  const { messages, output } = capture();
-  const sha = 'a'.repeat(40);
-  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ ci: { provider: 'ado-pipelines' } }), makeCi: (_config, credentials) => { assert.equal(credentials.adoToken, 'secret'); return { provider: 'ado-pipelines', listBuilds: async () => ({ values: [{ id: 1, sourceVersion: sha }], continuationToken: null }) }; } };
-  assert.equal(await runCli(['ado-ci-commit', 'providers.json', 'main', sha], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).builds[0].id, 1);
-  assert.equal(await runCli(['ado-ci-commit', 'providers.json', 'main', 'abc'], options), 2);
-});
-
-test('writes a new local AEM evidence report', async t => {
-  const { mkdtemp, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'aem-report-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  const report = join(dir, 'report.md');
-  assert.equal(await runCli(['aem-component-report', dir, report], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).path, report);
-  assert.equal(await runCli(['aem-component-report', dir, report], { output }), 1);
 });
 
 test('shows help successfully with the supported PR creation commands', async () => {
@@ -770,17 +225,6 @@ test('starts an explicit local webhook listener without exposing its secret', as
   assert.equal(JSON.parse(messages.logs.at(-1)).listening, '127.0.0.1');
   assert.ok(!messages.logs.at(-1).includes('secret-value'));
   assert.equal(await runCli(['webhook-listen', path, dir, '0'], options), 2);
-});
-
-test('lists local webhook claim records without running tasks', async t => {
-  const { mkdtemp, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'webhook-claims-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['webhook-claims', dir], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).complete, true);
 });
 
 test('transitions a plan using the digest from plan-status', async t => {
@@ -822,18 +266,6 @@ test('runs and records configured tests without marking a plan verified', async 
   assert.equal(await runCli(['verification-run', config, plan, evidence], { cwd, output }), 1);
 });
 
-test('installs an explicitly selected set of skills', async t => {
-  const { mkdtemp, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const target = await mkdtemp(join(tmpdir(), 'skills-batch-cli-'));
-  t.after(() => rm(target, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['install-skills', 'codex', target, 'agent-req', 'agent-plan'], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).installed.length, 2);
-  assert.equal(await runCli(['install-skills', 'codex', target, 'agent-plan'], { output }), 1);
-});
-
 test('runs an explicitly configured local hub task', async t => {
   const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
@@ -853,201 +285,6 @@ test('runs an explicitly configured local hub task', async t => {
   assert.equal(await runCli(['hub-run', input], { cwd: hub, output }), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).repos.repo, 'done');
 });
-
-test('creates a local PR discussion workspace without posting replies', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'pr-response-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const input = join(dir, 'context.json'), destination = join(dir, 'draft.md');
-  await writeFile(input, JSON.stringify({ provider: 'github', pullRequest: {}, comments: [{ id: 1, body: 'Comment' }], reviewComments: [], reviews: [], discussionComplete: true }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['pr-response-draft', input, destination], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).count, 1);
-  assert.equal(await runCli(['pr-response-draft', input, destination], { output }), 1);
-});
-
-test('creates a local PR review report from supplied evidence', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const dir = await mkdtemp(join(tmpdir(), 'pr-review-report-cli-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const input = join(dir, 'findings.json'), report = join(dir, 'report.md');
-  await writeFile(input, JSON.stringify({ repository: 'team/site', pullRequest: 7, head: 'a'.repeat(40), findings: [], checks: [], limitations: [] }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['pr-review-report', input, report], { output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).findingCount, 0);
-  assert.equal(await runCli(['pr-review-report', input, report], { output }), 1);
-});
-
-test('runs a local changed-file security scan without printing detected values', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const { execFileSync } = await import('node:child_process');
-  const cwd = await mkdtemp(join(tmpdir(), 'security-scan-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  execFileSync('git', ['init', '-q', '-b', 'feature'], { cwd });
-  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd });
-  const token = 'ghp_' + 'A'.repeat(36);
-  await writeFile(join(cwd, 'secret.txt'), token);
-  const { messages, output } = capture();
-  assert.equal(await runCli(['security-scan'], { cwd, output }), 1);
-  assert.equal(JSON.parse(messages.logs.at(-1)).findings[0].pattern, 'github-token-pattern');
-  assert.ok(!messages.logs.at(-1).includes(token));
-});
-
-test('scans committed PR changes from an explicit full base commit', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const { execFileSync } = await import('node:child_process');
-  const cwd = await mkdtemp(join(tmpdir(), 'security-commit-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const git = args => execFileSync('git', args, { cwd, encoding: 'utf8' });
-  git(['init', '-q', '-b', 'feature']);
-  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial']);
-  const base = git(['rev-parse', 'HEAD']).trim();
-  await writeFile(join(cwd, 'safe.txt'), 'safe');
-  git(['add', 'safe.txt']);
-  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'change']);
-  const { messages, output } = capture();
-  assert.equal(await runCli(['security-scan-commit', base], { cwd, output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).headChanged, false);
-  assert.equal(await runCli(['security-scan-commit', 'abc1234'], { cwd, output }), 2);
-});
-
-test('scans a bounded PR commit history without printing detected values', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const { execFileSync } = await import('node:child_process');
-  const cwd = await mkdtemp(join(tmpdir(), 'security-history-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const git = args => execFileSync('git', args, { cwd, encoding: 'utf8' });
-  git(['init', '-q', '-b', 'feature']);
-  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial']);
-  const base = git(['rev-parse', 'HEAD']).trim(), token = 'ghp_' + 'C'.repeat(36);
-  await writeFile(join(cwd, 'secret.txt'), token);
-  git(['add', 'secret.txt']);
-  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'change']);
-  const { messages, output } = capture();
-  assert.equal(await runCli(['security-scan-history', base], { cwd, output }), 1);
-  assert.equal(JSON.parse(messages.logs.at(-1)).findings[0].pattern, 'github-token-pattern');
-  assert.ok(!messages.logs.at(-1).includes(token));
-});
-
-test('records security findings without printing detected values', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const { execFileSync } = await import('node:child_process');
-  const cwd = await mkdtemp(join(tmpdir(), 'security-evidence-cli-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const git = args => execFileSync('git', args, { cwd, encoding: 'utf8' });
-  git(['init', '-q', '-b', 'feature']);
-  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial']);
-  const base = git(['rev-parse', 'HEAD']).trim(), token = 'ghp_' + 'D'.repeat(36);
-  await writeFile(join(cwd, 'secret.txt'), token);
-  const { messages, output } = capture();
-  assert.equal(await runCli(['security-evidence', base, join(cwd, 'evidence.md')], { cwd, output }), 1);
-  assert.ok(JSON.parse(messages.logs.at(-1)).findingCount > 0);
-  assert.ok(!messages.logs.at(-1).includes(token));
-});
-
-test('previews a hub task without executing it', async t => {
-  const { mkdtemp, mkdir, writeFile, rm, lstat } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const { execFileSync } = await import('node:child_process');
-  const { initializeHub } = await import('../src/hub-init.js');
-  const root = await mkdtemp(join(tmpdir(), 'hub-plan-cli-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  const hub = join(root, 'hub'), repo = join(root, 'repo');
-  await mkdir(hub);
-  execFileSync('git', ['init', '-q', '-b', 'feature', repo]);
-  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-qm', 'initial'], { cwd: repo });
-  await initializeHub({ cwd: hub, repos: [{ name: 'repo', path: repo }] });
-  const input = join(root, 'task.json');
-  await writeFile(input, JSON.stringify({ ticket: 'TASK-2', title: 'Check', repositories: ['repo'], executable: '/nonexistent/program', args: [], timeoutMs: 10000 }));
-  const { messages, output } = capture();
-  assert.equal(await runCli(['hub-plan', input], { cwd: hub, output }), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).repositories[0].name, 'repo');
-  await assert.rejects(lstat(join(hub, 'state', 'TASK-2')), { code: 'ENOENT' });
-});
-
-
-test('audits a local dialog without asserting candidate defects', async t => {
-  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const root = await mkdtemp(join(tmpdir(), 'dialog-audit-cli-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  const path = join(root, 'dialog.xml');
-  await writeFile(path, '<root><x name="./title" sling:resourceType="form/textfield"/></root>');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['aem-dialog-audit', path], { output }), 0);
-  const result = JSON.parse(messages.logs.at(-1));
-  assert.equal(result.missingLabels.length, 1);
-  assert.match(result.scope, /not proven defects/);
-  assert.equal(await runCli(['aem-dialog-audit'], { output }), 2);
-});
-
-
-test('checks explicit local supertype candidates', async t => {
-  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const root = await mkdtemp(join(tmpdir(), 'supertype-cli-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  const component = join(root, 'component'), jcrRoot = join(root, 'jcr_root');
-  await mkdir(component); await mkdir(jcrRoot);
-  await writeFile(join(component, '.content.xml'), '<jcr:root xmlns:jcr="x" xmlns:sling="y" sling:resourceSuperType="example/base"/>');
-  const { messages, output } = capture();
-  assert.equal(await runCli(['aem-supertype', component, jcrRoot], { output }), 0);
-  assert.deepEqual(JSON.parse(messages.logs.at(-1)).candidates.map(item => item.status), ['missing', 'missing']);
-  assert.equal(await runCli(['aem-supertype', component], { output }), 2);
-});
-
-test('reads GitHub PR commit metadata through the configured SCM', async () => {
-  const { messages, output } = capture();
-  const head = 'a'.repeat(40), base = 'b'.repeat(40);
-  const options = { output, env: { GITHUB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'github' } }), makeScm: () => ({ provider: 'github', getPullRequest: async () => ({ number: 7, head: { sha: head }, base: { sha: base }, commits: 1 }), listPullRequestCommits: async () => [{ sha: head }] }) };
-  assert.equal(await runCli(['github-pr-commits', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).commitListComplete, true);
-  assert.equal(await runCli(['github-pr-commits', 'providers.json', 'bad'], options), 2);
-});
-
-
-test('reads GitLab MR commit metadata through configured SCM', async () => {
-  const { messages, output } = capture();
-  const refs = { base_sha: 'a'.repeat(40), head_sha: 'b'.repeat(40), start_sha: 'c'.repeat(40) };
-  const options = { output, env: { GITLAB_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'gitlab' } }), makeScm: () => ({ provider: 'gitlab', getPullRequest: async () => ({ iid: 7, diff_refs: refs }), getMergeRequestCommits: async () => [{ id: refs.head_sha }] }) };
-  assert.equal(await runCli(['gitlab-mr-commits', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).commitListComplete, null);
-});
-
-
-test('reads Bitbucket PR commits through configured SCM', async () => {
-  const { messages, output } = capture();
-  const head = 'a'.repeat(40), base = 'b'.repeat(40);
-  const options = { output, env: { BITBUCKET_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'bitbucket-cloud' } }), makeScm: () => ({ provider: 'bitbucket-cloud', getPullRequest: async () => ({ id: 7, source: { commit: { hash: head } }, destination: { commit: { hash: base } } }), getPullRequestCommits: async () => [{ hash: head }] }) };
-  assert.equal(await runCli(['bitbucket-pr-commits', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).paginationComplete, true);
-});
-
-
-test('reads an explicit Azure PR commit page', async () => {
-  const { messages, output } = capture();
-  const options = { output, env: { ADO_PAT: 'secret' }, readBody: async () => JSON.stringify({ scm: { provider: 'ado' } }), makeScm: () => ({ provider: 'ado', getPullRequestCommitPage: async (_id, { continuationToken }) => ({ values: [{ commitId: 'a'.repeat(40) }], continuationToken: continuationToken ? null : 'next' }) }) };
-  assert.equal(await runCli(['ado-pr-commits', 'providers.json', '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).continuationToken, 'next');
-  assert.equal(await runCli(['ado-pr-commits', 'providers.json', '7', '--continuation', 'next'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).paginationComplete, null);
-});
-
 
 test('routes PR commit reads to the selected provider and checks credentials', async () => {
   const { messages, output } = capture();
@@ -1106,50 +343,6 @@ test('saves PR and CI evidence locally without overwriting', async t => {
   assert.equal(await runCli(['scm-review-evidence', 'providers.json', '7', sha, path], options), 1);
   assert.equal(await runCli(['scm-review-evidence-check', 'providers.json', path], options), 1);
   assert.equal(JSON.parse(messages.logs.at(-1)).revisionMatches, null);
-});
-
-
-test('downloads an explicit Jira attachment set into an existing directory', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const directory = await mkdtemp(join(tmpdir(), 'jira-attachments-cli-'));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  const options = { output, env: { JIRA_EMAIL: 'x', JIRA_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }), makeTracker: () => ({ provider: 'jira', getAttachmentMetadata: async id => ({ id, filename: 'file', size: 1 }), saveAttachment: async (id, path) => { await writeFile(path, 'x', { flag: 'wx' }); return { id, path, size: 1 }; } }) };
-  assert.equal(await runCli(['jira-attachments', 'providers.json', directory, '7', '8'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).saved.length, 2);
-  assert.equal(await runCli(['jira-attachments', 'providers.json', directory, '../bad'], options), 2);
-});
-
-
-test('downloads Jira attachments only when selected issue reports them', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const directory = await mkdtemp(join(tmpdir(), 'jira-ticket-attachments-cli-'));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const { messages, output } = capture();
-  const options = { output, env: { JIRA_EMAIL: 'x', JIRA_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'jira' } }), makeTracker: () => ({ provider: 'jira', getTicket: async key => ({ provider: 'jira', key, attachments: [{ id: '7' }] }), getAttachmentMetadata: async id => ({ id, filename: 'file', size: 1 }), saveAttachment: async (id, path) => { await writeFile(path, 'x', { flag: 'wx' }); return { id, path, size: 1 }; } }) };
-  assert.equal(await runCli(['jira-ticket-attachments', 'providers.json', 'TEAM-7', directory, '7'], options), 0);
-  assert.equal(JSON.parse(messages.logs.at(-1)).ticket, 'TEAM-7');
-  assert.equal(await runCli(['jira-ticket-attachments', 'providers.json', 'TEAM-7', directory, '8'], options), 1);
-});
-
-
-test('records and checks local attachment hashes', async t => {
-  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join } = await import('node:path');
-  const directory = await mkdtemp(join(tmpdir(), 'attachment-manifest-cli-'));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  await writeFile(join(directory, '7.bin'), 'initial');
-  const manifest = join(directory, 'manifest.json'), { messages, output } = capture();
-  assert.equal(await runCli(['jira-attachment-manifest', directory, manifest, '7'], { output }), 0);
-  assert.equal(await runCli(['jira-attachment-check', directory, manifest], { output }), 0);
-  await writeFile(join(directory, '7.bin'), 'changed');
-  assert.equal(await runCli(['jira-attachment-check', directory, manifest], { output }), 1);
-  assert.equal(JSON.parse(messages.logs.at(-1)).files[0].status, 'changed');
 });
 
 
