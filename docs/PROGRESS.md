@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added a read-only preview of selected Jira issue attachments, reported sizes and current destination collisions. Live Jira behavior remains unverified.
+
 - Reject Jira attachment responses with mismatched unencoded content length and cover the complete issue-to-manifest path with simulated HTTP. Live Jira remains unverified.
 
 - Bound issue attachment manifests to the SHA-256 of downloaded bytes, detecting a local change before manifest creation; later changes and source authenticity remain outside this check.

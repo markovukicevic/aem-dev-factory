@@ -196,6 +196,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Download a Jira attachment
 
+`jira-attachment-plan <providers.json> <issue-key> <directory> <id> [id ...]` previews selected Jira issue attachments, their reported sizes and current destination collisions without downloading or writing files. A passing preview does not guarantee access or unchanged state during a later download.
+
 `jira-ticket-evidence <providers.json> <issue-key> <directory> <manifest.json> <id> [id ...]` checks that Jira reports the selected IDs on the issue, saves the attachments, verifies that local bytes still match the downloaded-byte hashes, and creates a local hash manifest labelled with the configured Jira site and issue. Existing destinations are preserved. If a download or manifest creation fails, saved files are retained and reported. Source labels and hashes are editable and do not authenticate content or establish safety.
 
 `jira-attachment-manifest <directory> <output.json> <id> [id ...]` records SHA-256 and size for selected local `<id>.bin` files without overwriting; `jira-attachment-check <directory> <manifest.json>` detects missing, changed or unsafe files. Hash comparisons do not establish Jira provenance, file safety or manifest authenticity, and concurrent changes remain possible.

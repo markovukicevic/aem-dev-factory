@@ -42,3 +42,29 @@ export async function saveJiraTicketAttachments({ tracker, key, directory, ids }
   const result = await saveJiraAttachments({ tracker, directory, ids });
   return { ticket: ticket.key, ...result, sourceScope: 'Attachment IDs were reported by Jira for the selected issue at fetch time; membership and metadata may change afterward.' };
 }
+
+/** Preview explicit issue attachment downloads without writing files. */
+export async function previewJiraTicketAttachments({ tracker, key, directory, ids }) {
+  if (tracker?.provider !== 'jira' || typeof tracker.getTicket !== 'function' || typeof tracker.getAttachmentMetadata !== 'function' || typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key) || typeof directory !== 'string' || !directory.trim() || !Array.isArray(ids) || !ids.length || ids.length > 50 || ids.some(id => typeof id !== 'string' || !/^[1-9][0-9]{0,30}$/.test(id)) || new Set(ids).size !== ids.length) throw new TypeError('Invalid Jira attachment preview');
+  const dir = await lstat(directory);
+  if (!dir.isDirectory() || dir.isSymbolicLink()) throw new Error('Attachment destination must be a local directory');
+  const ticket = await tracker.getTicket(key);
+  if (ticket?.provider !== 'jira' || typeof ticket.key !== 'string' || ticket.key.toUpperCase() !== key.toUpperCase() || !Array.isArray(ticket.attachments)) throw new Error('Invalid Jira issue attachment metadata');
+  const available = new Set();
+  for (const item of ticket.attachments) {
+    if (!item || typeof item.id !== 'string' || !/^[1-9][0-9]{0,30}$/.test(item.id) || available.has(item.id)) throw new Error('Invalid Jira issue attachment metadata');
+    available.add(item.id);
+  }
+  const attachments = [];
+  for (const id of ids) {
+    const path = join(directory, `${id}.bin`);
+    let destination = 'available';
+    try { await lstat(path); destination = 'exists'; }
+    catch (error) { if (error?.code !== 'ENOENT') throw error; }
+    if (!available.has(id)) { attachments.push({ id, path, destination, issueMembership: 'not-reported', metadata: null }); continue; }
+    const metadata = await tracker.getAttachmentMetadata(id);
+    if (!metadata || metadata.id !== id || typeof metadata.filename !== 'string' || !Number.isSafeInteger(metadata.size) || metadata.size < 0) throw new Error('Invalid Jira attachment metadata');
+    attachments.push({ id, path, destination, issueMembership: 'reported', metadata: { filename: metadata.filename, size: metadata.size, mimeType: typeof metadata.mimeType === 'string' ? metadata.mimeType : null }, withinSizeLimit: metadata.size <= 5 * 1024 * 1024 });
+  }
+  return { ticket: ticket.key, attachments, ready: attachments.every(item => item.destination === 'available' && item.issueMembership === 'reported' && item.withinSizeLimit === true), scope: 'Read-only preview of reported metadata and current destinations; access, content, membership and filesystem state can change before download.' };
+}
