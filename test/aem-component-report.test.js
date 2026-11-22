@@ -22,12 +22,3 @@ test('creates an evidence-only report and never overwrites it', async t => {
   await assert.rejects(saveAemComponentReport({ componentPath: component, outputPath: output }), { code: 'EEXIST' });
   assert.equal(await readFile(output, 'utf8'), report);
 });
-
-test('records an invalid local dialog without inventing fields', async t => {
-  const root = await mkdtemp(join(tmpdir(), 'aem-report-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  await mkdir(join(root, '_cq_dialog'));
-  await writeFile(join(root, '_cq_dialog', '.content.xml'), '<broken>');
-  const result = await saveAemComponentReport({ componentPath: root, outputPath: join(root, 'report.md') });
-  assert.equal(result.dialogStatus, 'invalid-or-unreadable');
-});

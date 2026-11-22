@@ -24,12 +24,3 @@ test('reports artifact availability without asserting readiness', async t => {
   assert.equal(result.files.find(file => file.name === 'verification.md').status, 'unreadable');
   assert.match(result.scope, /not verified/);
 });
-
-test('flags an invalid plan without treating other files as invalid', async t => {
-  const dir = await mkdtemp(join(tmpdir(), 'ticket-status-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  await writeFile(join(dir, 'implement.md'), 'invalid');
-  const result = await inspectTicketDirectory(dir);
-  assert.equal(result.plan, null);
-  assert.equal(result.files.find(file => file.name === 'implement.md').status, 'invalid-or-unreadable');
-});

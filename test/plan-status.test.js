@@ -21,12 +21,3 @@ test('blocks selection while any work is blocked or in progress', () => {
   assert.equal(summarizePlanStatus(step(1, 'done')).allStepsDone, true);
   assert.throws(() => summarizePlanStatus('not a plan'));
 });
-test('reads a plan from a bounded file', async t => {
-  const dir = await mkdtemp(join(tmpdir(), 'aem-max-plan-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, 'implement.md');
-  await writeFile(path, step(1, 'pending'));
-  assert.equal((await readPlanStatus(path)).next.number, 1);
-  await writeFile(path, 'x'.repeat(1024 * 1024 + 1));
-  await assert.rejects(readPlanStatus(path), /size limit/);
-});

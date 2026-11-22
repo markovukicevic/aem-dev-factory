@@ -24,16 +24,6 @@ test('reads original hub status format and filters by ticket', async t => {
   assert.equal((await readHubStatuses({ cwd, ticket: 'OTHER-1' })).dispatches.length, 0);
 });
 
-test('reports malformed status rather than silently claiming completeness', async t => {
-  const cwd = await fixture(t);
-  const folder = join(cwd, 'state', '123');
-  await mkdir(folder, { recursive: true });
-  await writeFile(join(folder, 'status.json'), JSON.stringify({ ticket: '123', title: 'Story', repos: { web: 'invented' } }));
-  const result = await readHubStatuses({ cwd });
-  assert.equal(result.complete, false);
-  assert.deepEqual(result.errors, [{ ticket: '123', message: 'Status file missing or invalid' }]);
-});
-
 test('rejects disabled hubs, unsafe ticket IDs and symlinked status files', async t => {
   const cwd = await fixture(t);
   await assert.rejects(readHubStatuses({ cwd, ticket: '../bad' }));

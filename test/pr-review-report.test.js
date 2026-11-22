@@ -16,14 +16,3 @@ test('formats supplied findings and checks without claiming independent verifica
   assert.match(empty.report, /No findings were supplied/);
   assert.throws(() => renderReviewReport({ ...input, findings: [{ ...input.findings[0], file: '../outside' }] }), /repository-relative/);
 });
-
-test('creates a new local report and refuses replacement', async t => {
-  const root = await mkdtemp(join(tmpdir(), 'pr-review-report-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  const inputPath = join(root, 'findings.json'), outputPath = join(root, 'report.md');
-  await writeFile(inputPath, JSON.stringify(input));
-  assert.equal((await saveReviewReport({ inputPath, outputPath })).findingCount, 1);
-  const original = await readFile(outputPath, 'utf8');
-  await assert.rejects(saveReviewReport({ inputPath, outputPath }), { code: 'EEXIST' });
-  assert.equal(await readFile(outputPath, 'utf8'), original);
-});

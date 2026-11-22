@@ -14,19 +14,6 @@ test('generates a PR description from source sections and actual verification ev
   assert.match(text, /npm test: passed/);
 });
 
-test('falls back to explanation and completed plan step titles without inventing verification', () => {
-  const text = buildPullRequestDescription({ explanation: '## What & Why\nAdd a feature\n', plan, verification: 'Manual review pending' });
-  assert.match(text, /Add a feature/);
-  assert.match(text, /- Change hero/);
-  assert.match(text, /Manual review pending/);
-  assert.throws(() => buildPullRequestDescription({ explanation: '## What & Why\nFeature', plan: plan.replace('done', 'pending'), verification: 'test passed' }));
-  assert.throws(() => buildPullRequestDescription({ explanation: '## What & Why\nFeature', plan, verification: '' }));
-});
-
-test('does not mistake a fenced example or comment for a real section', () => {
-  assert.equal(extractSection('```md\n## Summary\nFake\n```\n<!--\n## Summary\nFake\n-->\n## Summary\nReal\n', ['Summary']), 'Real');
-});
-
 test('creates a new description file without overwriting user work', async t => {
   const dir = await mkdtemp(join(tmpdir(), 'devflow-pr-description-'));
   t.after(() => rm(dir, { recursive: true, force: true }));

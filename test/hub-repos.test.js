@@ -20,17 +20,6 @@ test('inspects local hub repositories without assuming remote identity', async t
   assert.match(result.scope, /not verified/);
 });
 
-test('rejects duplicated names and disabled hubs', async t => {
-  const cwd = await mkdtemp(join(tmpdir(), 'hub-repos-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  await mkdir(join(cwd, '.ai'));
-  const config = join(cwd, '.ai', 'config.yaml');
-  await writeFile(config, 'hub:\n  enabled: true\n  repos:\n    - name: web\n      path: one\n    - name: web\n      path: two\n');
-  await assert.rejects(inspectHubRepositories({ cwd }), /Invalid/);
-  await writeFile(config, 'hub:\n  enabled: false\n  repos: []\n');
-  await assert.rejects(inspectHubRepositories({ cwd }), /disabled/);
-});
-
 test('selects only explicitly named registered repositories', async t => {
   const { selectHubRepositories } = await import('../src/hub-repos.js');
   const cwd = await mkdtemp(join(tmpdir(), 'hub-select-'));

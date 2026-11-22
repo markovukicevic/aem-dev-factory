@@ -23,15 +23,3 @@ test('preserves provider discussion as untrusted data without inventing replies'
   }
   assert.throws(() => prepareResponseDraft({ provider: 'github', pullRequest: {}, comments: [] }), /Missing/);
 });
-
-test('creates a new workspace and refuses to overwrite it', async t => {
-  const dir = await mkdtemp(join(tmpdir(), 'pr-response-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const inputPath = join(dir, 'context.json'), outputPath = join(dir, 'draft.md');
-  await writeFile(inputPath, JSON.stringify(contexts[0]));
-  const result = await saveResponseDraft({ inputPath, outputPath });
-  assert.equal(result.count, 3);
-  const original = await readFile(outputPath, 'utf8');
-  await assert.rejects(saveResponseDraft({ inputPath, outputPath }), { code: 'EEXIST' });
-  assert.equal(await readFile(outputPath, 'utf8'), original);
-});

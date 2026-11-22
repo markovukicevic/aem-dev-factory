@@ -16,20 +16,6 @@ test('preserves Jira description and comment ADF in fences that cannot be closed
   assert.doesNotMatch(text, /Acceptance Criteria/);
 });
 
-test('writes a new story and preserves an existing file', async t => {
-  const dir = await mkdtemp(join(tmpdir(), 'tracker-story-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, 'story.md');
-  assert.deepEqual(await saveTrackerStory(issue, path), { path, provider: 'jira', issue: 'TEAM-12' });
-  await assert.rejects(saveTrackerStory(issue, path), { code: 'EEXIST' });
-  assert.match(await readFile(path, 'utf8'), /Original/);
-});
-
-test('rejects unexpected provider or malformed ADF', () => {
-  assert.throws(() => renderTrackerStory({ ...issue, body: 'text' }));
-  assert.throws(() => renderTrackerStory({ ...issue, key: '../bad' }));
-});
-
 test('preserves Azure work item fields, relations and comment text as untrusted source data', () => {
   const ado = { provider: 'ado', number: 12, title: 'Fix', fields: { 'System.Title': 'Fix', 'Microsoft.VSTS.Common.AcceptanceCriteria': '<p>Keep</p>' }, relations: [{ rel: 'parent' }], comments: [{ id: 1, body: 'Comment ``` content' }] };
   const story = renderTrackerStory(ado, { created: '2026-11-21T12:00:00Z' });

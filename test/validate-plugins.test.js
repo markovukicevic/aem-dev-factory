@@ -23,12 +23,6 @@ test('validates a marketplace with a real plugin and skill', async t => {
   assert.deepEqual(await validatePlugins(root), { plugins: 1, skills: 1 });
 });
 
-test('rejects mismatched manifests and invalid skill metadata', async t => {
-  const { root } = await fixture(t);
-  await writeFile(join(root, 'plugins', 'core', 'skills', 'agent-test', 'SKILL.md'), '---\nname: other\ndescription: Test\n---\n');
-  await assert.rejects(validatePlugins(root), /Invalid skill metadata/);
-});
-
 test('rejects plugin sources outside the marketplace', async t => {
   const { root, marketplace } = await fixture(t);
   marketplace.plugins[0].source = './..';

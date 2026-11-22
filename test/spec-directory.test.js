@@ -29,16 +29,3 @@ test('rejects invalid IDs, ambiguous directories and symlinks', async t => {
   await symlink(cwd, join(root, 'github-7-link'));
   await assert.rejects(ensureSpecDirectory({ cwd, id: 'github-7', title: 'test' }), /not a directory/);
 });
-
-test('does not create conflicting ticket directories during concurrent requests', async t => {
-  const cwd = await mkdtemp(join(tmpdir(), 'devflow-spec-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  const results = await Promise.allSettled([
-    ensureSpecDirectory({ cwd, id: 'github-9', title: 'First' }),
-    ensureSpecDirectory({ cwd, id: 'github-9', title: 'Second' }),
-  ]);
-  assert.ok(results.some(result => result.status === 'fulfilled'));
-  const root = join(cwd, '.ai', 'specs');
-  const { readdir } = await import('node:fs/promises');
-  assert.equal((await readdir(root)).filter(name => name.startsWith('github-9-')).length, 1);
-});

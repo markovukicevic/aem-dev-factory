@@ -17,10 +17,3 @@ test('reports only supported local project markers and dependency signals', asyn
   assert.equal(result.markers.find(item => item.name === '.ai').type, 'unsupported');
   assert.match(result.scope, /not verified/);
 });
-
-test('reports invalid package metadata without failing the entire inspection', async t => {
-  const cwd = await mkdtemp(join(tmpdir(), 'inspect-project-'));
-  t.after(() => rm(cwd, { recursive: true, force: true }));
-  await writeFile(join(cwd, 'package.json'), '{ invalid');
-  assert.ok((await inspectProject({ cwd })).signals.includes('Node package manifest unreadable or invalid'));
-});

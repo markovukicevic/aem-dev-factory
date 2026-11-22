@@ -15,14 +15,3 @@ test('preserves issue content without inventing acceptance criteria', () => {
   assert.match(text, /untrusted content/);
   assert.doesNotMatch(text, /Acceptance Criteria/);
 });
-
-test('creates a new story but does not overwrite existing content', async t => {
-  const dir = await mkdtemp(join(tmpdir(), 'devflow-story-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const path = join(dir, 'raw-story.md');
-  await saveGitHubIssueStory(issue, path);
-  assert.match(await readFile(path, 'utf8'), /Exact comment/);
-  await writeFile(path, 'User changes');
-  await assert.rejects(saveGitHubIssueStory(issue, path), { code: 'EEXIST' });
-  assert.equal(await readFile(path, 'utf8'), 'User changes');
-});

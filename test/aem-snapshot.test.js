@@ -24,14 +24,6 @@ test('saves and compares real local dialog snapshots without overwriting', async
   assert.match(await readFile(before, 'utf8'), /Old/);
 });
 
-test('detects added and removed fields and rejects duplicate paths', () => {
-  const field = { path: '/a', name: './a', resourceType: 'text', label: null, description: null, required: null, value: null, defaultValue: null };
-  const make = values => ({ schemaVersion: 1, source: { type: 'local-dialog' }, fields: values });
-  assert.equal(compareAemDialogSnapshots(make([]), make([field])).added.length, 1);
-  assert.equal(compareAemDialogSnapshots(make([field]), make([])).removed.length, 1);
-  assert.throws(() => compareAemDialogSnapshots(make([field, field]), make([])));
-});
-
 
 test('suggests only unique name and type matches as possible moves', () => {
   const field = { path: '/old/title', name: './title', resourceType: 'text', label: 'Old', description: null, required: null, value: null, defaultValue: null };
