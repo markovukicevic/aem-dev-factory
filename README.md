@@ -236,6 +236,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Plan execution progress
 
+The initial bug workflow provides `agent-bug-triage`, `agent-bug-verify`, `agent-bug-fix` and `agent-bug-all` for ticket investigation, reproduction, fixes and verification. `ticket-status` lists their local reports. These are instructional workflows, not automatic execution or proof of reproduction, and AI-client behavior and live integrations remain unverified.
+
 `plan-status <implement.md>` reads the supported plan format, reports declared step counts and selects the first pending step only when none are blocked or in progress. An in-progress step requires inspection before resuming. This is a read-only status summary; `allStepsDone` does not establish test or review success. The initial `agent-step-all` skill describes a sequential execution workflow, but has not been validated in an AI client. The initial `agent-step-build` and `agent-step-fix` skills describe bounded build diagnosis and blocked-step recovery; they do not implement the original automatic healing protocol and have not been behaviorally validated in AI clients.
 
 `bitbucket-pr-diffstat /path/to/providers.json <number>` reads Bitbucket Cloud PR changed-file statistics after validating the provider redirect and pagination URLs, and checks source and destination commit hashes before and after retrieval. It fails on incomplete pagination. Diff statistics are not a code diff; verify changes separately. Tested with simulated API responses only.
