@@ -1160,7 +1160,7 @@ test('downloads issue attachments and records their local evidence', async t => 
   const directory = await mkdtemp(join(tmpdir(), 'jira-ticket-evidence-cli-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const { messages, output } = capture(), path = join(directory, 'manifest.json');
-  const options = { output, env: { JIRA_EMAIL: 'x', JIRA_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'jira', baseUrl: 'https://team.atlassian.net' } }), makeTracker: () => ({ provider: 'jira', getTicket: async key => ({ provider: 'jira', key, attachments: [{ id: '7' }] }), getAttachmentMetadata: async id => ({ id, filename: 'file', size: 1 }), saveAttachment: async (id, target) => { await writeFile(target, 'x', { flag: 'wx' }); return { id, path: target, size: 1 }; } }) };
+  const options = { output, env: { JIRA_EMAIL: 'x', JIRA_API_TOKEN: 'secret' }, readBody: async () => JSON.stringify({ tracker: { provider: 'jira', baseUrl: 'https://team.atlassian.net' } }), makeTracker: () => ({ provider: 'jira', getTicket: async key => ({ provider: 'jira', key, attachments: [{ id: '7' }] }), getAttachmentMetadata: async id => ({ id, filename: 'file', size: 1 }), saveAttachment: async (id, target) => { await writeFile(target, 'x', { flag: 'wx' }); return { id, path: target, size: 1, sha256: '2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881' }; } }) };
   assert.equal(await runCli(['jira-ticket-evidence', 'providers.json', 'TEAM-7', directory, path, '7'], options), 0);
   assert.equal(JSON.parse(messages.logs.at(-1)).manifest.files, 1);
 });

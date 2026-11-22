@@ -14,9 +14,10 @@ export async function saveJiraTicketEvidence({ tracker, baseUrl, key, directory,
   catch (error) { if (error?.code !== 'ENOENT') throw error; }
   const result = await saveJiraTicketAttachments({ tracker, key, directory, ids });
   if (!result.complete) return { ...result, manifest: null };
+  if (result.saved.some(item => !item.sha256)) return { ...result, complete: false, manifest: null, reason: 'download-hash-unavailable', scope: 'Attachments were saved but their downloaded-byte hashes were unavailable; no manifest was created.' };
   try {
-    const manifest = await saveAttachmentManifest({ directory, outputPath, ids, source: { provider: 'jira', site: url.origin, issue: result.ticket } });
-    return { ...result, manifest, scope: 'Jira reported selected issue membership and local hashes were recorded. Source records are editable; content safety and later changes are not verified.' };
+    const manifest = await saveAttachmentManifest({ directory, outputPath, ids, expectedHashes: result.saved.map(item => ({ id: item.id, sha256: item.sha256 })), source: { provider: 'jira', site: url.origin, issue: result.ticket } });
+    return { ...result, manifest, scope: 'Jira reported selected issue membership and downloaded-byte hashes matched local files when the manifest was created. Source records are editable; content safety and later changes are not verified.' };
   } catch {
     return { ...result, complete: false, manifest: null, reason: 'manifest-write-or-inspection-failed', scope: 'Attachments were saved but the manifest was not created. Inspect files and destinations before retrying.' };
   }

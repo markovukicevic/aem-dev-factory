@@ -7,7 +7,7 @@ import { saveJiraTicketEvidence } from '../src/jira-ticket-evidence.js';
 import { checkAttachmentManifest } from '../src/attachment-manifest.js';
 const baseUrl = 'https://team.atlassian.net';
 function makeTracker(failing) {
-  return { provider: 'jira', getTicket: async key => ({ provider: 'jira', key, attachments: [{ id: '1' }, { id: '2' }] }), getAttachmentMetadata: async id => ({ id, filename: 'remote', size: 3 }), saveAttachment: async (id, path) => { if (id === failing) throw new Error('failed'); await writeFile(path, 'abc', { flag: 'wx' }); return { id, path, size: 3 }; } };
+  return { provider: 'jira', getTicket: async key => ({ provider: 'jira', key, attachments: [{ id: '1' }, { id: '2' }] }), getAttachmentMetadata: async id => ({ id, filename: 'remote', size: 3 }), saveAttachment: async (id, path) => { if (id === failing) throw new Error('failed'); await writeFile(path, 'abc', { flag: 'wx' }); return { id, path, size: 3, sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad' }; } };
 }
 
 test('saves selected issue attachments and a source-labelled local hash manifest', async t => {
@@ -31,4 +31,17 @@ test('retains partial downloads and refuses destination collisions', async t => 
   assert.equal(await readFile(join(directory, '1.bin'), 'utf8'), 'abc');
   await assert.rejects(saveJiraTicketEvidence({ tracker: makeTracker(), baseUrl, key: 'TEAM-7', directory, outputPath: join(directory, '2.bin'), ids: ['2'] }), /conflicts/);
   await assert.rejects(saveJiraTicketEvidence({ tracker: makeTracker(), baseUrl: 'https://evil.example', key: 'TEAM-7', directory, outputPath: join(directory, 'safe.json'), ids: ['2'] }), /source/);
+});
+
+
+test('does not create a manifest when saved bytes differ from the downloaded hash', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'jira-evidence-race-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const tracker = { ...makeTracker(), saveAttachment: async (id, path) => { await writeFile(path, 'def', { flag: 'wx' }); return { id, path, size: 3, sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad' }; } };
+  const outputPath = join(directory, 'manifest.json');
+  const result = await saveJiraTicketEvidence({ tracker, baseUrl, key: 'TEAM-7', directory, outputPath, ids: ['1'] });
+  assert.equal(result.complete, false);
+  assert.equal(result.reason, 'manifest-write-or-inspection-failed');
+  await assert.rejects(readFile(outputPath), { code: 'ENOENT' });
+  assert.equal(await readFile(join(directory, '1.bin'), 'utf8'), 'def');
 });

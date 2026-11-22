@@ -32,13 +32,18 @@ async function inspectAttachment(directory, id) {
 }
 
 /** Create a new local hash manifest; it is not evidence of Jira provenance. */
-export async function saveAttachmentManifest({ directory, outputPath, ids, source }) {
+export async function saveAttachmentManifest({ directory, outputPath, ids, source, expectedHashes }) {
   if (typeof outputPath !== 'string' || !outputPath.trim() || !Array.isArray(ids) || !ids.length || ids.length > 50 || ids.some(id => !validId(id)) || new Set(ids).size !== ids.length) throw new TypeError('Invalid attachment manifest request');
   await validateDirectory(directory);
   try { await lstat(outputPath); throw Object.assign(new Error('Output exists'), { code: 'EEXIST' }); }
   catch (error) { if (error?.code !== 'ENOENT') throw error; }
+  if (expectedHashes !== undefined && (!Array.isArray(expectedHashes) || expectedHashes.length !== ids.length || expectedHashes.some((item, index) => !item || item.id !== ids[index] || typeof item.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)))) throw new TypeError('Invalid expected attachment hashes');
   const files = [];
-  for (const id of ids) files.push(await inspectAttachment(directory, id));
+  for (const [index, id] of ids.entries()) {
+    const file = await inspectAttachment(directory, id);
+    if (expectedHashes && file.sha256 !== expectedHashes[index].sha256) throw new Error('Attachment differs from downloaded bytes');
+    files.push(file);
+  }
   if (source !== undefined && (!source || source.provider !== 'jira' || typeof source.site !== 'string' || !/^https:\/\/[a-z0-9][a-z0-9-]*\.atlassian\.net$/i.test(source.site) || typeof source.issue !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(source.issue))) throw new TypeError('Invalid attachment source');
   const manifest = { version: 1, ...(source ? { source: { provider: source.provider, site: source.site, issue: source.issue } } : {}), files, scope: 'Local bytes and supplied source only; source authenticity and content safety are not verified.' };
   await writeFile(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });

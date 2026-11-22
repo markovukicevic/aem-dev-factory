@@ -85,7 +85,9 @@ test('saves an attachment without overwriting an existing file', async t => {
   t.after(() => rm(dir, { recursive: true, force: true }));
   const path = join(dir, 'attachment.bin');
   const tracker = createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async () => ({ ok: true, status: 200, headers: { get: () => '3' }, body: new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1, 2, 3])); controller.close(); } }) }) });
-  assert.equal((await tracker.saveAttachment('42', path)).size, 3);
+  const saved = await tracker.saveAttachment('42', path);
+  assert.equal(saved.size, 3);
+  assert.equal(saved.sha256, '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81');
   await assert.rejects(tracker.saveAttachment('42', path), { code: 'EEXIST' });
   assert.deepEqual(await readFile(path), Buffer.from([1, 2, 3]));
 });

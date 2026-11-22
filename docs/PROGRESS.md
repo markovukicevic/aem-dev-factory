@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Bound issue attachment manifests to the SHA-256 of downloaded bytes, detecting a local change before manifest creation; later changes and source authenticity remain outside this check.
+
 - Added an issue-bound Jira attachment download and source-labelled local hash manifest workflow; partial files are retained and labels do not authenticate provenance.
 
 - Added non-overwriting local attachment hash manifests and integrity comparisons; manifests do not prove Jira origin or content safety.

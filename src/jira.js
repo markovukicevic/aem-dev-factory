@@ -1,4 +1,5 @@
 import { writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 /** A read-only Jira Cloud issue client. Atlassian Document Format is preserved. */
 export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThis.fetch, maxPages = 10 }) {
@@ -67,7 +68,7 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
       if (typeof path !== 'string' || !path.trim()) throw new TypeError('Output path is required');
       const content = await downloadAttachment(id);
       await writeFile(path, content, { flag: 'wx', mode: 0o600 });
-      return { id, path, size: content.length };
+      return { id, path, size: content.length, sha256: createHash('sha256').update(content).digest('hex') };
     },
     async getTicket(key) {
       if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key)) throw new TypeError('Invalid Jira issue key');
