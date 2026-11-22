@@ -204,7 +204,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 `aem-dialog-audit <dialog.xml>` identifies exact duplicate field names and explicit fields without a nonblank `fieldLabel`. These are inspection candidates, not proven defects or accessibility results: hidden fields, multifield scopes, inheritance and runtime behavior need separate review. It reads local XML and does not print field values.
 
-`aem-dialog-snapshot <dialog.xml> <new-output.json>` saves local explicit dialog fields without overwriting. `aem-dialog-compare <before.json> <after.json>` reports added, removed and changed fields by XML path. Snapshot files are limited to 1 MiB. This is not a live AEM snapshot or visual comparison; inherited fields and authored values are outside its scope. Tests use synthetic XML.
+`aem-dialog-snapshot <dialog.xml> <new-output.json>` saves local explicit dialog fields without overwriting. `aem-dialog-compare <before.json> <after.json>` reports added, removed and changed fields by XML path. It also suggests possible moves when an exact name is unique in both snapshots and the resource type matches; added and removed entries remain visible because identity is not proven. Snapshot files are limited to 1 MiB. This is not a live AEM snapshot or visual comparison; inherited fields and authored values are outside its scope. Tests use synthetic XML.
 
 ### Dispatch a GitHub Actions workflow (experimental)
 

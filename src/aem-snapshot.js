@@ -40,7 +40,23 @@ export function compareAemDialogSnapshots(before, after) {
     if (Object.keys(changes).length) changed.push({ path, changes });
   }
   for (const [path, field] of newFields) if (!oldFields.has(path)) added.push(field);
-  return { added, removed, changed, scope: 'Local explicit dialog fields only; not a live AEM or rendered-page comparison.' };
+  // Treat matching unique names as candidates, never as proof of identity.
+  const countNames = entries => {
+    const counts = new Map();
+    for (const field of entries) counts.set(field.name, (counts.get(field.name) ?? 0) + 1);
+    return counts;
+  };
+  const oldNames = countNames(oldFields.values()), newNames = countNames(newFields.values());
+  const newByName = new Map(added.map(field => [field.name, field]));
+  const possibleMoves = [];
+  for (const field of removed) {
+    const next = newByName.get(field.name);
+    if (!field.name.trim() || oldNames.get(field.name) !== 1 || newNames.get(field.name) !== 1 || !next || field.resourceType !== next.resourceType) continue;
+    const changes = {};
+    for (const key of fields) if (field[key] !== next[key]) changes[key] = { before: field[key], after: next[key] };
+    possibleMoves.push({ name: field.name, from: field.path, to: next.path, changes });
+  }
+  return { added, removed, changed, possibleMoves, scope: 'Local explicit dialog fields only; possible moves are candidates, not proven identity. Not a live AEM or rendered-page comparison.' };
 }
 
 async function readSnapshot(path) {

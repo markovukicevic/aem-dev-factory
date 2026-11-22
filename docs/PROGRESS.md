@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added possible-move candidates to local dialog snapshot comparisons for unique field names and matching resource types; field identity is not assumed.
+
 - Added explicit local AEM supertype candidate inspection under one JCR root; actual search order and runtime inheritance remain unverified.
 
 - Added local dialog inspection for exact duplicate-name and missing-label candidates; these are not confirmed defects or accessibility results.

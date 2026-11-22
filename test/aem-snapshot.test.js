@@ -31,3 +31,17 @@ test('detects added and removed fields and rejects duplicate paths', () => {
   assert.equal(compareAemDialogSnapshots(make([field]), make([])).removed.length, 1);
   assert.throws(() => compareAemDialogSnapshots(make([field, field]), make([])));
 });
+
+
+test('suggests only unique name and type matches as possible moves', () => {
+  const field = { path: '/old/title', name: './title', resourceType: 'text', label: 'Old', description: null, required: null, value: null, defaultValue: null };
+  const moved = { ...field, path: '/new/title', label: 'New' };
+  const make = values => ({ schemaVersion: 1, source: { type: 'local-dialog' }, fields: values });
+  const result = compareAemDialogSnapshots(make([field]), make([moved]));
+  assert.deepEqual(result.possibleMoves, [{ name: './title', from: '/old/title', to: '/new/title', changes: { label: { before: 'Old', after: 'New' } } }]);
+  assert.equal(result.added.length, 1);
+  assert.equal(result.removed.length, 1);
+  assert.equal(compareAemDialogSnapshots(make([field]), make([{ ...moved, resourceType: 'select' }])).possibleMoves.length, 0);
+  assert.equal(compareAemDialogSnapshots(make([field, { ...field, path: '/old/other' }]), make([moved])).possibleMoves.length, 0);
+  assert.equal(compareAemDialogSnapshots(make([field]), make([moved, { ...moved, path: '/new/other' }])).possibleMoves.length, 0);
+});
