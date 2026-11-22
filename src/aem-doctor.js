@@ -78,5 +78,17 @@ export async function inspectOsgiConfigs({ path, maxEntries = 5000, maxDepth = 1
   }
   files.sort((a, b) => a.path.localeCompare(b.path));
   skipped.sort((a, b) => a.path.localeCompare(b.path));
-  return { path, files, skipped, scope: 'Local JSON syntax only; configuration values, runmode correctness, secrets and live OSGi services were not verified.' };
+  const groups = new Map();
+  for (const file of files) {
+    if (!file.path.endsWith('.cfg.json')) continue;
+    const parts = file.path.split('/');
+    const filename = parts.pop();
+    const runmode = [...parts].reverse().find(part => /^config(?:\.[A-Za-z0-9_.-]+)?$/.test(part));
+    if (!runmode) continue;
+    const key = `${runmode}\0${filename}`;
+    if (!groups.has(key)) groups.set(key, { runmode, filename, paths: [] });
+    groups.get(key).paths.push(file.path);
+  }
+  const duplicateCandidates = [...groups.values()].filter(group => group.paths.length > 1).sort((a, b) => a.runmode.localeCompare(b.runmode) || a.filename.localeCompare(b.filename));
+  return { path, files, skipped, duplicateCandidates, scope: 'Local JSON syntax and same-named configuration candidates only; installation precedence, runmode correctness, values, secrets and live OSGi services were not verified.' };
 }

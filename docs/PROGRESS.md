@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added same-named OSGi configuration candidates for matching runmode folder names; installation precedence and runtime behavior are not inferred.
+
 - Bound PR diff checks to stable head and local tracked-base commits and repeated the check before provider writes. The tracked base may still be stale relative to the remote.
 
 - Added non-overwriting local security-evidence records combining changed-file and bounded commit-range scans; these are not a complete security review.

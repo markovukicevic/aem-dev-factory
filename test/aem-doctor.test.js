@@ -49,3 +49,22 @@ test('checks OSGi JSON syntax without exposing values and reports skipped files'
   assert.ok(!JSON.stringify(result).includes('do-not-print'));
   await assert.rejects(inspectOsgiConfigs({ path, maxEntries: 1 }), /limit exceeded/);
 });
+
+test('reports same-named OSGi config candidates without inferring runtime conflicts', async t => {
+  const { inspectOsgiConfigs } = await import('../src/aem-doctor.js');
+  const path = await mkdtemp(join(tmpdir(), 'aem-osgi-duplicates-'));
+  t.after(() => rm(path, { recursive: true, force: true }));
+  for (const project of ['one', 'two']) {
+    const dir = join(path, project, 'osgiconfig', 'config.author');
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'com.example.Service.cfg.json'), '{}');
+  }
+  const different = join(path, 'two', 'osgiconfig', 'config.publish');
+  await mkdir(different, { recursive: true });
+  await writeFile(join(different, 'com.example.Service.cfg.json'), '{}');
+  const result = await inspectOsgiConfigs({ path });
+  assert.equal(result.duplicateCandidates.length, 1);
+  assert.equal(result.duplicateCandidates[0].runmode, 'config.author');
+  assert.equal(result.duplicateCandidates[0].paths.length, 2);
+  assert.match(result.scope, /precedence/);
+});
