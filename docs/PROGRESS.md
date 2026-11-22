@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added bounded AEM directory-marker inspection and explicit non-secret AEM settings initialization and local status inspection. Original YAML, client rules and live AEM setup remain unimplemented.
+
 - Added explicitly mapped JCR page candidates and non-overwriting reports for local resource-type references in declared cq:Page roots; live page use remains unverified.
 
 - Added bounded exact resource-type search in local AEM serialized content and an initial page-search skill. Live pages and references remain unverified.
