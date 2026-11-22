@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added non-overwriting local PR and CI evidence records; records contain untrusted potentially private provider data and do not establish review or readiness.
+
 - Added explicit SHA-bound PR and independently configured CI observations, with PR revision rechecks where available and unknown Azure head identity. CI and SCM repository identity remains unverified.
 
 - Added independently configured cross-provider CI observations for exact commits, with provider-specific attribution and completeness limits and no new aggregate verdict.
