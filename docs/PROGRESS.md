@@ -1,5 +1,9 @@
 # Progress
 
+## 2026-11-22
+
+- Added bounded scanning of final committed file versions relative to an explicit base SHA, with head-change and skipped-file reporting. Intermediate commit history is not scanned.
+
 ## 2026-11-21
 
 - Added a bounded local changed-file scan for selected potential secret patterns without printing matched values. It is not a comprehensive security or history scan.

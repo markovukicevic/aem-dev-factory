@@ -38,3 +38,37 @@ test('reports unsupported files and enforces the scan limit', async t => {
   assert.equal(result.skipped.length, 2);
   await assert.rejects(scanChangedFiles({ cwd, maxFiles: 1 }), /limit/);
 });
+
+test('scans final committed PR file versions without exposing values', async t => {
+  const { scanCommittedChanges } = await import('../src/security-scan.js');
+  const { cwd, git } = await fixture(t);
+  const base = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+  const token = 'ghp_' + 'B'.repeat(36);
+  await writeFile(join(cwd, 'committed.txt'), `value=${token}\n`);
+  git(['add', 'committed.txt']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'add']);
+  await writeFile(join(cwd, 'working-only.txt'), '-----BEGIN PRIVATE KEY-----\n');
+  const result = await scanCommittedChanges({ cwd, base });
+  assert.equal(result.complete, true);
+  assert.equal(result.headChanged, false);
+  assert.equal(result.findings[0].path, 'committed.txt');
+  assert.equal(result.findings[0].source, 'committed');
+  assert.ok(!JSON.stringify(result).includes(token));
+  assert.ok(!result.findings.some(item => item.path === 'working-only.txt'));
+  assert.match(result.scope, /intermediate commits/);
+  await assert.rejects(scanCommittedChanges({ cwd, base: base.slice(0, 7) }), /full base/);
+});
+
+test('reports deleted committed files as skipped rather than claiming complete coverage', async t => {
+  const { scanCommittedChanges } = await import('../src/security-scan.js');
+  const { cwd, git } = await fixture(t);
+  await writeFile(join(cwd, 'removed.txt'), 'old');
+  git(['add', 'removed.txt']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'base']);
+  const base = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+  git(['rm', '-q', 'removed.txt']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'delete']);
+  const result = await scanCommittedChanges({ cwd, base });
+  assert.equal(result.complete, false);
+  assert.equal(result.skipped[0].path, 'removed.txt');
+});

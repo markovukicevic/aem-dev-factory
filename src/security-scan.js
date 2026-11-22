@@ -29,6 +29,11 @@ export async function scanChangedFiles({ cwd, maxFiles = 500 } = {}) {
     paths(['ls-files', '--others', '--exclude-standard', '-z']),
   ]);
   const candidates = [...new Set(staged.map(path => `staged\0${path}`)), ...new Set([...unstaged, ...untracked].map(path => `worktree\0${path}`))];
+  const result = await scanCandidates({ root, rootOptions, candidates, maxFiles });
+  return { ...result, complete: result.skipped.length === 0, scope: 'Limited pattern scan of changed staged snapshots and working files only. It does not scan history, ignored files, all credential types or guarantee secret absence.' };
+}
+
+async function scanCandidates({ root, rootOptions, candidates, maxFiles, head }) {
   if (candidates.length > maxFiles) throw new Error('Changed file limit exceeded');
   let total = 0;
   const findings = [], skipped = [];
@@ -39,8 +44,11 @@ export async function scanChangedFiles({ cwd, maxFiles = 500 } = {}) {
     if (!subpath || subpath === '..' || subpath.startsWith('../') || isAbsolute(subpath)) { skipped.push({ path, source, reason: 'unsafe-path' }); continue; }
     let bytes;
     try {
-      if (source === 'staged') {
-        const result = await exec('git', ['show', '--no-ext-diff', '--no-textconv', `:${path}`], { ...rootOptions, maxBuffer: maxFileBytes });
+      if (source === 'staged' || source === 'committed') {
+        const object = source === 'staged' ? `:${path}` : `${head}:${path}`;
+        const kind = await exec('git', ['cat-file', '-t', object], rootOptions);
+        if (kind.stdout.toString('utf8').trim() !== 'blob') throw new Error('Not a Git blob');
+        const result = await exec('git', ['show', '--no-ext-diff', '--no-textconv', object], { ...rootOptions, maxBuffer: maxFileBytes });
         bytes = result.stdout;
       } else {
         const info = await lstat(full);
@@ -60,5 +68,26 @@ export async function scanChangedFiles({ cwd, maxFiles = 500 } = {}) {
       skipped.push({ path, source, reason: 'unreadable-unsupported-or-deleted' });
     }
   }
-  return { findings, skipped, complete: skipped.length === 0, scope: 'Limited pattern scan of changed staged snapshots and working files only. It does not scan history, ignored files, all credential types or guarantee secret absence.' };
+  return { findings, skipped };
+}
+
+
+/** Scan final committed file versions in the PR range, not intermediate commits. */
+export async function scanCommittedChanges({ cwd, base, maxFiles = 500 } = {}) {
+  if (typeof cwd !== 'string' || !cwd.trim() || typeof base !== 'string' || !/^[a-f0-9]{40,64}$/i.test(base) || !Number.isSafeInteger(maxFiles) || maxFiles < 1 || maxFiles > 5000) throw new TypeError('A full base commit and valid scan options are required');
+  const options = { cwd, encoding: 'buffer', maxBuffer: 2 * 1024 * 1024, timeout: 30000, windowsHide: true };
+  const readText = value => new TextDecoder('utf-8', { fatal: true }).decode(value);
+  const root = await realpath(readText((await exec('git', ['rev-parse', '--show-toplevel'], options)).stdout).trim());
+  const rootOptions = { ...options, cwd: root };
+  const resolveCommit = async ref => readText((await exec('git', ['rev-parse', '--verify', `${ref}^{commit}`], rootOptions)).stdout).trim();
+  const resolvedBase = await resolveCommit(base);
+  if (resolvedBase.toLowerCase() !== base.toLowerCase()) throw new Error('Base must be a full commit SHA');
+  const head = await resolveCommit('HEAD');
+  if (!/^[a-f0-9]{40,64}$/i.test(head)) throw new Error('Invalid head commit');
+  const diff = await exec('git', ['diff', '--no-ext-diff', '--no-textconv', '--name-only', '--diff-filter=ACDMRT', '-z', `${base}...${head}`, '--'], rootOptions);
+  const paths = readText(diff.stdout).split('\0').filter(Boolean);
+  const candidates = [...new Set(paths.map(path => `committed\0${path}`))];
+  const result = await scanCandidates({ root, rootOptions, candidates, maxFiles, head });
+  const headChanged = (await resolveCommit('HEAD')) !== head;
+  return { ...result, base: resolvedBase, head, headChanged, complete: result.skipped.length === 0 && !headChanged, scope: 'Limited pattern scan of final committed file versions only; intermediate commits, history, ignored files and all credential types are not covered.' };
 }
