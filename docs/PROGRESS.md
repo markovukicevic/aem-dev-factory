@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Added a read-only saved review evidence check against configured identities and current PR revisions; CI freshness and record authenticity remain unverified.
+
 - Added whitelisted configured SCM and CI source identifiers to PR/CI evidence; matching fields are not proof of repository identity.
 
 - Added non-overwriting local PR and CI evidence records; records contain untrusted potentially private provider data and do not establish review or readiness.

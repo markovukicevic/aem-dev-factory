@@ -1104,4 +1104,6 @@ test('saves PR and CI evidence locally without overwriting', async t => {
   assert.equal(JSON.parse(messages.logs.at(-1)).prHeadMatchesSha, null);
   assert.match(await readFile(path, 'utf8'), /untrusted provider data/);
   assert.equal(await runCli(['scm-review-evidence', 'providers.json', '7', sha, path], options), 1);
+  assert.equal(await runCli(['scm-review-evidence-check', 'providers.json', path], options), 1);
+  assert.equal(JSON.parse(messages.logs.at(-1)).revisionMatches, null);
 });
