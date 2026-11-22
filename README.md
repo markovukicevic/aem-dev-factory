@@ -212,6 +212,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Compare local dialog snapshots
 
+`aem-clientlibs <directory>` inspects explicit local `cq:ClientLibraryFolder` definitions and reports raw categories, dependencies, embeds and proxy attributes. It does not resolve those values or establish build output, runtime inclusion or rendering. The initial `aem-fe-verify` skill describes frontend verification without implementing live AEM or screenshot automation.
+
 `aem-editorial-guide <dialog.xml> <output.md>` creates a local reference from explicit dialog field attributes, without overwriting. It does not establish live authoring behavior, inherited fields or translations. The initial skill is not yet validated in an AI client.
 
 `aem-qa-handoff <input.json> <output.md>` creates a local QA handoff from explicit `component`, `environment`, optional `revision`, `checks` (`name`, `result`, `evidence`) and `limitations`. Results are `passed`, `failed` or `not-run`. `aem-qa-status <handoff.md>` summarizes the declared results without validating them; `ticket-status` recognizes `qa-handoff.md` as a local artifact. The handoff does not perform or validate checks, and never overwrites an existing file. Initial `aem-verify`, `aem-qa` and `aem-qa-handoff` skills describe the workflow; live AEM and AI-client behavior are unverified.

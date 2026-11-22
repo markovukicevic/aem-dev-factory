@@ -49,13 +49,12 @@ Reference skills: 5. Same-named Max skills: 5.
 
 ## aem-tools
 
-Reference skills: 12. Same-named Max skills: 8.
+Reference skills: 12. Same-named Max skills: 9.
 
-**Initial Max skills:** `aem-component`, `aem-doc-gen`, `aem-doctor`, `aem-editorial-guide`, `aem-qa`, `aem-qa-handoff`, `aem-snapshot`, `aem-verify`.
+**Initial Max skills:** `aem-component`, `aem-doc-gen`, `aem-doctor`, `aem-editorial-guide`, `aem-fe-verify`, `aem-qa`, `aem-qa-handoff`, `aem-snapshot`, `aem-verify`.
 
 **Reference skills without a same-named Max skill:**
 
-- `aem-fe-verify`
 - `aem-init`
 - `aem-page-search`
 - `aem-refresh`
