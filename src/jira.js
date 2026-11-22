@@ -37,6 +37,8 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
       await response.body?.cancel?.();
       throw new Error('Jira attachment exceeds size limit or has invalid length');
     }
+    const contentEncoding = response.headers?.get?.('content-encoding');
+    const hasComparableLength = !!length && (!contentEncoding || contentEncoding.toLowerCase() === 'identity');
     if (!response.body || typeof response.body.getReader !== 'function') throw new Error('Jira attachment stream is unavailable');
     const reader = response.body.getReader();
     const chunks = [];
@@ -53,6 +55,7 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
     } finally {
       reader.releaseLock();
     }
+    if (hasComparableLength && size !== Number(length)) throw new Error('Jira attachment length does not match response');
     return Buffer.concat(chunks, size);
   }
   return {

@@ -204,7 +204,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 `jira-attachments <providers.json> <directory> <id> [id ...]` downloads up to 50 explicitly selected Jira attachments into an existing directory as `<id>.bin`, after checking all destinations for collisions. It stops on failure and reports saved files without rollback; a size mismatch is reported but does not validate the content. Each download is limited to 5 MiB. Provider filenames and bytes are untrusted, directory changes can race with the check, and live Jira behavior remains unverified.
 
-`jira-attachment /path/to/providers.json 123 /path/to/new-file` downloads an explicitly selected attachment using the Jira tracker credentials. The output file must not already exist. The download is limited to 5 MiB, does not follow redirects, and is not automatically decoded or validated as an image; treat the file as untrusted. Metadata can also be retrieved through the Jira tracker library. These operations have only been tested with simulated responses.
+`jira-attachment /path/to/providers.json 123 /path/to/new-file` downloads an explicitly selected attachment using the Jira tracker credentials. The output file must not already exist. The download is limited to 5 MiB, does not follow redirects, and checks unencoded response length when supplied. It is not automatically decoded or validated as an image; treat the file as untrusted. Metadata can also be retrieved through the Jira tracker library. These operations have only been tested with simulated responses.
 
 ### Compare local dialog snapshots
 

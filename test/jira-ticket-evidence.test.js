@@ -45,3 +45,26 @@ test('does not create a manifest when saved bytes differ from the downloaded has
   await assert.rejects(readFile(outputPath), { code: 'ENOENT' });
   assert.equal(await readFile(join(directory, '1.bin'), 'utf8'), 'def');
 });
+
+
+test('runs issue-bound attachment evidence through the real Jira adapter using simulated HTTP', async t => {
+  const { createJiraTracker } = await import('../src/jira.js');
+  const directory = await mkdtemp(join(tmpdir(), 'jira-evidence-http-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const requests = [];
+  const tracker = createJiraTracker({ baseUrl, email: 'user@example.com', token: 'secret', fetchImpl: async (url, options) => {
+    requests.push({ url, redirect: options.redirect });
+    if (url.includes('/comment?')) return { ok: true, json: async () => ({ startAt: 0, total: 0, comments: [] }) };
+    if (url.includes('/issue/')) return { ok: true, json: async () => ({ key: 'TEAM-7', fields: { summary: 'Issue', attachment: [{ id: '1', filename: 'file', size: 3 }] } }) };
+    if (url.includes('/attachment/content/')) return { ok: true, status: 200, headers: { get: name => name === 'content-length' ? '3' : null }, body: new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('abc')); controller.close(); } }) };
+    if (url.includes('/attachment/1')) return { ok: true, json: async () => ({ id: '1', filename: 'file', size: 3 }) };
+    throw new Error('Unexpected URL');
+  } });
+  const outputPath = join(directory, 'manifest.json');
+  const result = await saveJiraTicketEvidence({ tracker, baseUrl, key: 'TEAM-7', directory, outputPath, ids: ['1'] });
+  assert.equal(result.complete, true);
+  assert.equal(result.saved[0].sha256, 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+  assert.equal((await checkAttachmentManifest({ directory, manifestPath: outputPath })).consistent, true);
+  assert.equal(requests.length, 4);
+  assert.ok(requests.every(item => item.redirect === 'error' && item.url.startsWith(baseUrl)));
+});

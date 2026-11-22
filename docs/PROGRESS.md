@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+- Reject Jira attachment responses with mismatched unencoded content length and cover the complete issue-to-manifest path with simulated HTTP. Live Jira remains unverified.
+
 - Bound issue attachment manifests to the SHA-256 of downloaded bytes, detecting a local change before manifest creation; later changes and source authenticity remain outside this check.
 
 - Added an issue-bound Jira attachment download and source-labelled local hash manifest workflow; partial files are retained and labels do not authenticate provenance.

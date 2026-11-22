@@ -91,3 +91,10 @@ test('saves an attachment without overwriting an existing file', async t => {
   await assert.rejects(tracker.saveAttachment('42', path), { code: 'EEXIST' });
   assert.deepEqual(await readFile(path), Buffer.from([1, 2, 3]));
 });
+
+
+test('rejects an incomplete unencoded response but does not compare compressed wire length', async () => {
+  const make = encoding => createJiraTracker({ baseUrl: 'https://team.atlassian.net', email: 'a@example.com', token: 'secret', fetchImpl: async () => ({ ok: true, status: 200, headers: { get: name => name === 'content-length' ? '4' : name === 'content-encoding' ? encoding : null }, body: new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1, 2, 3])); controller.close(); } }) }) });
+  await assert.rejects(make(null).downloadAttachment('42'), /length does not match/);
+  assert.deepEqual(await make('gzip').downloadAttachment('42'), Buffer.from([1, 2, 3]));
+});
