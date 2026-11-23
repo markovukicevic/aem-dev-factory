@@ -193,8 +193,8 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
     async getJob(id) { iid(id); return (await get(`/jobs/${id}`)).data; },
     async getJobTrace(id) {
       iid(id);
-      const response = await fetchImpl(`${root}/jobs/${id}/trace`, { method: 'GET', headers: { Accept: 'text/plain', 'PRIVATE-TOKEN': token }, redirect: 'error' });
-      if (!response.ok || !response.body?.getReader) throw new Error('Job trace unavailable');
+      const response = await fetchImpl(`${root}/jobs/${id}/trace`, { method: 'GET', headers: { Accept: 'text/plain', 'PRIVATE-TOKEN': token }, redirect: 'error', signal: AbortSignal.timeout(30000) });
+      if (!response.ok || response.redirected || !response.body?.getReader) throw new Error('Job trace unavailable');
       const reader = response.body.getReader(), chunks = []; let size = 0;
       try {
         while (true) {
