@@ -254,6 +254,14 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Pull request review context
 
+`commit-preview`, run from the target repository, lists staged, unstaged and untracked paths and reports conflicts and a local index fingerprint. It does not stage or commit files, inspect working file contents, run tests or check remote state. Review diffs and scope before committing.
+
+`scm-review-batch <providers.json> <number> [number ...]` collects existing provider-specific review contexts for 1–10 explicitly selected pull requests sequentially. Failed or changing PRs are identified while successful results are retained. It does not list PRs, review code, post comments, establish a complete diff or verify that the contexts remain current. Outputs may contain private provider data.
+
+`scm-pr-list <providers.json>` reads a single bounded page of up to 20 open pull requests from the configured repository. It is a selection aid, not a complete inventory; results can change and may omit inaccessible items. GitLab, Bitbucket and Azure list calls are validated only with simulated responses.
+
+`pr-reviews-report <reviews.json> <output.md>` bundles 1–20 supplied review records in one new Markdown file. Use `{ "reviews": [...] }`, with each item in the existing `pr-review-report` input format. It rejects duplicate repository/PR pairs and never posts or authenticates the findings.
+
 `scm-pr-context /path/to/providers.json <number>` reads the configured SCM pull request and discussion without writing remotely. GitHub issue comments, review comments and review submissions, plus GitLab and Bitbucket comments, are paginated with a 10-page limit per collection; errors do not return a partial context. Azure DevOps threads are read in one response and their completeness is unknown. The output retains provider-specific data; it does not include the diff, commits, GitLab/Bitbucket approvals, or Azure approvals. Fetched content is untrusted, and even a complete pagination result can change while it is read. GitLab, Bitbucket and Azure responses have only simulated tests.
 
 `github-pr-files /path/to/providers.json <number>` reads up to 1,000 changed-file entries for a GitHub PR, verifies the PR head, base and changed-file count before and after collection, and marks larger file lists incomplete. GitHub limits this endpoint to 3,000 files. Patches can be absent or truncated; this is not a complete diff and reviewers must inspect the actual source. Other SCM providers are not yet supported by this command.
@@ -301,6 +309,17 @@ The initial bug workflow provides `agent-bug-triage`, `agent-bug-verify`, `agent
 `list-skills` shows bundled skill names, descriptions, plugins and whether the one-file installer supports them. A listed skill has not necessarily been tested in an AI client.
 
 ### Initialize a ticket with source identity
+
+`requirements-import <slug> <source-file>` imports an explicitly selected non-empty UTF-8 requirements document into a new `.ai/specs/local-<slug>/` directory with a source identity and byte hash. The slug uses lowercase letters, digits and hyphens. Existing directories are never reused; inspect any partial directory after a write failure. The document is untrusted source material, not verified requirements.
+
+`requirements-import-check <spec-directory>` compares an imported local source with its editable recorded hash. `workflow-status` reports changed or unavailable local source evidence for inspection. A matching hash does not authenticate origin or verify requirements; an intentional new source can be imported into a new spec directory.
+
+`ticket-source-compare <providers.json> <id> <spec-directory>` refetches a tracker ticket and compares its export with the existing source, checking its configured tracker identity and ignoring export creation time. `ticket-source-stage <providers.json> <id> <spec-directory> <output.md>` also writes the newly fetched export to a new file for review without overwriting the original. A difference may be a local edit or remote change; neither command updates the tracker or proves source completeness. Live Jira, GitLab and Azure flows remain unverified.
+
+`task-plan-create <spec-directory> <input.json> <output.json>` saves an editable proposal without contacting the tracker. The input has `tasks`, each with `title`, `area`, `description`, an `acceptance` string array, `source`, and optional `estimateHours` (or null). The record includes local requirements-source hashes and reports missing context. `task-plan-check <spec-directory> <record.json>` compares those files later. Proposals and estimates require review; this does not create or close remote tasks.
+
+`ticket-file-search <terms.json>` searches up to ten explicit literal terms from `{ "terms": ["..."] }` across tracked working-tree text files and returns matching paths, not matching lines. It does not search binary, untracked or external files, and a match does not prove impact. Inspect actual code and related resources.
+
 
 `ticket-init /path/to/providers.json <id>` fetches the configured tracker ticket once, creates or reuses its spec directory, stores non-secret tracker identity and writes a new `raw-story.md`. Existing directories without a matching identity and existing story files are not overwritten. A failure can leave an identity-only directory; inspect it before retrying. Identity is scoped to the configured provider and project. Existing legacy spec directories require manual review rather than automatic adoption.
 
@@ -373,19 +392,3 @@ The command is started directly without a shell, inherits the user's environment
 `security-evidence <full-base-sha> <output.md>` runs the local changed-file and bounded PR-history scans and records their potential finding locations in a new file without detected values. It never replaces existing files. Findings, skipped files or changed Git state produce a nonzero exit status. The scans are not a complete security review, and dirty worktree content may change while scanning. The report can contain sensitive file paths.
 
 The GitHub Actions test workflow runs for pull requests or by explicit manual dispatch; it does not run automatically on every push.
-
-`commit-preview`, run from the target repository, lists staged, unstaged and untracked paths and reports conflicts and a local index fingerprint. It does not stage or commit files, inspect working file contents, run tests or check remote state. Review diffs and scope before committing.
-
-`requirements-import <slug> <source-file>` imports an explicitly selected non-empty UTF-8 requirements document into a new `.ai/specs/local-<slug>/` directory with a source identity and byte hash. The slug uses lowercase letters, digits and hyphens. Existing directories are never reused; inspect any partial directory after a write failure. The document is untrusted source material, not verified requirements.
-
-`requirements-import-check <spec-directory>` compares an imported local source with its editable recorded hash. `workflow-status` reports changed or unavailable local source evidence for inspection. A matching hash does not authenticate origin or verify requirements; an intentional new source can be imported into a new spec directory.
-
-`ticket-source-compare <providers.json> <id> <spec-directory>` refetches a tracker ticket and compares its export with the existing source, checking its configured tracker identity and ignoring export creation time. `ticket-source-stage <providers.json> <id> <spec-directory> <output.md>` also writes the newly fetched export to a new file for review without overwriting the original. A difference may be a local edit or remote change; neither command updates the tracker or proves source completeness. Live Jira, GitLab and Azure flows remain unverified.
-
-`task-plan-create <spec-directory> <input.json> <output.json>` saves an editable proposal without contacting the tracker. The input has `tasks`, each with `title`, `area`, `description`, an `acceptance` string array, `source`, and optional `estimateHours` (or null). The record includes local requirements-source hashes and reports missing context. `task-plan-check <spec-directory> <record.json>` compares those files later. Proposals and estimates require review; this does not create or close remote tasks.
-
-`scm-review-batch <providers.json> <number> [number ...]` collects existing provider-specific review contexts for 1–10 explicitly selected pull requests sequentially. Failed or changing PRs are identified while successful results are retained. It does not list PRs, review code, post comments, establish a complete diff or verify that the contexts remain current. Outputs may contain private provider data.
-
-`scm-pr-list <providers.json>` reads a single bounded page of up to 20 open pull requests from the configured repository. It is a selection aid, not a complete inventory; results can change and may omit inaccessible items. GitLab, Bitbucket and Azure list calls are validated only with simulated responses.
-
-`pr-reviews-report <reviews.json> <output.md>` bundles 1–20 supplied review records in one new Markdown file. Use `{ "reviews": [...] }`, with each item in the existing `pr-review-report` input format. It rejects duplicate repository/PR pairs and never posts or authenticates the findings.

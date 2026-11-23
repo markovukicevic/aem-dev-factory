@@ -2,6 +2,26 @@
 
 ## 2026-11-23
 
+- Added a provider-independent commit preview and an initial commit workflow. It preserves existing staging and does not create commits, push, create PRs or verify tests as a side effect of previewing. Client behavior remains unverified.
+
+- Added local requirements import into a new source-labelled spec directory and an initial requirements-import workflow. Completeness scoring and actual client behavior require human review.
+
+- Added comparison of local imported source bytes with the editable import hash; workflow status now flags changes for inspection, without asserting authenticity.
+
+- Added identity-bound tracker source comparison and optional staging of a new fetched export without replacing local work; non-GitHub providers remain unverified live.
+
+- Added local source-bound task proposals and freshness checks with an initial task-breakdown skill. Remote task creation, closing and live tracker validation are not implemented.
+
+- Added bounded read-only context collection for explicitly selected PRs across the configured SCM provider, retaining partial failures. It does not list, review, post or prove complete diffs; non-GitHub providers remain unverified live.
+
+- Added a bounded one-page active PR listing for GitHub, GitLab, Bitbucket Cloud and Azure Repos as a batch-review selection aid; simulated responses only, and listing is not complete.
+
+- Added a local multi-PR review report bundler and initial reporting skill. It formats supplied evidence without running reviews or publishing externally.
+
+- Added bounded literal search of tracked source paths for ticket investigation and an initial analysis workflow; it does not inspect untracked or external files or prove impact.
+
+- Workflow evidence audit compares explicitly indexed step records and reports completed or blocked steps without an indexed record. This does not authenticate work or establish readiness.
+
 - Bound new step evidence records to plan content and plan review fingerprints and added a local consistency check; older records and actual observations require manual inspection.
 
 - Added explicit per-step evidence recording and digest-checked completion or blocking. Supplied results are editable and not independently verified; partial failures are retained.
@@ -307,22 +327,6 @@
 - Linked the new project to its GitHub origin and added a test workflow. The first GitHub Actions run passed on Node 20 and 22; action versions were then updated to address a deprecation warning.
 - Most recent observed five-hour quota reset: 2026-11-20 21:27 Europe/Berlin. Scheduled sessions must verify the reset and current usage before starting; limits are shared across the account.
 
-- Added a provider-independent commit preview and an initial commit workflow. It preserves existing staging and does not create commits, push, create PRs or verify tests as a side effect of previewing. Client behavior remains unverified.
-
-- Added local requirements import into a new source-labelled spec directory and an initial requirements-import workflow. Completeness scoring and actual client behavior require human review.
-
-- Added comparison of local imported source bytes with the editable import hash; workflow status now flags changes for inspection, without asserting authenticity.
-
-- Added identity-bound tracker source comparison and optional staging of a new fetched export without replacing local work; non-GitHub providers remain unverified live.
-
-- Added local source-bound task proposals and freshness checks with an initial task-breakdown skill. Remote task creation, closing and live tracker validation are not implemented.
-
-- Added bounded read-only context collection for explicitly selected PRs across the configured SCM provider, retaining partial failures. It does not list, review, post or prove complete diffs; non-GitHub providers remain unverified live.
-
-- Added a bounded one-page active PR listing for GitHub, GitLab, Bitbucket Cloud and Azure Repos as a batch-review selection aid; simulated responses only, and listing is not complete.
-
-- Added a local multi-PR review report bundler and initial reporting skill. It formats supplied evidence without running reviews or publishing externally.
-
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.
@@ -332,4 +336,3 @@
 5. Improve CI status coverage and webhook handling; the local listener and claims do not provide a public service, durable distributed replay protection or agent dispatch.
 6. Extend plan formats and legacy YAML compatibility where the reference workflow requires them. Preserve existing behavior and document unsupported cases.
 
-- Workflow evidence audit compares explicitly indexed step records and reports completed or blocked steps without an indexed record. This does not authenticate work or establish readiness.
