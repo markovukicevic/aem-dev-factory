@@ -32,3 +32,5 @@ For an explicitly selected Bitbucket pipeline step, `bitbucket-step-log-plan <pr
 `ci-run-diagnose <providers.json> <run-id>` summarizes reported problem candidates from the configured CI provider and retains its evidence and limitations. Do not interpret an empty candidate list as proof of success, policy compliance or root cause. Live access has only simulated validation.
 
 `ci-diagnosis-save <providers.json> <run-id> <new-output.json>` records the selected run observation; `ci-diagnosis-check <providers.json> <evidence.json>` compares current provider metadata. The record is editable and cannot prove correctness, completeness or policy compliance.
+
+`ci-log-compare <before.log> <after.log>` compares heuristic keyword counts from two selected local logs without printing content. Check that the runs and formats are comparable; a lower count is not proof of success.

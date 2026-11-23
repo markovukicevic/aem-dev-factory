@@ -19,3 +19,10 @@ export async function inspectCiLogCandidates({ path }) {
   });
   return { path, sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, lines: lines.length, counts, candidates, candidateListTruncated: matchingLines > candidates.length, skippedLongLines: longLines, scope: 'Heuristic keyword locations only; false positives, omissions, sensitive content, root cause and actual command results require inspection of the original log.' };
 }
+
+/** Compare keyword counts in two explicit logs without printing their content. */
+export async function compareCiLogCandidates({ beforePath, afterPath }) {
+  const [before, after] = await Promise.all([inspectCiLogCandidates({ path: beforePath }), inspectCiLogCandidates({ path: afterPath })]);
+  const categories = Object.keys(before.counts).map(category => ({ category, before: before.counts[category], after: after.counts[category], difference: after.counts[category] - before.counts[category] }));
+  return { before: { path: before.path, sha256: before.sha256, lines: before.lines, skippedLongLines: before.skippedLongLines }, after: { path: after.path, sha256: after.sha256, lines: after.lines, skippedLongLines: after.skippedLongLines }, categories, scope: 'Heuristic keyword-count comparison only; different jobs or log formats may not be comparable, and fewer matches do not establish success or root cause.' };
+}
