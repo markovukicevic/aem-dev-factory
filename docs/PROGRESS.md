@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added bounded local Node/Maven/AEM project-profile signals and an initial project-adaptation workflow, without executing scripts or modifying project settings.
+
 - Added local automation diagnostics covering policy, secret presence, claims, queue and provider configuration; listener and cloud health remain unknown.
 
 - Bound Jira subtask previews to the parent issue update timestamp; changes before submission invalidate the preview, while a separate source comparison identifies older local requirements.
