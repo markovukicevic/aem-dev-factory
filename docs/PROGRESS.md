@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added explicit per-step evidence recording and digest-checked completion or blocking. Supplied results are editable and not independently verified; partial failures are retained.
+
 - Added a review-aware plan step preview and digest-checked start with post-transition evidence recheck. Editable records do not prove review; races remain possible.
 
 - Bound new structured plan reviews to source identity file presence and content; older records require inspection and matching bytes do not establish authenticity.
