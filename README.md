@@ -244,6 +244,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Offline GitHub webhook inspection
 
+`automation-init <policy.json> <target-project>` saves explicit `allowedRepositories` and `allowedActors` lists to a new `.ai/automation/policy.json` without overwriting. `automation-status <target-project>` inspects this local policy, webhook-secret environment presence and local claim counts; it does not check whether a listener is running, process events or query any cloud service. No infrastructure or agent is deployed.
+
 `webhook-inspect <policy.json> <headers.json> <body.json>` checks the raw body against `GITHUB_WEBHOOK_SECRET` and explicit `allowedRepositories` and `allowedActors` arrays. The headers file has `signature`, `event`, and `deliveryId` fields. Supported events are narrowly classified; no task is executed and no listener is started. This building block does not prevent replay or establish that the event and delivery headers are bound to the signed body, and it is not a production webhook service. The signature implementation is tested against GitHub's published test vector and synthetic deliveries.
 
 `webhook-claim <policy.json> <headers.json> <body.json> <store-dir>` adds an atomic, local claim keyed by the signed body digest. Identical bodies are rejected on subsequent claims even if the delivery ID differs. This is local deduplication, not a distributed replay-proof service: headers remain unsigned, stores on different machines are independent, and identical legitimate bodies can be suppressed. A crash after claiming requires manual reconciliation. The command still does not execute a task.

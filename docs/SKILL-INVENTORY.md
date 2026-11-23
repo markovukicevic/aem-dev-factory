@@ -48,9 +48,9 @@ Reference skills: 12. Same-named Max skills: 12.
 
 ## agent-automation
 
-Reference skills: 11. Same-named Max skills: 0.
+Reference skills: 11. Same-named Max skills: 2.
 
-**Initial Max skills:** None.
+**Initial Max skills:** `auto-init`, `auto-status`.
 
 **Reference skills without a same-named Max skill:**
 
@@ -58,10 +58,8 @@ Reference skills: 11. Same-named Max skills: 0.
 - `auto-deploy`
 - `auto-doctor`
 - `auto-eval`
-- `auto-init`
 - `auto-lambda-env`
 - `auto-pipelines`
 - `auto-provision`
-- `auto-status`
 - `auto-test`
 - `auto-webhooks`

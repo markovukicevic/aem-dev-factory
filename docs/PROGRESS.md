@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added an explicit non-overwriting local GitHub webhook policy setup and read-only status summary, plus initial automation setup and status skills. No agents or cloud infrastructure are deployed and runtime health is unknown.
+
 - Added a read-only preview for selected skill installations, including source availability and destination collisions; no files are created.
 
 - Extended ticket file search to optionally inspect bounded untracked, non-ignored text files and report skipped files. Results remain candidates, not proof of impact.
