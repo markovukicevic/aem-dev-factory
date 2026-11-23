@@ -12,7 +12,7 @@ export function validateAutomationPolicy(policy) {
   return { allowedRepositories: [...policy.allowedRepositories], allowedActors: [...policy.allowedActors] };
 }
 
-async function projectDirectory(target, create) {
+export async function projectAutomationDirectory(target, create) {
   const root = await realpath(target), rootInfo = await lstat(root);
   if (!rootInfo.isDirectory()) throw new Error('Invalid project');
   let path = root;
@@ -28,7 +28,7 @@ async function projectDirectory(target, create) {
 /** Configure the existing local GitHub receiver without provisioning or deploying. */
 export async function initializeLocalAutomation({ target, config }) {
   const policy = validateAutomationPolicy(config);
-  const directory = await projectDirectory(target, true), path = join(directory, 'policy.json');
+  const directory = await projectAutomationDirectory(target, true), path = join(directory, 'policy.json');
   await writeFile(path, `${JSON.stringify(policy, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
   return { path, claimsDirectory: join(directory, 'claims'), scope: 'Local GitHub receiver policy only; no listener, agent, CI pipeline, cloud resources or remote configuration was created. Keep the webhook secret in the environment.' };
 }
@@ -36,7 +36,7 @@ export async function initializeLocalAutomation({ target, config }) {
 /** Inspect only local policy and claim records; no network access or mutation. */
 export async function inspectLocalAutomation({ target, env = process.env }) {
   let directory;
-  try { directory = await projectDirectory(target, false); }
+  try { directory = await projectAutomationDirectory(target, false); }
   catch (error) { if (error?.code === 'ENOENT') return { configured: false, policy: 'missing', claims: 'not-inspected', secretPresent: typeof env.GITHUB_WEBHOOK_SECRET === 'string' && !!env.GITHUB_WEBHOOK_SECRET.trim(), scope: 'Local files only; runtime, delivery, cloud health and task execution were not checked.' }; throw error; }
   let policy;
   try {
