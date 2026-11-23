@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 import { inspectTicketDirectory } from './ticket-status.js';
 import { inspectWorkflowStatus } from './workflow-status.js';
+import { readGitState } from './git-state.js';
 
 async function hashArtifact(path) {
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -25,7 +26,15 @@ async function hashArtifact(path) {
 }
 
 /** Capture known local artifact hashes, not source code or proof of execution. */
-export async function collectWorkflowSnapshot({ path }) {
+export async function collectWorkflowSnapshot({ path, repo }) {
+  let gitBefore = null, repoPath = null;
+  if (repo !== undefined) {
+    if (typeof repo !== 'string' || !repo.trim()) throw new TypeError('Invalid repository path');
+    const info = await lstat(repo);
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Repository must be a local directory');
+    repoPath = await realpath(repo);
+    gitBefore = await readGitState(repoPath);
+  }
   const ticket = await inspectTicketDirectory(path);
   const canonical = await realpath(path);
   const artifacts = [];
@@ -37,26 +46,33 @@ export async function collectWorkflowSnapshot({ path }) {
   const workflow = await inspectWorkflowStatus({ path });
   const final = await inspectTicketDirectory(path);
   const complete = artifacts.every(item => ['present', 'missing'].includes(item.status)) && ticket.plan?.digest === workflow.plan?.digest && ticket.plan?.digest === final.plan?.digest && ticket.files.length === final.files.length && ticket.files.every((item, index) => item.name === final.files[index].name && item.status === final.files[index].status);
-  return { version: 1, specPath: canonical, capturedAt: new Date().toISOString(), phase: workflow.phase, artifacts, complete, scope: 'Editable local artifact snapshot only. Contents, checks, Git state and readiness are not verified; files may change during or after collection.' };
+  let git = null;
+  if (gitBefore) {
+    const after = await readGitState(repoPath);
+    git = { path: repoPath, head: gitBefore.head, commit: gitBefore.commit, workingTreeClean: gitBefore.workingTreeClean, stable: gitBefore.head === after.head && gitBefore.commit === after.commit && gitBefore.workingTreeClean === after.workingTreeClean };
+  }
+  return { version: 1, specPath: canonical, capturedAt: new Date().toISOString(), phase: workflow.phase, artifacts, complete, git, scope: 'Editable local artifact snapshot and optional Git metadata only. Dirty worktree contents, checks and readiness are not verified; files may change during or after collection.' };
 }
 
 
 /** Save a new snapshot without overwriting an existing file. */
-export async function saveWorkflowSnapshot({ path, outputPath }) {
+export async function saveWorkflowSnapshot({ path, outputPath, repo }) {
   if (typeof outputPath !== 'string' || !outputPath.trim()) throw new TypeError('Output path is required');
   try { await lstat(outputPath); throw Object.assign(new Error('Output exists'), { code: 'EEXIST' }); }
   catch (error) { if (error?.code !== 'ENOENT') throw error; }
-  const snapshot = await collectWorkflowSnapshot({ path });
+  const snapshot = await collectWorkflowSnapshot({ path, repo });
   const json = `${JSON.stringify(snapshot, null, 2)}\n`;
   if (Buffer.byteLength(json, 'utf8') > 262144) throw new Error('Snapshot exceeds size limit');
   await writeFile(outputPath, json, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-  return { path: outputPath, phase: snapshot.phase, complete: snapshot.complete, scope: snapshot.scope };
+  return { path: outputPath, phase: snapshot.phase, complete: snapshot.complete, gitComparable: snapshot.git ? snapshot.git.stable && snapshot.git.workingTreeClean : null, scope: snapshot.scope };
 }
 
 /** Compare known local artifact hashes with an editable snapshot. */
-export async function compareWorkflowSnapshot({ path, snapshotPath }) {
+export async function compareWorkflowSnapshot({ path, snapshotPath, repo }) {
   const saved = JSON.parse((await readLimitedFile(snapshotPath, 262144)).toString('utf8'));
-  const current = await collectWorkflowSnapshot({ path });
+  if (saved?.git !== undefined && saved.git !== null && (!saved.git || typeof saved.git !== 'object' || typeof saved.git.path !== 'string' || typeof saved.git.head !== 'string' || !saved.git.head || typeof saved.git.commit !== 'string' || !/^[a-f0-9]{40,64}$/i.test(saved.git.commit) || typeof saved.git.workingTreeClean !== 'boolean' || typeof saved.git.stable !== 'boolean')) throw new Error('Invalid snapshot Git state');
+  if (repo !== undefined && (!saved?.git || await realpath(repo) !== saved.git.path)) throw new Error('Repository does not match the snapshot');
+  const current = await collectWorkflowSnapshot({ path, repo });
   if (!saved || saved.version !== 1 || saved.specPath !== current.specPath || typeof saved.complete !== 'boolean' || !Array.isArray(saved.artifacts) || saved.artifacts.length > 100) throw new Error('Invalid workflow snapshot');
   const validNames = new Set(current.artifacts.map(item => item.name)), old = new Map();
   for (const item of saved.artifacts) {
@@ -71,5 +87,10 @@ export async function compareWorkflowSnapshot({ path, snapshotPath }) {
     else if (item.status === 'present' && previous.sha256 !== item.sha256) changes.push({ name: item.name, change: 'content-changed' });
   }
   const comparisonComplete = saved.complete && current.complete;
-  return { changes, previousPhase: typeof saved.phase === 'string' ? saved.phase : null, currentPhase: current.phase, comparisonComplete, consistent: comparisonComplete && changes.length === 0, scope: 'Editable local snapshot comparison only; source code, Git state, test results and readiness are not verified.' };
+  let gitComparison = saved.git ? 'not-checked' : 'not-requested';
+  if (saved.git && current.git) {
+    if (!saved.git.stable || !current.git.stable || !saved.git.workingTreeClean || !current.git.workingTreeClean) gitComparison = 'unknown';
+    else gitComparison = saved.git.head === current.git.head && saved.git.commit === current.git.commit ? 'match' : 'changed';
+  }
+  return { changes, previousPhase: typeof saved.phase === 'string' ? saved.phase : null, currentPhase: current.phase, comparisonComplete, gitComparison, consistent: comparisonComplete && changes.length === 0 && ['match', 'not-requested'].includes(gitComparison), scope: 'Editable local snapshot comparison only. Dirty worktree contents, tests and readiness are not verified; Git state may change after inspection.' };
 }
