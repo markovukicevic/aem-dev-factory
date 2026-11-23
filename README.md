@@ -250,6 +250,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Install one skill into a project
 
+`install-skills-plan <codex|claude|copilot> <target-project> <skill> [skill ...]` previews selected skills and destination collisions without creating files. A later installation rechecks inputs; the preview cannot guarantee the files remain unchanged.
+
 Skill installation copies an explicitly selected skill directory, including supporting files, with limits of 100 files, 1 MiB per file, 8 MiB total and five directory levels. Symlinks and special files are rejected. Existing destination skills are preserved; inspect any partial installation after a copy failure. Executable bits are retained. Client discovery and behavior remain unverified.
 
 `node bin/aem-devflow.js install-skill codex agent-plan /path/to/target-project` copies one skill and its bounded supporting files to the selected project's `.agents/skills/` directory. Use `claude` for `.claude/skills/` or `copilot` for `.github/skills/`. Existing destinations and symlinked destination directories are rejected; if copying fails after a new directory is created, inspect that directory before retrying. Set `AEM_DEVFLOW_MAX_HOME` for skills that call the Max CLI and start a new client session. The installer has been tested with temporary projects; automatic discovery and skill behavior in AI clients remain unverified.

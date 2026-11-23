@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added a read-only preview for selected skill installations, including source availability and destination collisions; no files are created.
+
 - Extended ticket file search to optionally inspect bounded untracked, non-ignored text files and report skipped files. Results remain candidates, not proof of impact.
 
 - Extended explicit skill installation to bounded supporting files, rejecting symlinks and preserving existing destinations; client discovery and behavior remain unverified.
