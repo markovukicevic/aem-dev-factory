@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added separate local AEM knowledge staging with byte comparison; it does not update target files or validate source contents.
+
 - Added optional branch, commit and clean-worktree metadata to workflow snapshots; dirty contents and Git state without an explicit matching repository remain unverified.
 
 - Added non-overwriting local ticket artifact snapshots and change comparison; snapshots do not capture Git state or verify tests or readiness.
