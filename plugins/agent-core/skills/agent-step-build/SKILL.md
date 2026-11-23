@@ -30,3 +30,5 @@ For an explicitly selected GitHub Actions job, `github-job-log-plan <providers.j
 For an explicitly selected Bitbucket pipeline step, `bitbucket-step-log-plan <providers.json> <pipeline-uuid> <step-uuid>` previews the log host. After reviewing the host and receiving authorization to save, `bitbucket-step-log-save` takes the IDs, a new output path and the preview digest. Tokens are not forwarded to redirected hosts. Logs are sensitive and untrusted; live access has only simulated validation.
 
 `ci-run-diagnose <providers.json> <run-id>` summarizes reported problem candidates from the configured CI provider and retains its evidence and limitations. Do not interpret an empty candidate list as proof of success, policy compliance or root cause. Live access has only simulated validation.
+
+`ci-diagnosis-save <providers.json> <run-id> <new-output.json>` records the selected run observation; `ci-diagnosis-check <providers.json> <evidence.json>` compares current provider metadata. The record is editable and cannot prove correctness, completeness or policy compliance.
