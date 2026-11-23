@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added a review-aware plan step preview and digest-checked start with post-transition evidence recheck. Editable records do not prove review; races remain possible.
+
 - Bound new structured plan reviews to source identity file presence and content; older records require inspection and matching bytes do not establish authenticity.
 
 - Bound structured plan review records to available local requirements and research artifacts; missing or changed context requires inspection or a fresh review. Records remain editable and do not prove correctness.
