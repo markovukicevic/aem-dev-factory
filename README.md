@@ -240,6 +240,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 `gitlab-pipeline-status <providers.json> <id>` and `bitbucket-pipeline-status <providers.json> <uuid>` read a selected run's reported state and commit without displaying pipeline variables. They do not establish required checks or deployment success.
 
+`ado-pipeline-dispatch <providers.json> <definition-id> <branch> [--commit <sha>]` explicitly queues an Azure build using a selected definition and branch, optionally with a full source commit. `ado-pipeline-status <providers.json> <build-id>` reads selected status fields. A queued build may deploy; an accepted response does not establish the actual checked-out commit or completion. Inspect Azure before retrying an ambiguous request. Simulated responses only. See [Azure Build Queue API](https://learn.microsoft.com/en-us/rest/api/azure/devops/build/builds/queue?view=azure-devops-rest-7.1).
+
 `ci-dispatch /path/to/providers.json build.yml feature-branch [--inputs-file /path/to/inputs.json]` explicitly requests a `workflow_dispatch` run using the configured GitHub Actions provider. The token needs Actions write permission, and the workflow must support manual dispatch. Inputs are a JSON object; do not put secrets in workflow inputs. An `accepted` result means GitHub accepted the request, not that a run completed or succeeded. The command does not retry; after an ambiguous error, inspect GitHub before trying again. This write operation has only been tested with simulated responses.
 
 ### Prepare a PR description

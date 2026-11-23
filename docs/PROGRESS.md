@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added explicit Azure build-definition queueing with optional commit and selected-field build status, using simulated responses only; no live build was triggered.
+
 - Added explicit GitLab and Bitbucket CI pipeline run requests using the configured provider; simulated transport only, no live runs or completion verification.
 
 - Connected a selected queued GitHub, GitLab or Bitbucket event to read-only provider context with provider identity and local queue rechecks; simulated automation-context validation only and no execution.
