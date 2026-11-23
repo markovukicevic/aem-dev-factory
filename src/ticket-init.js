@@ -32,7 +32,7 @@ export function deriveTicketIdentity({ config, ticket }) {
 /** Bind a new spec directory to one tracker and export the fetched source without overwriting. */
 export async function initializeTicket({ cwd, config, ticket }) {
   const identity = deriveTicketIdentity({ config, ticket });
-  const { provider, id } = identity;
+  const { provider, source, id } = identity;
   const story = renderTrackerStory(ticket);
   const { path, created } = await ensureSpecDirectory({ cwd, id, title: ticket.title });
   const identityPath = join(path, 'source-identity.json');
