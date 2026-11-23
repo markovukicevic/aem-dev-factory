@@ -30,3 +30,26 @@ export async function compareAemLiveSnapshots({ beforePath, afterPath }) {
   if (oldFields.size !== before.localDialog.fields.length || newFields.size !== after.localDialog.fields.length || [...oldFields.keys(), ...newFields.keys()].some(path => typeof path !== 'string')) throw new Error('Invalid dialog fields');
   return { before: before.capturedAt, after: after.capturedAt, scope: { authorOrigin: before.liveUsage.authorOrigin, root: before.liveUsage.root, resourceType: before.liveUsage.resourceType }, queryComplete: before.liveUsage.queryComplete && after.liveUsage.queryComplete, pagesOnlyBefore: oldPages.filter(path => !newSet.has(path)), pagesOnlyAfter: newPages.filter(path => !oldSet.has(path)), localFieldsAdded: [...newFields.keys()].filter(path => !oldFields.has(path)), localFieldsRemoved: [...oldFields.keys()].filter(path => !newFields.has(path)), localFieldsChanged: [...newFields.keys()].filter(path => oldFields.has(path) && oldFields.get(path) !== newFields.get(path)), limitations: 'Snapshots are editable observations, not authenticated evidence. Page changes may reflect access, concurrent edits or incomplete queries; local XML is not a deployed dialog.' };
 }
+
+function flattenNode(node) {
+  const result = new Map(), stack = [{ path: '', value: node }];
+  while (stack.length) {
+    const { path, value } = stack.pop();
+    if (result.size + stack.length > 20000) throw new Error('Node snapshot exceeds comparison limit');
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const entries = Object.entries(value);
+      if (!entries.length) result.set(path, '{}');
+      else for (const [key, child] of entries) stack.push({ path: `${path}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`, value: child });
+    } else result.set(path, JSON.stringify(value));
+  }
+  return result;
+}
+/** Compare two explicitly saved node snapshots without printing property values. */
+export async function compareAemLiveNodes({ beforePath, afterPath }) {
+  const before = JSON.parse((await readLimitedFile(beforePath, 2 * 1024 * 1024)).toString('utf8'));
+  const after = JSON.parse((await readLimitedFile(afterPath, 2 * 1024 * 1024)).toString('utf8'));
+  for (const item of [before, after]) if (item?.version !== 1 || typeof item.capturedAt !== 'string' || typeof item.authorOrigin !== 'string' || typeof item.path !== 'string' || !Number.isSafeInteger(item.depth) || item.depth < 0 || item.depth > 2 || !item.node || typeof item.node !== 'object' || Array.isArray(item.node)) throw new Error('Invalid AEM node snapshot');
+  if (['authorOrigin', 'path', 'depth'].some(key => before[key] !== after[key])) throw new Error('AEM node snapshot scope differs');
+  const oldFields = flattenNode(before.node), newFields = flattenNode(after.node);
+  return { before: before.capturedAt, after: after.capturedAt, authorOrigin: before.authorOrigin, path: before.path, depth: before.depth, added: [...newFields.keys()].filter(key => !oldFields.has(key)).sort(), removed: [...oldFields.keys()].filter(key => !newFields.has(key)).sort(), changed: [...newFields.keys()].filter(key => oldFields.has(key) && oldFields.get(key) !== newFields.get(key)).sort(), scope: 'JSON pointer paths identify differing observed properties; arrays are compared as values. Snapshots are editable and do not prove live state, inheritance or rendered behavior.' };
+}

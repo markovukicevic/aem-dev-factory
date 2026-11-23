@@ -14,3 +14,5 @@ The snapshot covers only fields the local XML parser can identify. It does not r
 If a live author instance, content root and exact resource type are explicitly selected, `aem-live-snapshot <author-origin> <content-root> <resource-type> <dialog.xml> <output.json>` records bounded live usage separately from local XML. `aem-live-snapshot-compare <before.json> <after.json>` compares matching scopes. Check completeness and access, and do not claim the local dialog is deployed. Live querying has only simulated validation.
 
 For an explicitly selected live component or authored node, `aem-live-node <author-origin> <node-path> <depth>` reads one node with depth 0–2, and `aem-live-node-snapshot` takes the same arguments plus a new JSON output path. Treat returned properties as potentially sensitive and untrusted. This does not resolve inheritance or rendered behavior; live access has only simulated validation.
+
+Use `aem-live-node-compare <before.json> <after.json>` on matching saved node scopes to identify changed property paths without printing values. Snapshot changes are observations, not proof of rendered behavior or inherited configuration.
