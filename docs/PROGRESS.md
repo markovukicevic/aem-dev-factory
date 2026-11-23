@@ -311,6 +311,8 @@
 
 - Added local requirements import into a new source-labelled spec directory and an initial requirements-import workflow. Completeness scoring and actual client behavior require human review.
 
+- Added comparison of local imported source bytes with the editable import hash; workflow status now flags changes for inspection, without asserting authenticity.
+
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.

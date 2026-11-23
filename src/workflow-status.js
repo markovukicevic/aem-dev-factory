@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { inspectTicketDirectory } from './ticket-status.js';
 import { checkPlanReview } from './plan-review.js';
+import { checkLocalRequirements } from './requirements-import.js';
 
 /** Suggest a workflow phase from local artifacts and declared statuses only. */
 export async function inspectWorkflowStatus({ path }) {
@@ -14,9 +15,15 @@ export async function inspectWorkflowStatus({ path }) {
     try { review = { format: 'structured', ...(await checkPlanReview({ planPath: join(path, 'implement.md'), reportPath: join(path, 'validation-report.md') })) }; }
     catch { review = { format: 'unstructured-or-invalid' }; }
   }
+  let sourceConsistency = 'not-applicable';
+  if (ticket.identity?.provider === 'local') {
+    try { sourceConsistency = (await checkLocalRequirements({ path })).matches ? 'matches' : 'changed'; }
+    catch { sourceConsistency = 'unavailable'; }
+  }
   let phase, nextStep = null;
   if (unsafe.length) phase = 'inspect-unreadable-artifacts';
   else if (status('raw-story.md') === 'missing') phase = 'collect-source';
+  else if (['changed', 'unavailable'].includes(sourceConsistency)) phase = 'inspect-local-source';
   else if (['dor.md', 'explain.md', 'research.md'].some(name => status(name) === 'missing')) phase = 'prepare-requirements';
   else if (status('implement.md') === 'missing') phase = 'prepare-plan';
   else if (status('validation-report.md') === 'missing') phase = 'review-plan';
@@ -31,5 +38,5 @@ export async function inspectWorkflowStatus({ path }) {
   else if (status('verification.md') === 'missing') phase = 'verify-change';
   else if (status('dod.md') === 'missing') phase = 'review-definition-of-done';
   else phase = 'review-existing-evidence';
-  return { path, phase, nextStep, missing, unsafe, sourceIdentityAvailable: !!ticket.identity, plan: ticket.plan, review, scope: 'Suggestions from local artifact presence and declared statuses only. Requirement readiness, plan approval, completed checks, source identity and release readiness are not verified; inspect the actual evidence before acting.' };
+  return { path, phase, nextStep, missing, unsafe, sourceConsistency, sourceIdentityAvailable: !!ticket.identity, plan: ticket.plan, review, scope: 'Suggestions from local artifact presence and declared statuses only. Requirement readiness, plan approval, completed checks, source identity and release readiness are not verified; inspect the actual evidence before acting.' };
 }

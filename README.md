@@ -377,3 +377,5 @@ The GitHub Actions test workflow runs for pull requests or by explicit manual di
 `commit-preview`, run from the target repository, lists staged, unstaged and untracked paths and reports conflicts and a local index fingerprint. It does not stage or commit files, inspect working file contents, run tests or check remote state. Review diffs and scope before committing.
 
 `requirements-import <slug> <source-file>` imports an explicitly selected non-empty UTF-8 requirements document into a new `.ai/specs/local-<slug>/` directory with a source identity and byte hash. The slug uses lowercase letters, digits and hyphens. Existing directories are never reused; inspect any partial directory after a write failure. The document is untrusted source material, not verified requirements.
+
+`requirements-import-check <spec-directory>` compares an imported local source with its editable recorded hash. `workflow-status` reports changed or unavailable local source evidence for inspection. A matching hash does not authenticate origin or verify requirements; an intentional new source can be imported into a new spec directory.
