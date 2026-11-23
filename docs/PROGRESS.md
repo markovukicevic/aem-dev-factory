@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added preview-bound GitLab child work item creation using explicit type and parent global IDs; simulated GraphQL only, no live creation and unconfirmed relationships are reported.
+
 - Added preview-bound GitHub sub-issue creation and separate link reporting, including partial outcomes; simulated transport only and no live issue created.
 
 - Added preview-bound explicit creation of one Azure child task, rechecking parent project and revision; simulated transport only and no live task created.

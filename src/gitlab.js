@@ -16,6 +16,12 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
     return { data: await response.json(), headers: response.headers };
   }
   const get = path => request(path);
+  async function graphql(query, variables) {
+    const response = await fetchImpl('https://gitlab.com/api/graphql', { method: 'POST', headers: { Accept: 'application/json', 'PRIVATE-TOKEN': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables }), redirect: 'error' });
+    if (!response.ok) throw new Error(`GitLab GraphQL request failed (${response.status})`);
+    return response.json();
+  }
+
   function iid(value) {
     if (!Number.isSafeInteger(value) || value < 1) throw new TypeError('Invalid GitLab IID');
   }
@@ -59,6 +65,23 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
   }
   return {
     listAllPipelines,
+    async getWorkItem(number) {
+      iid(number);
+      const query = 'query Parent($path: ID!, $iid: String!) { namespace(fullPath: $path) { fullPath workItem(iid: $iid) { id iid updatedAt } } }';
+      const result = await graphql(query, { path: project, iid: String(number) });
+      const namespace = result?.data?.namespace, item = namespace?.workItem;
+      if (result?.errors?.length || namespace?.fullPath !== project || !/^gid:\/\/gitlab\/WorkItem\/[1-9][0-9]*$/.test(item?.id ?? '') || item.iid !== String(number) || typeof item.updatedAt !== 'string' || item.updatedAt.length > 64) throw new Error('GitLab work item unavailable or mismatched');
+      return { id: item.id, iid: number, updatedAt: item.updatedAt };
+    },
+    async createChildWorkItem({ parentId, workItemTypeId, title, description }) {
+      if (typeof parentId !== 'string' || !/^gid:\/\/gitlab\/WorkItem\/[1-9][0-9]*$/.test(parentId) || typeof workItemTypeId !== 'string' || !/^gid:\/\/gitlab\/WorkItems::Type\/[1-9][0-9]*$/.test(workItemTypeId) || typeof title !== 'string' || !title.trim() || title.length > 255 || /[\u0000-\u001f\u007f]/.test(title) || typeof description !== 'string' || !description.trim() || description.length > 262144) throw new TypeError('Invalid GitLab child work item');
+      const query = 'mutation CreateChild($input: WorkItemCreateInput!) { workItemCreate(input: $input) { errors workItem { id iid widgets { __typename ... on WorkItemWidgetHierarchy { parent { id } } } } } }';
+      const variables = { input: { namespacePath: project, title, workItemTypeId, hierarchyWidget: { parentId }, descriptionWidget: { description } } };
+      const response = await graphql(query, variables), data = response?.data?.workItemCreate, item = data?.workItem;
+      if (!item || !/^gid:\/\/gitlab\/WorkItem\/[1-9][0-9]*$/.test(item.id ?? '') || !/^[1-9][0-9]*$/.test(item.iid ?? '') || !Number.isSafeInteger(Number(item.iid))) throw new Error('Work item response unclear; inspect GitLab before retrying');
+      const hierarchy = Array.isArray(item.widgets) ? item.widgets.find(widget => widget?.__typename === 'WorkItemWidgetHierarchy') : null;
+      return { created: true, iid: Number(item.iid), linked: !response?.errors?.length && Array.isArray(data.errors) && data.errors.length === 0 && hierarchy?.parent?.id === parentId };
+    },
     async getTicket(number) {
       iid(number);
       const { data: issue } = await get(`/issues/${number}`);
