@@ -6,6 +6,21 @@ export function createAdoTracker({ organization, project, token, fetchImpl = glo
   const { base, request: get } = createAdoHttp({ organization, project, token, fetchImpl });
   return {
     provider: 'ado',
+    async getWorkItemState(id) {
+      if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) throw new TypeError('Invalid work item ID');
+      return get(`/_apis/wit/workitems/${id}?fields=System.State,System.WorkItemType,System.TeamProject&api-version=7.1`);
+    },
+    async listWorkItemStates(type) {
+      if (typeof type !== 'string' || !type.trim() || type !== type.trim() || type.length > 128 || /[\u0000-\u001f\u007f\/\\]/.test(type)) throw new TypeError('Invalid work item type');
+      return get(`/_apis/wit/workitemtypes/${encodeURIComponent(type)}/states?api-version=7.1`);
+    },
+    async updateWorkItemState({ id, revision, state }) {
+      if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || !Number.isSafeInteger(revision) || revision < 1 || typeof state !== 'string' || !state.trim() || state !== state.trim() || state.length > 128 || /[\u0000-\u001f\u007f]/.test(state)) throw new TypeError('Invalid work item state');
+      const body = [{ op: 'test', path: '/rev', value: revision }, { op: 'add', path: '/fields/System.State', value: state }];
+      const item = await get(`/_apis/wit/workitems/${id}?api-version=7.1`, { method: 'PATCH', body, contentType: 'application/json-patch+json' });
+      if (item?.id !== id || item.fields?.['System.State'] !== state || !Number.isSafeInteger(item.rev) || item.rev <= revision) throw new Error('Work item update unclear; inspect Azure before retrying');
+      return { updated: true, state, revision: item.rev };
+    },
     async createSubtask({ parent, workItemType, summary, description }) {
       if (!Number.isSafeInteger(parent) || parent < 1 || parent > 2147483647 || typeof workItemType !== 'string' || !workItemType.trim() || workItemType !== workItemType.trim() || workItemType.length > 128 || /[\u0000-\u001f\u007f\/\\$]/.test(workItemType) || typeof summary !== 'string' || !summary.trim() || summary.length > 255 || /[\u0000-\u001f\u007f]/.test(summary) || typeof description !== 'string' || !description.trim() || description.length > 262144) throw new TypeError('Invalid Azure subtask');
       const operations = [ { op: 'add', path: '/fields/System.Title', value: summary }, { op: 'add', path: '/fields/System.Description', value: description }, { op: 'add', path: '/relations/-', value: { rel: 'System.LinkTypes.Hierarchy-Reverse', url: `${base}/_apis/wit/workItems/${parent}` } } ];
