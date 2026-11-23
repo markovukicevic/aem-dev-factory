@@ -31,7 +31,10 @@ export function summarizeAxeResult(input) {
   };
   const violations = normalize(input.violations), incomplete = normalize(input.incomplete);
   const passes = Array.isArray(input.passes) ? input.passes.length : null, inapplicable = Array.isArray(input.inapplicable) ? input.inapplicable.length : null;
-  return { engine: { name: 'axe-core', version: input.testEngine.version }, page, violations, incomplete, passes, inapplicable, scope: 'Supplied axe-core results only; scan execution, complete coverage, manual accessibility and WCAG conformance are not verified. Page query and fragment and DOM snippets are omitted; selectors may still be sensitive.' };
+  const meta = input.aemDevFlowRun;
+  const declaredRun = meta?.version === 1 && Number.isSafeInteger(meta.blockedRequests) && meta.blockedRequests >= 0 && Array.isArray(meta.axeTags) && meta.axeTags.length <= 20 && meta.axeTags.every(tag => typeof tag === 'string' && /^[a-z0-9-]{1,64}$/i.test(tag)) ? { blockedRequests: meta.blockedRequests, axeTags: [...meta.axeTags] } : null;
+
+  return { engine: { name: 'axe-core', version: input.testEngine.version }, page, violations, incomplete, passes, inapplicable, declaredRun, scope: 'Supplied axe-core results only; scan execution, complete coverage, manual accessibility and WCAG conformance are not verified. Page query and fragment and DOM snippets are omitted; selectors may still be sensitive.' };
 }
 export async function readAxeResult(path) {
   const bytes = await readLimitedFile(path, 8 * 1024 * 1024);
@@ -43,13 +46,13 @@ export function compareAxeResults(before, after) {
   const old = rows(before), next = rows(after), added = [], noLongerReported = [];
   for (const [key, item] of next) { const difference = item.count - (old.get(key)?.count ?? 0); if (difference > 0) added.push({ ...item, count: difference }); }
   for (const [key, item] of old) { const difference = item.count - (next.get(key)?.count ?? 0); if (difference > 0) noLongerReported.push({ ...item, count: difference }); }
-  return { samePage: before.page && after.page ? before.page === after.page : null, sameEngineVersion: before.engine.version === after.engine.version, added, noLongerReported, incompleteBefore: before.incomplete.length, incompleteAfter: after.incomplete.length, scope: 'Rule/selector differences in supplied files only; scan configuration, dynamic state, coverage, actual fixes and WCAG conformance are not established.' };
+  return { samePage: before.page && after.page ? before.page === after.page : null, sameEngineVersion: before.engine.version === after.engine.version, sameDeclaredTags: before.declaredRun && after.declaredRun ? JSON.stringify([...before.declaredRun.axeTags].sort()) === JSON.stringify([...after.declaredRun.axeTags].sort()) : null, blockedBefore: before.declaredRun?.blockedRequests ?? null, blockedAfter: after.declaredRun?.blockedRequests ?? null, added, noLongerReported, incompleteBefore: before.incomplete.length, incompleteAfter: after.incomplete.length, scope: 'Rule/selector differences in supplied files only; scan configuration, dynamic state, coverage, actual fixes and WCAG conformance are not established.' };
 }
 const escape = value => String(value).replace(/([\\`*_{}\[\]()#+.!|<>-])/g, '\\$1');
 /** Save a local report without overwriting or claiming the scan ran. */
 export async function saveAxeReport({ inputPath, outputPath }) {
   const result = await readAxeResult(inputPath);
-  const lines = ['# Accessibility scan observations', '', 'This report formats supplied axe-core output. It does not establish scan execution, complete accessibility coverage or conformance.', '', `- Page: ${result.page ? escape(result.page) : 'unknown'}`, `- Engine: axe-core ${escape(result.engine.version)}`, `- Passing rules reported: ${result.passes ?? 'unknown'}`, '', '## Reported violations', ''];
+  const lines = ['# Accessibility scan observations', '', 'This report formats supplied axe-core output. It does not establish scan execution, complete accessibility coverage or conformance.', '', `- Page: ${result.page ? escape(result.page) : 'unknown'}`, `- Engine: axe-core ${escape(result.engine.version)}`, `- Passing rules reported: ${result.passes ?? 'unknown'}`, `- Declared blocked requests: ${result.declaredRun?.blockedRequests ?? 'unknown'}`, `- Declared axe tags: ${result.declaredRun ? (result.declaredRun.axeTags.map(escape).join(', ') || 'all configured rules') : 'unknown'}`, '', '## Reported violations', ''];
   for (const rule of result.violations) { lines.push(`### ${escape(rule.id)}`, '', `Impact: ${rule.impact ?? 'unknown'}`, '', ...(rule.help ? [`${escape(rule.help)}`, ''] : [])); for (const node of rule.nodes) lines.push(`- ${escape(JSON.stringify(node.target))}`); lines.push(''); }
   if (!result.violations.length) lines.push('No violations were supplied.', '');
   lines.push('## Needs manual review', '');
