@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added non-overwriting local ticket artifact snapshots and change comparison; snapshots do not capture Git state or verify tests or readiness.
+
 - Added a local ticket workflow phase suggestion and initial requirements-to-implementation coordination skills. Artifact presence and plan statuses do not verify readiness or checks.
 
 ## 2026-11-22
