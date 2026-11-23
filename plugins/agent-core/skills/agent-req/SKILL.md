@@ -43,3 +43,5 @@ Write `share-req.md` with the confirmed scope, readiness result, likely affected
 Create new artifact files without clobbering existing user content. If any output already exists, stop before replacing it and report the collision. No generated artifact is evidence that the ticket is ready or implemented; label the readiness outcome based on the checks actually performed.
 
 If the user explicitly requests a GitHub issue comment, `github-issue-comment-plan <providers.json> <issue> <body.md>` previews the exact message; `github-issue-comment-send` accepts the same arguments plus the preview digest and sends one comment after rechecking the issue. A request to gather requirements does not authorize sending. Inspect GitHub before retrying an unclear send. This write path has only simulated validation.
+
+If the user explicitly requests a GitLab issue comment, use `gitlab-issue-comment-plan <providers.json> <issue> <body.md>` to preview it and `gitlab-issue-comment-send` with the preview digest to send it. Inspect GitLab before retrying an unclear send. This path has only simulated validation.

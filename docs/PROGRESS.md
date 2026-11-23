@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added preview-bound GitLab discussion and issue replies, Bitbucket and Azure review replies, and GitHub/GitLab issue, Jira transition and Azure work-item state changes. Only simulated providers were used; workflow side effects and live provider behavior remain unverified.
+
 - Added preview-bound explicit GitHub issue comments and top-level PR review replies, with target and revision rechecks. Simulated transport only; no live messages sent.
 
 - Added initial evidence-based documentation workflows for completed and historical work. Automatic wiki publication, live deployment verification and client behavior remain unimplemented or unverified.
