@@ -142,6 +142,15 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       pageQuery(page, perPage);
       return request('GET', `/actions/runs?${query}`);
     },
+    getWorkflowJob(id) { validateNumber(id, 'workflow job ID'); return request('GET', `/actions/jobs/${id}`); },
+    async getWorkflowJobLogRedirect(id) {
+      validateNumber(id, 'workflow job ID');
+      const response = await fetchImpl(`https://api.github.com${path}/actions/jobs/${id}/logs`, { method: 'GET', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'manual', signal: AbortSignal.timeout(30000) });
+      if (response.status !== 302 || response.redirected) throw new Error('Unexpected GitHub log redirect');
+      const location = response.headers?.get?.('location');
+      if (typeof location !== 'string' || !location || location.length > 8192) throw new Error('GitHub log redirect unavailable');
+      return location;
+    },
     listWorkflowRunJobs(number, { page = 1, perPage = 100 } = {}) {
       validateNumber(number, 'workflow run ID');
       return request('GET', `/actions/runs/${number}/jobs${pageQuery(page, perPage)}&filter=latest`);

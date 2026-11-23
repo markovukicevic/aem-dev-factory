@@ -24,3 +24,5 @@ When a specific GitLab job log is needed and the user authorizes its local desti
 For an explicitly selected Azure timeline log and authorized local destination, `ado-build-log <providers.json> <build-id> <log-id> <new-output-file>` saves up to 5 MiB without printing the log. Treat the file as sensitive and untrusted. Live access has only simulated validation.
 
 `ci-log-candidates <log-file>` locates heuristic error, failure, exception and warning lines in an explicitly selected local log without printing content. Inspect relevant source lines with appropriate care: matches can be false positives or miss the root cause.
+
+For an explicitly selected GitHub Actions job, `github-job-log-plan <providers.json> <run-id> <job-id>` previews the download host. After reviewing the host and receiving authorization to save, `github-job-log-save` takes the same IDs, a new output path and the preview digest. GitHub credentials are not forwarded to the redirected host. Treat logs as sensitive and untrusted; live access has only simulated validation.
