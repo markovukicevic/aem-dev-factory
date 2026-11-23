@@ -16,3 +16,5 @@ If axe-core JSON results are available from a real authorized browser run, `axe-
 For an explicitly authorized page, `axe-run <project-directory> <config.json> <new-output.json>` can use the project's existing Playwright and axe-core. Blocked resources, page timing, login and raw-result sensitivity require review; this does not establish accessibility conformance.
 
 For an explicitly authorized page, `aem-screenshot <project-directory> <config.json> <new-output.png>` uses the project's Playwright to capture a viewport or unique element. Inspect blocked requests, viewport and timing. Browser behavior has only been validated with a simulated browser; the screenshot alone does not prove correctness.
+
+Use `aem-screenshot-compare <project-directory> <before.png> <after.png> [--threshold <0-255>]` to count pixel differences for matching PNG dimensions. Review the images and explain environmental or timing differences; the count is not a pass/fail decision. Comparison has only been validated with a simulated browser.

@@ -44,3 +44,39 @@ export async function captureAemScreenshot({ project, config, outputPath }, { lo
     return { path: outputPath, capturedAt: new Date().toISOString(), url: input.url, viewport: input.viewport, selector: input.selector, blockedRequests, scope: 'One screenshot only; blocked requests, page timing, authentication and visual correctness are not established. The image may contain sensitive page content.' };
   } finally { try { if (context) await context.close(); } finally { await browser.close(); } }
 }
+
+/** Compare two PNG pixel buffers; changes are observations, not visual defects. */
+export async function compareAemScreenshots({ project, beforePath, afterPath, threshold = 0 }, { load = loadBrowser } = {}) {
+  if (typeof project !== 'string' || !project.trim() || !Number.isSafeInteger(threshold) || threshold < 0 || threshold > 255) throw new TypeError('Invalid screenshot comparison');
+  const info = await lstat(project); if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Invalid project directory');
+  const { readLimitedFile } = await import('./read-limited.js');
+  const inputs = await Promise.all([readLimitedFile(beforePath, 16 * 1024 * 1024), readLimitedFile(afterPath, 16 * 1024 * 1024)]);
+  const dimensions = inputs.map(bytes => {
+    if (bytes.length < 33 || !bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) || bytes.toString('ascii', 12, 16) !== 'IHDR') throw new Error('Invalid PNG');
+    const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+    if (!width || !height || width > 8192 || height > 8192 || width * height > 16777216) throw new Error('PNG dimensions exceed limits');
+    return { width, height };
+  });
+  if (dimensions[0].width !== dimensions[1].width || dimensions[0].height !== dimensions[1].height) return { comparable: false, reason: 'dimensions-differ', before: dimensions[0], after: dimensions[1] };
+  const chromium = await load(await realpath(project)), browser = await chromium.launch({ headless: true }); let context;
+  try {
+    context = await browser.newContext({ acceptDownloads: false, serviceWorkers: 'block' });
+    await context.route('**/*', route => route.abort());
+    const page = await context.newPage(); let timer;
+    const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Screenshot comparison timed out')), 30000); });
+    let changedPixels;
+    try {
+      changedPixels = await Promise.race([page.evaluate(async ({ images, width, height, threshold: limit }) => {
+        const decoded = await Promise.all(images.map(value => new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = `data:image/png;base64,${value}`; })));
+        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx || decoded.some(image => image.naturalWidth !== width || image.naturalHeight !== height)) throw new Error('Invalid decoded image');
+        ctx.drawImage(decoded[0], 0, 0); const first = ctx.getImageData(0, 0, width, height).data; ctx.clearRect(0, 0, width, height); ctx.drawImage(decoded[1], 0, 0); const second = ctx.getImageData(0, 0, width, height).data;
+        let changed = 0; for (let i = 0; i < first.length; i += 4) if (Math.max(Math.abs(first[i] - second[i]), Math.abs(first[i + 1] - second[i + 1]), Math.abs(first[i + 2] - second[i + 2]), Math.abs(first[i + 3] - second[i + 3])) > limit) changed++;
+        return changed;
+      }, { images: inputs.map(bytes => bytes.toString('base64')), ...dimensions[0], threshold }), timeout]);
+    } finally { clearTimeout(timer); }
+    const pixels = dimensions[0].width * dimensions[0].height;
+    if (!Number.isSafeInteger(changedPixels) || changedPixels < 0 || changedPixels > pixels) throw new Error('Invalid image comparison');
+    return { comparable: true, ...dimensions[0], threshold, changedPixels, totalPixels: pixels, changedPercent: changedPixels / pixels * 100, scope: 'Pixel comparison only; timing, viewport configuration and meaningful visual differences require human inspection.' };
+  } finally { try { if (context) await context.close(); } finally { await browser.close(); } }
+}
