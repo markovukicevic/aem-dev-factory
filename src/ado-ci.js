@@ -17,6 +17,10 @@ export function createAdoCi({ organization, project, token, fetchImpl = globalTh
       if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) throw new TypeError('Invalid build ID');
       return request(`/_apis/build/builds/${id}?api-version=7.1`);
     },
+    getBuildTimeline(id) {
+      if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) throw new TypeError('Invalid build ID');
+      return request(`/_apis/build/builds/${id}/timeline?api-version=7.1`);
+    },
     async listBuilds({ branch, top = 100, continuationToken } = {}) {
       const ref = branchRef(branch);
       if (!Number.isSafeInteger(top) || top < 1 || top > 100) throw new TypeError('Invalid build page size');
