@@ -60,6 +60,20 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
   }
   return {
     provider: 'jira',
+    async getIssueState(key) {
+      if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key)) throw new TypeError('Invalid Jira issue key');
+      return get(`/rest/api/3/issue/${encodeURIComponent(key)}?fields=status,updated`);
+    },
+    async getTransitions(key) {
+      if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key)) throw new TypeError('Invalid Jira issue key');
+      return get(`/rest/api/3/issue/${encodeURIComponent(key)}/transitions?expand=transitions.fields`);
+    },
+    async transitionIssue({ key, transitionId }) {
+      if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key) || typeof transitionId !== 'string' || !/^[1-9][0-9]{0,19}$/.test(transitionId)) throw new TypeError('Invalid Jira transition');
+      const response = await fetchImpl(`${origin}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { method: 'POST', headers: { Accept: 'application/json', Authorization: authorization, 'Content-Type': 'application/json' }, body: JSON.stringify({ transition: { id: transitionId } }), redirect: 'error' });
+      if (!response.ok || response.status !== 204) throw new Error('Transition response unclear; inspect Jira before retrying');
+      return { accepted: true };
+    },
     async createSubtask({ parent, issueTypeId, summary, description }) {
       if (typeof parent !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(parent) || typeof issueTypeId !== 'string' || !/^[1-9][0-9]{0,19}$/.test(issueTypeId) || typeof summary !== 'string' || !summary.trim() || summary.length > 255 || /[\u0000-\u001f\u007f]/.test(summary) || !description || description.type !== 'doc' || description.version !== 1 || !Array.isArray(description.content)) throw new TypeError('Invalid Jira subtask');
       const project = parent.slice(0, parent.lastIndexOf('-'));
