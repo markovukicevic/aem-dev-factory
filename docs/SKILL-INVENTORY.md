@@ -4,9 +4,9 @@ Compared against the local reference checkout at `7ecd2a0` (1.1.0). A matching n
 
 ## agent-core
 
-Reference skills: 49. Same-named Max skills: 33.
+Reference skills: 49. Same-named Max skills: 34.
 
-**Initial Max skills:** `agent-adapt`, `agent-agent-all`, `agent-agent-dev`, `agent-agent-re`, `agent-bug-all`, `agent-bug-fix`, `agent-bug-triage`, `agent-bug-verify`, `agent-doctor`, `agent-dor`, `agent-help`, `agent-init`, `agent-plan`, `agent-plan-resolve`, `agent-plan-validate`, `agent-pr`, `agent-pr-commit`, `agent-pr-answer`, `agent-pr-review`, `agent-pr-review-all`, `agent-pr-review-report`, `agent-pr-reviews-report`, `agent-req`, `agent-req-import`, `agent-req-tasks`, `agent-req-dod`, `agent-security`, `agent-step`, `agent-step-all`, `agent-step-build`, `agent-step-fix`, `agent-step-verify`, `agent-ticket-analyze`.
+**Initial Max skills:** `agent-adapt`, `agent-agent-all`, `agent-agent-dev`, `agent-agent-re`, `agent-bug-all`, `agent-bug-fix`, `agent-bug-triage`, `agent-bug-verify`, `agent-doctor`, `agent-dor`, `agent-help`, `agent-init`, `agent-plan`, `agent-plan-resolve`, `agent-plan-validate`, `agent-pr`, `agent-pr-commit`, `agent-pr-answer`, `agent-pr-review`, `agent-pr-review-all`, `agent-pr-review-report`, `agent-pr-reviews-report`, `agent-req`, `agent-req-import`, `agent-req-tasks`, `agent-req-dod`, `agent-security`, `agent-scan`, `agent-step`, `agent-step-all`, `agent-step-build`, `agent-step-fix`, `agent-step-verify`, `agent-ticket-analyze`.
 
 **Reference skills without a same-named Max skill:**
 
@@ -21,7 +21,6 @@ Reference skills: 49. Same-named Max skills: 33.
 - `agent-figma-prototype`
 - `agent-figma-verify`
 - `agent-pattern-extract`
-- `agent-scan`
 - `agent-simple`
 - `agent-simplify`
 - `agent-sync`

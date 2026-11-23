@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added bounded local CSS/Sass convention candidate discovery and an initial project-scan skill; names and paths are heuristic, values and live behavior are not checked.
+
 - Added bounded local Node/Maven/AEM project-profile signals and an initial project-adaptation workflow, without executing scripts or modifying project settings.
 
 - Added local automation diagnostics covering policy, secret presence, claims, queue and provider configuration; listener and cloud health remain unknown.

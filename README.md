@@ -376,6 +376,8 @@ The initial bug workflow provides `agent-bug-triage`, `agent-bug-verify`, `agent
 
 ### Initialize a project
 
+`project-conventions <project-directory>` finds bounded CSS custom-property and Sass-variable name candidates in tracked and untracked non-ignored CSS-family files. It returns names and source paths, not values; generated files, strings and scopes can produce false positives. Skipped or truncated results are reported. No files are modified.
+
 `project-profile <project-directory>` inspects bounded local Maven, Node and AEM layout signals and reports package script names without printing or executing their values. It records incomplete scans and unreadable files; candidates are not verified build commands, project classifications or live AEM evidence. No configuration is written.
 
 From the target project, `project-inspect` reports local technology markers without running commands or inferring provider credentials. `project-init <providers.json>` validates an explicit JSON provider configuration and creates `.ai/providers.json` and `.ai/specs` without replacing existing files. Only recognized, non-secret provider fields are accepted; credentials must be supplied through environment variables. It creates directories before the config file and can leave them behind on failure. This setup does not recreate the original `.ai/config.yaml`, rules, MCP configuration, or test settings; those remain separate work.
