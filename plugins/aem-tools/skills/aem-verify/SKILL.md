@@ -9,4 +9,4 @@ Identify the target repository, change, requirements and verification environmen
 
 If an explicitly authorized live AEM environment is available, inspect the relevant authoring and rendered behavior within the user's requested scope. Report the environment, page, revision where known, actions and observations. Do not create or alter content, deploy or send messages unless authorized. If live access or a required check is missing, mark it unverified rather than inferring success from local files.
 
-Report passed and failed checks, unrun checks, evidence and remaining risks. This initial workflow does not implement the original's live automation or screenshot capture.
+Report passed and failed checks, unrun checks, evidence and remaining risks. For an explicitly selected AEM author and content root, `aem-live-usage` and `aem-live-node` provide bounded live observations. For an authorized page, `aem-screenshot` captures a viewport or element and `aem-screenshot-compare` reports pixel differences. These paths have only simulated validation; they do not prove deployment, authoring, accessibility or visual correctness. Full original live automation is not reproduced.

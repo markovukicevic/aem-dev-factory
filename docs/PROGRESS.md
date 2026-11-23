@@ -2,6 +2,11 @@
 
 ## 2026-11-23
 
+- Extended AEM workflows with bounded live usage and node reads, local/live snapshots, screenshot capture and pixel comparison. Network and browser paths have simulated validation only; real AEM and Playwright remain unverified.
+- Added explicit tracker comments and PR review/comment previews, plus CI job/step diagnostics, selected log downloads and guarded retry/cancellation. Remote write and download paths have simulated validation only.
+- Extended the hub with bounded parallel local commands, preview binding, scope-table selection and observed ending Git state. This is not the original agent-session dispatcher.
+- Added project setup diagnostics, provider proposals, readiness configuration and skill audit/upgrade/restore/sync with preserved backups. Client behavior remains unverified.
+
 - Added preview-bound GitLab discussion and issue replies, Bitbucket and Azure review replies, and GitHub/GitLab issue, Jira transition and Azure work-item state changes. Only simulated providers were used; workflow side effects and live provider behavior remain unverified.
 
 - Added preview-bound explicit GitHub issue comments and top-level PR review replies, with target and revision rechecks. Simulated transport only; no live messages sent.

@@ -34,11 +34,15 @@ export async function inspectWorkflowSetup({ target, client, env = process.env }
     return { status: 'present', path };
   }
   const files = {};
-  for (const [name, parts, type] of [ ['providers', ['.ai', 'providers.json'], 'file'], ['legacyConfig', ['.ai', 'config.yaml'], 'file'], ['rules', ['.ai', 'rules'], 'directory'], ['skills', [roots[client], 'skills'], 'directory'], ['mcpConfig', ['.mcp.json'], 'file'] ]) files[name] = await marker(parts, type);
+  for (const [name, parts, type] of [ ['providers', ['.ai', 'providers.json'], 'file'], ['legacyConfig', ['.ai', 'config.yaml'], 'file'], ['readiness', ['.ai', 'readiness.json'], 'file'], ['rules', ['.ai', 'rules'], 'directory'], ['skills', [roots[client], 'skills'], 'directory'], ['mcpConfig', ['.mcp.json'], 'file'] ]) files[name] = await marker(parts, type);
   let providers = null;
   if (files.providers.status === 'present') {
     try { providers = inspectProviderConfiguration({ config: JSON.parse((await readLimitedFile(files.providers.path, 262144)).toString('utf8')), env }); }
     catch { files.providers.status = 'invalid-or-unreadable'; }
+  }
+  if (files.readiness.status === 'present') {
+    try { const { loadReadinessConfig } = await import('./config.js'); await loadReadinessConfig(files.readiness.path, { read: async path => (await readLimitedFile(path, 262144)).toString('utf8') }); files.readiness.configuration = 'supported'; }
+    catch { files.readiness.configuration = 'invalid-or-unsupported'; }
   }
   if (files.legacyConfig.status === 'present') {
     try { parseLegacyConfig((await readLimitedFile(files.legacyConfig.path, 262144)).toString('utf8')); files.legacyConfig.readiness = 'supported-settings-present'; }
