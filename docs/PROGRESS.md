@@ -313,6 +313,8 @@
 
 - Added comparison of local imported source bytes with the editable import hash; workflow status now flags changes for inspection, without asserting authenticity.
 
+- Added identity-bound tracker source comparison and optional staging of a new fetched export without replacing local work; non-GitHub providers remain unverified live.
+
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.

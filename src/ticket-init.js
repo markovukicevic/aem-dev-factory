@@ -4,8 +4,8 @@ import { ensureSpecDirectory } from './spec-directory.js';
 import { renderTrackerStory } from './tracker-story.js';
 import { readLimitedFile } from './read-limited.js';
 
-/** Bind a new spec directory to one tracker and export the fetched source without overwriting. */
-export async function initializeTicket({ cwd, config, ticket }) {
+/** Derive the tracker identity used to bind local source records. */
+export function deriveTicketIdentity({ config, ticket }) {
   const provider = config?.provider;
   const text = value => typeof value === 'string' && value.trim() && value === value.trim() && !/[\u0000-\u001f]/.test(value) ? value : null;
   let source;
@@ -26,10 +26,16 @@ export async function initializeTicket({ cwd, config, ticket }) {
     id = ticket?.key;
   } else throw new TypeError('Invalid tracker configuration');
   if (ticket?.provider !== provider || typeof ticket.title !== 'string' || !ticket.title.trim()) throw new TypeError('Ticket does not match tracker');
+  return { version: 1, provider, source, id };
+}
+
+/** Bind a new spec directory to one tracker and export the fetched source without overwriting. */
+export async function initializeTicket({ cwd, config, ticket }) {
+  const identity = deriveTicketIdentity({ config, ticket });
+  const { provider, id } = identity;
   const story = renderTrackerStory(ticket);
   const { path, created } = await ensureSpecDirectory({ cwd, id, title: ticket.title });
   const identityPath = join(path, 'source-identity.json');
-  const identity = { version: 1, provider, source, id };
   if (created) {
     await writeFile(identityPath, `${JSON.stringify(identity, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
   } else {
