@@ -309,6 +309,8 @@
 
 - Added a provider-independent commit preview and an initial commit workflow. It preserves existing staging and does not create commits, push, create PRs or verify tests as a side effect of previewing. Client behavior remains unverified.
 
+- Added local requirements import into a new source-labelled spec directory and an initial requirements-import workflow. Completeness scoring and actual client behavior require human review.
+
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.

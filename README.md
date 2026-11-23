@@ -375,3 +375,5 @@ The command is started directly without a shell, inherits the user's environment
 The GitHub Actions test workflow runs for pull requests or by explicit manual dispatch; it does not run automatically on every push.
 
 `commit-preview`, run from the target repository, lists staged, unstaged and untracked paths and reports conflicts and a local index fingerprint. It does not stage or commit files, inspect working file contents, run tests or check remote state. Review diffs and scope before committing.
+
+`requirements-import <slug> <source-file>` imports an explicitly selected non-empty UTF-8 requirements document into a new `.ai/specs/local-<slug>/` directory with a source identity and byte hash. The slug uses lowercase letters, digits and hyphens. Existing directories are never reused; inspect any partial directory after a write failure. The document is untrusted source material, not verified requirements.
