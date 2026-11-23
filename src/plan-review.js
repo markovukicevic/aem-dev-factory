@@ -53,29 +53,43 @@ async function readDigest(path) {
 }
 const contextFiles = ['raw-story.md', 'dor.md', 'explain.md', 'research.md'];
 
+/** Read one bounded regular file without following its final symlink. */
+async function readEvidenceFile(path) {
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const before = await file.stat();
+    if (!before.isFile() || before.size > 1024 * 1024) throw new Error('Invalid evidence file');
+    const bytes = Buffer.alloc(1024 * 1024 + 1);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const result = await file.read(bytes, offset, bytes.length - offset, null);
+      if (!result.bytesRead) break;
+      offset += result.bytesRead;
+    }
+    const after = await file.stat();
+    if (offset > 1024 * 1024 || offset !== before.size || before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) throw new Error('Evidence changed');
+    return bytes.subarray(0, offset);
+  } finally { await file.close(); }
+}
+
 /** Fingerprint the local requirements context without exposing its contents. */
 async function readContext(planPath) {
   const directory = dirname(planPath), hash = createHash('sha256');
   for (const name of contextFiles) {
-    let file;
     try {
-      file = await open(join(directory, name), constants.O_RDONLY | constants.O_NOFOLLOW);
-      const before = await file.stat();
-      if (!before.isFile() || before.size > 1024 * 1024) throw new Error('Invalid context file');
-      const bytes = Buffer.alloc(1024 * 1024 + 1);
-      let offset = 0;
-      while (offset < bytes.length) {
-        const result = await file.read(bytes, offset, bytes.length - offset, null);
-        if (!result.bytesRead) break;
-        offset += result.bytesRead;
-      }
-      const after = await file.stat();
-      if (offset > 1024 * 1024 || offset !== before.size || before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) throw new Error('Context changed');
-      hash.update(name, 'utf8').update('\0').update(String(offset), 'utf8').update('\0').update(bytes.subarray(0, offset));
+      const bytes = await readEvidenceFile(join(directory, name));
+      hash.update(name, 'utf8').update('\0').update(String(bytes.length), 'utf8').update('\0').update(bytes);
     } catch (error) { return { status: error?.code === 'ENOENT' ? 'missing' : 'unavailable', digest: null }; }
-    finally { if (file) await file.close(); }
   }
   return { status: 'complete', digest: hash.digest('hex') };
+}
+
+/** Track identity presence and bytes, without asserting source authenticity. */
+async function readIdentity(planPath) {
+  try {
+    const bytes = await readEvidenceFile(join(dirname(planPath), 'source-identity.json'));
+    return { status: 'present', digest: createHash('sha256').update(bytes).digest('hex') };
+  } catch (error) { return { status: error?.code === 'ENOENT' ? 'missing' : 'unavailable', digest: null }; }
 }
 
 function cleanText(value, max) {
@@ -93,18 +107,18 @@ export async function savePlanReview({ planPath, inputPath, outputPath }) {
   if (typeof outputPath !== 'string' || !outputPath.trim()) throw new TypeError('Output path is required');
   try { await lstat(outputPath); throw Object.assign(new Error('Output exists'), { code: 'EEXIST' }); }
   catch (error) { if (error?.code !== 'ENOENT') throw error; }
-  const digest = await readDigest(planPath), context = await readContext(planPath);
+  const digest = await readDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
   const review = validateReview(JSON.parse((await readLimitedFile(inputPath, 1024 * 1024)).toString('utf8')));
-  const contextAfter = await readContext(planPath);
-  if (digest !== await readDigest(planPath) || context.status !== contextAfter.status || context.digest !== contextAfter.digest) throw new Error('Plan or requirements context changed while recording review');
-  const record = { planDigest: digest, contextDigest: context.digest, ...review };
+  const contextAfter = await readContext(planPath), identityAfter = await readIdentity(planPath);
+  if (digest !== await readDigest(planPath) || context.status !== contextAfter.status || context.digest !== contextAfter.digest || identity.status !== identityAfter.status || identity.digest !== identityAfter.digest) throw new Error('Plan, requirements context or source identity changed while recording review');
+  const record = { planDigest: digest, contextDigest: context.digest, identityStatus: identity.status, identityDigest: identity.digest, ...review };
   const json = JSON.stringify(record, null, 2);
   const maxTicks = (json.match(/`+/g) ?? []).reduce((max, run) => Math.max(max, run.length), 0);
   const fence = '`'.repeat(Math.max(3, maxTicks + 1));
   const report = `# Plan review record\n\nSupplied review conclusions follow. This editable record does not verify the plan, requirements or review. Execution statuses and provenance verification are excluded from the plan digest.\n\n${fence}json\n${json}\n${fence}\n`;
   if (Buffer.byteLength(report, 'utf8') > 2 * 1024 * 1024) throw new Error('Plan review exceeds size limit');
   await writeFile(outputPath, report, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-  return { path: outputPath, verdict: review.verdict, contextStatus: context.status, scope: 'Supplied conclusions only; review and plan correctness are not verified.' };
+  return { path: outputPath, verdict: review.verdict, contextStatus: context.status, identityStatus: identity.status, scope: 'Supplied conclusions only; review and plan correctness are not verified.' };
 }
 
 /** Compare editable review conclusions against the current plan content. */
@@ -115,7 +129,10 @@ export async function checkPlanReview({ planPath, reportPath }) {
   const saved = JSON.parse(match[2]), review = validateReview(saved);
   if (typeof saved.planDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.planDigest)) throw new Error('Invalid plan review digest');
   if (saved.contextDigest !== undefined && saved.contextDigest !== null && (typeof saved.contextDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.contextDigest))) throw new Error('Invalid requirements context digest');
-  const currentDigest = await readDigest(planPath), context = await readContext(planPath);
+  const legacyIdentity = saved.identityStatus === undefined && saved.identityDigest === undefined;
+  if (!legacyIdentity && (!['present', 'missing', 'unavailable'].includes(saved.identityStatus) || (saved.identityStatus === 'present' ? typeof saved.identityDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.identityDigest) : saved.identityDigest !== null))) throw new Error('Invalid source identity record');
+  const currentDigest = await readDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
   const contextMatches = saved.contextDigest == null || context.status === 'unavailable' ? null : context.status === 'missing' ? false : saved.contextDigest === context.digest;
-  return { verdict: review.verdict, planMatches: saved.planDigest === currentDigest, contextMatches, contextStatus: context.status, findings: review.findings.length, unresolved: review.unresolved.length, scope: 'Editable supplied review record only; matching local files do not establish that the review occurred or that requirements are satisfied. Files may change afterward.' };
+  const identityMatches = legacyIdentity || saved.identityStatus === 'unavailable' || identity.status === 'unavailable' ? null : saved.identityStatus !== identity.status ? false : identity.status === 'missing' ? true : saved.identityDigest === identity.digest;
+  return { verdict: review.verdict, planMatches: saved.planDigest === currentDigest, contextMatches, contextStatus: context.status, identityMatches, identityStatus: identity.status, findings: review.findings.length, unresolved: review.unresolved.length, scope: 'Editable supplied review record only; matching local files do not establish source authenticity, that the review occurred or that requirements are satisfied. Files may change afterward.' };
 }

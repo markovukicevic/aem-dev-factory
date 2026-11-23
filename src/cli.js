@@ -337,7 +337,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     if (args.length !== (saving ? 4 : 3) || args.slice(1).some(value => !value?.trim())) { output.error(usage); return 2; }
     try {
       const result = saving ? await savePlanReview({ planPath: args[1], inputPath: args[2], outputPath: args[3] }) : await checkPlanReview({ planPath: args[1], reportPath: args[2] });
-      output.log(JSON.stringify(result, null, 2)); return saving || (result.planMatches && result.contextMatches === true) ? 0 : 1;
+      output.log(JSON.stringify(result, null, 2)); return saving || (result.planMatches && result.contextMatches === true && result.identityMatches === true) ? 0 : 1;
     } catch (error) { output.error(error?.code === 'EEXIST' ? 'Plan review already exists; it was not overwritten.' : 'Unable to record or check the plan review. Check the plan, review and paths.'); return 1; }
   }
   if (args[0] === 'plan-transition') {

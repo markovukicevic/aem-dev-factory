@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Bound new structured plan reviews to source identity file presence and content; older records require inspection and matching bytes do not establish authenticity.
+
 - Bound structured plan review records to available local requirements and research artifacts; missing or changed context requires inspection or a fresh review. Records remain editable and do not prove correctness.
 
 - Added editable structured plan review records, content consistency checks and review-aware workflow suggestions. Status-only transitions do not stale a review; actual review and correctness are not verified.
