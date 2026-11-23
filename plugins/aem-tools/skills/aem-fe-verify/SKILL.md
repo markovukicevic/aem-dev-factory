@@ -18,3 +18,5 @@ For an explicitly authorized page, `axe-run <project-directory> <config.json> <n
 For an explicitly authorized page, `aem-screenshot <project-directory> <config.json> <new-output.png>` uses the project's Playwright to capture a viewport or unique element. Inspect blocked requests, viewport and timing. Browser behavior has only been validated with a simulated browser; the screenshot alone does not prove correctness.
 
 Use `aem-screenshot-compare <project-directory> <before.png> <after.png> [--threshold <0-255>]` to count pixel differences for matching PNG dimensions. Review the images and explain environmental or timing differences; the count is not a pass/fail decision. Comparison has only been validated with a simulated browser.
+
+When the selected AEM author page requires HTTP authentication, set `authenticate: true` in the screenshot config and provide `AEM_TOKEN` or Basic credentials via environment variables. Credentials are scoped to the page origin; interactive login is not implemented. Do not print or store credentials.

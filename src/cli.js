@@ -456,7 +456,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
   }
   if (args[0] === 'aem-screenshot') {
     if (args.length !== 4 || args.slice(1).some(value => !value?.trim())) { output.error(usage); return 2; }
-    try { const config = JSON.parse((await readLimitedFile(args[2], 262144)).toString('utf8')); output.log(JSON.stringify(await captureAemScreenshot({ project: args[1], config, outputPath: args[3] }), null, 2)); return 0; }
+    try { const config = JSON.parse((await readLimitedFile(args[2], 262144)).toString('utf8')); const auth = env.AEM_TOKEN ? { token: env.AEM_TOKEN } : env.AEM_USERNAME && env.AEM_PASSWORD ? { username: env.AEM_USERNAME, password: env.AEM_PASSWORD } : undefined; output.log(JSON.stringify(await captureAemScreenshot({ project: args[1], config, outputPath: args[3], auth }), null, 2)); return 0; }
     catch { output.error('Unable to capture the page. Check Playwright, URL, settings, access and output collision.'); return 1; }
   }
   if (args[0] === 'aem-live-node-compare') {
