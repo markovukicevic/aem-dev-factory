@@ -16,3 +16,5 @@ For a selected GitHub Actions run, `github-run-jobs <providers.json> <run-id>` s
 For a selected GitLab pipeline, `gitlab-pipeline-jobs <providers.json> <pipeline-id>` reports current job and failure-reason metadata after pipeline identity checks. Check completeness and status changes; retried jobs, downstream pipelines and logs are not included. Live access has only simulated validation.
 
 For a selected Azure build, `ado-build-timeline <providers.json> <build-id>` reads reported timeline outcomes and error counts. Child timelines, logs, actual checkout and root cause are not established. Live access has only simulated validation.
+
+For a selected Bitbucket Cloud pipeline, `bitbucket-pipeline-steps <providers.json> <pipeline-uuid>` reads bounded step state metadata without logs. Active pipeline state can change, and actual checkout is not established. Live access has only simulated validation.
