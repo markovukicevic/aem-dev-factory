@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Connected a selected queued GitHub, GitLab or Bitbucket event to read-only provider context with provider identity and local queue rechecks; simulated automation-context validation only and no execution.
+
 - Added explicit loopback-only GitLab and Bitbucket webhook listeners that verify and claim selected events without starting agents. Validated with local synthetic deliveries only; no public deployment or live provider verification.
 
 - Connected explicitly verified GitLab and Bitbucket webhook claims to provider-specific local allowlists and the existing metadata queue. No listener, worker, live delivery or authenticity of editable records is established.

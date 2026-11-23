@@ -71,3 +71,14 @@ export async function listAutomationJobs({ target }) {
   }
   return { jobs, claimErrors, complete: claimErrors === 0 && jobs.every(job => job.status === 'queued'), scope: 'Editable local records and current allowlist only; signatures, actual delivery, worker state and task execution are not verified. Files may change afterward.' };
 }
+
+/** Read one queue entry only when the current claim and policy still match it. */
+export async function readAutomationJob({ target, digest }) {
+  if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) throw new TypeError('Invalid job digest');
+  const { directory, policy, claims } = await loadInputs(target);
+  const queue = join(directory, 'jobs'), info = await lstat(queue);
+  if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Invalid queue');
+  const record = await readLocalJson(join(queue, `${digest}.json`), 16384), claim = claims.find(item => item.digest === digest);
+  if (record?.version !== 1 || typeof record.queuedAt !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(record.queuedAt) || !claim?.metadataAvailable || fields.some(key => claim[key] !== record.claim?.[key]) || !allowed(claim, policy)) throw new Error('Job no longer matches claim or policy');
+  return { queuedAt: record.queuedAt, claim: Object.fromEntries(fields.filter(key => claim[key] !== undefined).map(key => [key, claim[key]])) };
+}

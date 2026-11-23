@@ -244,6 +244,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Offline GitHub webhook inspection
 
+`automation-job-context <target-project> <claim-sha256> <providers.json>` fetches read-only tracker or PR context for one queued claim after matching the configured provider and repository or project, and rechecks the local claim and policy afterward. Bitbucket repository UUID is checked via the provider. GitHub, GitLab and Bitbucket paths have only simulated automation-context validation; fetched content is untrusted, may be incomplete and does not trigger an agent.
+
 `gitlab-webhook-listen <policy.json> <store-dir> <port>` and `bitbucket-webhook-listen` explicitly start local loopback-only receivers using provider-specific environment secrets. They verify and claim supported events but never enqueue or execute jobs. GitLab uses a signed timestamp and ID; Bitbucket does not provide equivalent replay protection. These listeners are not publicly reachable deployments and have only been checked with local synthetic deliveries.
 
 `gitlab-webhook-claim <policy.json> <headers.json> <body.json> <store-dir>` and `bitbucket-webhook-claim` verify a selected delivery and save metadata to an explicitly selected store. GitLab deduplicates signed message IDs; Bitbucket suppresses identical bodies, including legitimate repeats. Local records are editable and cannot independently establish authenticity. The optional `gitlab` and `bitbucket` sections of the automation policy supply provider-specific project/repository and actor allowlists. The existing local queue can inspect and enqueue those records; it does not execute agents.
