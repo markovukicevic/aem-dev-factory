@@ -86,7 +86,7 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
     async getTicket(key) {
       if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key)) throw new TypeError('Invalid Jira issue key');
       const encoded = encodeURIComponent(key);
-      const issue = await get(`/rest/api/3/issue/${encoded}?fields=summary,description,status,reporter,labels,attachment`);
+      const issue = await get(`/rest/api/3/issue/${encoded}?fields=summary,description,status,reporter,labels,attachment,updated`);
       if (!issue || typeof issue.key !== 'string' || issue.key.toUpperCase() !== key.toUpperCase() || typeof issue.fields?.summary !== 'string') throw new Error('Invalid Jira issue response');
       const attachments = (issue.fields.attachment ?? []).map(item => {
         const id = String(item?.id ?? '');
@@ -105,7 +105,7 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
         }
         startAt += result.comments.length;
         if (startAt === result.total) {
-          return { provider: 'jira', key: issue.key, title: issue.fields.summary, body: issue.fields.description ?? null, bodyFormat: 'adf', state: issue.fields.status?.name ?? null, author: issue.fields.reporter?.displayName ?? null, labels: Array.isArray(issue.fields.labels) ? issue.fields.labels : [], url: `${origin}/browse/${encodeURIComponent(issue.key)}`, attachments, comments };
+          return { provider: 'jira', key: issue.key, updatedAt: typeof issue.fields.updated === 'string' ? issue.fields.updated : null, title: issue.fields.summary, body: issue.fields.description ?? null, bodyFormat: 'adf', state: issue.fields.status?.name ?? null, author: issue.fields.reporter?.displayName ?? null, labels: Array.isArray(issue.fields.labels) ? issue.fields.labels : [], url: `${origin}/browse/${encodeURIComponent(issue.key)}`, attachments, comments };
         }
         if (!result.comments.length) throw new Error('Jira comments are incomplete');
       }

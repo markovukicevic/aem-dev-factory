@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Bound Jira subtask previews to the parent issue update timestamp; changes before submission invalidate the preview, while a separate source comparison identifies older local requirements.
+
 - Added preview-bound GitLab child work item creation using explicit type and parent global IDs; simulated GraphQL only, no live creation and unconfirmed relationships are reported.
 
 - Added preview-bound GitHub sub-issue creation and separate link reporting, including partial outcomes; simulated transport only and no live issue created.

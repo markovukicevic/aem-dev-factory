@@ -36,12 +36,12 @@ async function prepare({ spec, recordPath, index, issueTypeId, config, tracker }
   const task = plan.tasks[index - 1];
   if (task.title.length > 255 || /[\u0000-\u001f\u007f]/.test(task.title)) throw new Error('Invalid subtask title');
   const parent = await tracker.getTicket(source.id);
-  if (parent?.provider !== 'jira' || typeof parent.key !== 'string' || parent.key.toLowerCase() !== source.id.toLowerCase()) throw new Error('Jira parent mismatch');
+  if (parent?.provider !== 'jira' || typeof parent.key !== 'string' || parent.key.toLowerCase() !== source.id.toLowerCase() || typeof parent.updatedAt !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/.test(parent.updatedAt)) throw new Error('Jira parent mismatch');
   const [afterCheck, afterPlan, afterIdentity] = await Promise.all([checkTaskPlan({ path: spec, recordPath }), readTaskPlan(recordPath), readTaskSourceIdentity(spec)]);
   if (!afterCheck.matches || !afterCheck.sourceComplete || afterPlan.digest !== plan.digest || afterIdentity.digest !== identity.digest) throw new Error('Task source changed while preparing request');
   const request = { parent: source.id, issueTypeId, summary: task.title, description: buildDescription(task) };
-  const digest = createHash('sha256').update(JSON.stringify({ origin: source.source, request, taskPlanDigest: plan.digest, identityDigest: identity.digest })).digest('hex');
-  return { request, digest, taskPlanDigest: plan.digest, identityDigest: identity.digest, parent: source.id };
+  const digest = createHash('sha256').update(JSON.stringify({ origin: source.source, request, parentUpdatedAt: parent.updatedAt, taskPlanDigest: plan.digest, identityDigest: identity.digest })).digest('hex');
+  return { request, digest, parentUpdatedAt: parent.updatedAt, taskPlanDigest: plan.digest, identityDigest: identity.digest, parent: source.id };
 }
 
 /** Preview or explicitly submit one reviewed Jira subtask; never retries a create. */
@@ -49,7 +49,7 @@ export async function processJiraSubtask({ spec, recordPath, index, issueTypeId,
   if (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid preview digest');
   const tracker = makeTracker({ baseUrl: config?.baseUrl, email, token });
   const first = await prepare({ spec, recordPath, index, issueTypeId, config, tracker });
-  if (expectedDigest === undefined) return { preview: first.request, digest: first.digest, scope: 'Reviewable proposal and current parent lookup only; no subtask was created. Jira configuration and remote state may change.' };
+  if (expectedDigest === undefined) return { preview: first.request, parentUpdatedAt: first.parentUpdatedAt, digest: first.digest, scope: 'Reviewable proposal and current parent lookup only; no subtask was created. Jira configuration and remote state may change.' };
   if (first.digest !== expectedDigest) return { created: false, reason: 'preview-changed' };
   const final = await prepare({ spec, recordPath, index, issueTypeId, config, tracker });
   if (final.digest !== expectedDigest) return { created: false, reason: 'preview-changed' };
