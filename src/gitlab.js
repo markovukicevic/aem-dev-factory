@@ -190,6 +190,13 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       if (!result || !Number.isSafeInteger(result.id) || result.id < 1) throw new Error('Pipeline request may have been accepted; inspect provider before retrying');
       return { accepted: true, id: result.id, status: typeof result.status === 'string' ? result.status : null, sha: typeof result.sha === 'string' && /^[a-f0-9]{40,64}$/i.test(result.sha) ? result.sha : null };
     },
+    async listPipelineJobs(id, { page = 1 } = {}) {
+      iid(id);
+      if (!Number.isSafeInteger(page) || page < 1) throw new TypeError('Invalid pipeline jobs page');
+      const { data, headers } = await get(`/pipelines/${id}/jobs?per_page=100&page=${page}`);
+      if (!Array.isArray(data) || data.length > 100) throw new Error('Invalid pipeline jobs response');
+      return { values: data, nextPage: headers?.get?.('x-next-page') || null };
+    },
     async getPipeline(id) { iid(id); return (await get(`/pipelines/${id}`)).data; },
     async listPipelines({ sha, page = 1, perPage = 100 } = {}) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha) || !Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100) throw new TypeError('Invalid GitLab pipeline query');

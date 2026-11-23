@@ -12,3 +12,5 @@ Run the selected command from the correct directory and record the command, exit
 Report the attempts, relevant changes, remaining failures and checks that were not run. A successful build is not proof that tests, deployment or review passed unless those were separately performed and observed. Preserve existing user work. Respect user instructions on commits; do not push, create a PR or notify others as a side effect.
 
 For a selected GitHub Actions run, `github-run-jobs <providers.json> <run-id>` shows bounded job and step status metadata for the latest attempt, with commit and attempt rechecks. Inspect `complete` and `runStatusChanged`. It does not read logs or establish root cause; live access has only simulated validation.
+
+For a selected GitLab pipeline, `gitlab-pipeline-jobs <providers.json> <pipeline-id>` reports current job and failure-reason metadata after pipeline identity checks. Check completeness and status changes; retried jobs, downstream pipelines and logs are not included. Live access has only simulated validation.
