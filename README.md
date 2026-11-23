@@ -250,7 +250,9 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Install one skill into a project
 
-`node bin/aem-devflow.js install-skill codex agent-plan /path/to/target-project` copies one self-contained skill to the selected project's `.agents/skills/` directory. Use `claude` for `.claude/skills/` or `copilot` for `.github/skills/`. Existing destinations and symlinked destination directories are rejected; if copying fails after a new directory is created, inspect that directory before retrying. Skills that require supporting files are not handled by this initial installer. Set `AEM_DEVFLOW_MAX_HOME` for skills that call the Max CLI and start a new client session. The installer has been tested with temporary projects; automatic discovery and skill behavior in AI clients remain unverified.
+Skill installation copies an explicitly selected skill directory, including supporting files, with limits of 100 files, 1 MiB per file, 8 MiB total and five directory levels. Symlinks and special files are rejected. Existing destination skills are preserved; inspect any partial installation after a copy failure. Executable bits are retained. Client discovery and behavior remain unverified.
+
+`node bin/aem-devflow.js install-skill codex agent-plan /path/to/target-project` copies one skill and its bounded supporting files to the selected project's `.agents/skills/` directory. Use `claude` for `.claude/skills/` or `copilot` for `.github/skills/`. Existing destinations and symlinked destination directories are rejected; if copying fails after a new directory is created, inspect that directory before retrying. Set `AEM_DEVFLOW_MAX_HOME` for skills that call the Max CLI and start a new client session. The installer has been tested with temporary projects; automatic discovery and skill behavior in AI clients remain unverified.
 
 ### Pull request review context
 
@@ -306,7 +308,7 @@ The initial bug workflow provides `agent-bug-triage`, `agent-bug-verify`, `agent
 
 `bitbucket-pr-diffstat /path/to/providers.json <number>` reads Bitbucket Cloud PR changed-file statistics after validating the provider redirect and pagination URLs, and checks source and destination commit hashes before and after retrieval. It fails on incomplete pagination. Diff statistics are not a code diff; verify changes separately. Tested with simulated API responses only.
 
-`list-skills` shows bundled skill names, descriptions, plugins and whether the one-file installer supports them. A listed skill has not necessarily been tested in an AI client.
+`list-skills` shows bundled skill names, descriptions, plugins and whether the directory installer supports them. A listed skill has not necessarily been tested in an AI client.
 
 ### Initialize a ticket with source identity
 
@@ -357,7 +359,7 @@ From the target project, `project-inspect` reports local technology markers with
 
 `verification-check <config.json> <implement.md> <evidence.md>` compares a saved test record with the current plan, normalized settings, branch, commit and clean working tree without rerunning tests. It returns a failure status for a failed record or mismatches. Keep evidence outside the repository or in an ignored location if its presence would make the working tree dirty. The record is editable and can be forged, so a match is not proof that tests ran, a substitute for review, or an overall readiness verdict. Any later plan or code change can make it stale.
 
-`install-skills <codex|claude|copilot> <target-project> <skill> [skill ...]` preflights an explicit list of supported, self-contained skills and destination collisions, then installs each without replacement. Installation is not atomic: a concurrent change or copy error can leave some skills installed or a partial destination; the result identifies completed and failed names for inspection. Client discovery and skill behavior remain unverified.
+`install-skills <codex|claude|copilot> <target-project> <skill> [skill ...]` preflights an explicit list of supported skills with bounded supporting files and destination collisions, then installs each without replacement. Installation is not atomic: a concurrent change or copy error can leave some skills installed or a partial destination; the result identifies completed and failed names for inspection. Client discovery and skill behavior remain unverified.
 
 ### Explicit local hub task
 
@@ -392,3 +394,4 @@ The command is started directly without a shell, inherits the user's environment
 `security-evidence <full-base-sha> <output.md>` runs the local changed-file and bounded PR-history scans and records their potential finding locations in a new file without detected values. It never replaces existing files. Findings, skipped files or changed Git state produce a nonzero exit status. The scans are not a complete security review, and dirty worktree content may change while scanning. The report can contain sensitive file paths.
 
 The GitHub Actions test workflow runs for pull requests or by explicit manual dispatch; it does not run automatically on every push.
+Skill installation copies an explicitly selected skill directory, including supporting files, with limits of 100 files, 1 MiB per file, 8 MiB total and five directory levels. Symlinks and special files are rejected. Existing destination skills are preserved; inspect any partial installation after a copy failure. Executable bits are retained. Client discovery and behavior remain unverified.

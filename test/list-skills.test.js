@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { listSkills } from '../src/list-skills.js';
 
-test('lists unique self-contained skills and flags those with assets or duplicate names', async t => {
+test('lists bounded skill directories and flags duplicate names', async t => {
   const root = await mkdtemp(join(tmpdir(), 'skill-catalog-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, '.claude-plugin'), { recursive: true });
@@ -22,7 +22,7 @@ test('lists unique self-contained skills and flags those with assets or duplicat
   await skill('two', 'duplicate');
   const result = await listSkills({ sourceRoot: root });
   assert.equal(result.skills.find(item => item.name === 'unique').installable, true);
-  assert.equal(result.skills.find(item => item.name === 'asset').installable, false);
+  assert.equal(result.skills.find(item => item.name === 'asset').installable, true);
   assert.equal(result.skills.filter(item => item.name === 'duplicate').every(item => !item.installable), true);
   assert.match(result.scope, /not verified/);
 });

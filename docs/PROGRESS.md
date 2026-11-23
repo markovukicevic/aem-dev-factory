@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Extended explicit skill installation to bounded supporting files, rejecting symlinks and preserving existing destinations; client discovery and behavior remain unverified.
+
 - Added a provider-independent commit preview and an initial commit workflow. It preserves existing staging and does not create commits, push, create PRs or verify tests as a side effect of previewing. Client behavior remains unverified.
 
 - Added local requirements import into a new source-labelled spec directory and an initial requirements-import workflow. Completeness scoring and actual client behavior require human review.
@@ -330,9 +332,8 @@
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.
-2. Validate skill discovery and workflows in the actual supported AI clients; extend the installer for skill assets only after defining safe copy behavior.
+2. Validate skill discovery and workflows in the actual supported AI clients; validate installation of skills with supporting files.
 3. Exercise provider integrations against disposable test repositories and accounts where available. Confirm permissions, pagination and error handling before treating simulated write tests as live validation.
 4. Continue AEM development workflows, including live-instance and rendered-page checks when a suitable test instance is available.
 5. Improve CI status coverage and webhook handling; the local listener and claims do not provide a public service, durable distributed replay protection or agent dispatch.
 6. Extend plan formats and legacy YAML compatibility where the reference workflow requires them. Preserve existing behavior and document unsupported cases.
-

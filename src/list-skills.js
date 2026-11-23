@@ -3,9 +3,10 @@ import { dirname, join, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { readLimitedFile } from './read-limited.js';
+import { collectSkillAssets } from './skill-assets.js';
 const defaultRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
-/** Discover plugin skills and report whether the current one-file installer supports them. */
+/** Discover plugin skills and report bounded directory installer support. */
 export async function listSkills({ sourceRoot = defaultRoot } = {}) {
   const root = await realpath(sourceRoot);
   const marketplace = JSON.parse((await readLimitedFile(join(root, '.claude-plugin', 'marketplace.json'), 262144)).toString('utf8'));
@@ -33,7 +34,9 @@ export async function listSkills({ sourceRoot = defaultRoot } = {}) {
       const front = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text);
       const meta = front ? parse(front[1], { uniqueKeys: true, maxAliasCount: 0 }) : null;
       if (meta?.name !== entry.name || typeof meta.description !== 'string' || !meta.description.trim()) throw new Error('Invalid skill metadata');
-      skills.push({ name: meta.name, description: meta.description, plugin: plugin.name, installable: items.length === 1 });
+      let installable = true;
+      try { await collectSkillAssets(path); } catch { installable = false; }
+      skills.push({ name: meta.name, description: meta.description, plugin: plugin.name, installable });
     }
   }
   const counts = new Map();
