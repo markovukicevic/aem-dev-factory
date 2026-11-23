@@ -110,6 +110,12 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       const finalTitle = draft && !/^(?:draft:|\[draft\]|\(draft\))/i.test(title.trim()) ? `Draft: ${title}` : title;
       return (await request('/merge_requests', { method: 'POST', body: { source_branch: head, target_branch: base, title: finalTitle, description: body, remove_source_branch: false } })).data;
     },
+    async dispatchPipeline({ branch }) {
+      branchRef(branch);
+      const result = (await request('/pipeline', { method: 'POST', body: { ref: branch } })).data;
+      if (!result || !Number.isSafeInteger(result.id) || result.id < 1) throw new Error('Pipeline request may have been accepted; inspect provider before retrying');
+      return { accepted: true, id: result.id, status: typeof result.status === 'string' ? result.status : null, sha: typeof result.sha === 'string' && /^[a-f0-9]{40,64}$/i.test(result.sha) ? result.sha : null };
+    },
     async getPipeline(id) { iid(id); return (await get(`/pipelines/${id}`)).data; },
     async listPipelines({ sha, page = 1, perPage = 100 } = {}) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha) || !Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100) throw new TypeError('Invalid GitLab pipeline query');

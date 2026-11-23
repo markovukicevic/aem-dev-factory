@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added explicit GitLab and Bitbucket CI pipeline run requests using the configured provider; simulated transport only, no live runs or completion verification.
+
 - Connected a selected queued GitHub, GitLab or Bitbucket event to read-only provider context with provider identity and local queue rechecks; simulated automation-context validation only and no execution.
 
 - Added explicit loopback-only GitLab and Bitbucket webhook listeners that verify and claim selected events without starting agents. Validated with local synthetic deliveries only; no public deployment or live provider verification.

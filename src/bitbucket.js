@@ -84,6 +84,17 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
       if (head === base) throw new TypeError('Source and target branches must differ');
       return request(endpoint('/pullrequests'), { method: 'POST', body: { title, description: body, source: { branch: { name: head } }, destination: { branch: { name: base } }, draft, close_source_branch: false } });
     },
+    getPipeline(id) {
+      if (typeof id !== 'string' || !/^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i.test(id)) throw new TypeError('Invalid pipeline UUID');
+      return get(endpoint(`/pipelines/${encodeURIComponent(id)}`));
+    },
+    async dispatchPipeline({ branch, pipeline }) {
+      branchRef(branch);
+      if (typeof pipeline !== 'string' || !pipeline.trim() || pipeline !== pipeline.trim() || pipeline.length > 200 || /[\u0000-\u001f\u007f]/.test(pipeline)) throw new TypeError('Explicit custom pipeline name is required');
+      const result = await request(endpoint('/pipelines/'), { method: 'POST', body: { target: { type: 'pipeline_ref_target', ref_type: 'branch', ref_name: branch, selector: { type: 'custom', pattern: pipeline } } } });
+      if (typeof result?.uuid !== 'string' || !/^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i.test(result.uuid)) throw new Error('Pipeline request may have been accepted; inspect provider before retrying');
+      return { accepted: true, uuid: result.uuid, buildNumber: Number.isSafeInteger(result.build_number) && result.build_number > 0 ? result.build_number : null };
+    },
     getAllCommitStatuses(sha) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('Invalid commit SHA');
       return collect(`${root}/commit/${sha}/statuses`, new URLSearchParams({ pagelen: '100' }));

@@ -236,6 +236,10 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Dispatch a GitHub Actions workflow (experimental)
 
+`gitlab-pipeline-dispatch <providers.json> <branch>` and `bitbucket-pipeline-dispatch <providers.json> <branch> <custom-pipeline>` explicitly request a run on the selected provider. These commands may run deployment-capable pipelines; inspect the selected configuration and branch before invoking them. An accepted response is not completion and the branch may move. If the response is unclear, inspect the provider before retrying. No variables or secrets are passed. Tested with simulated responses only. See the [GitLab pipeline API](https://docs.gitlab.com/api/pipelines/#create-a-new-pipeline) and [Bitbucket pipeline API](https://developer.atlassian.com/cloud/bitbucket/rest/api-group-pipelines/#api-repositories-workspace-repo-slug-pipelines-post).
+
+`gitlab-pipeline-status <providers.json> <id>` and `bitbucket-pipeline-status <providers.json> <uuid>` read a selected run's reported state and commit without displaying pipeline variables. They do not establish required checks or deployment success.
+
 `ci-dispatch /path/to/providers.json build.yml feature-branch [--inputs-file /path/to/inputs.json]` explicitly requests a `workflow_dispatch` run using the configured GitHub Actions provider. The token needs Actions write permission, and the workflow must support manual dispatch. Inputs are a JSON object; do not put secrets in workflow inputs. An `accepted` result means GitHub accepted the request, not that a run completed or succeeded. The command does not retry; after an ambiguous error, inspect GitHub before trying again. This write operation has only been tested with simulated responses.
 
 ### Prepare a PR description

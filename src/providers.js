@@ -44,11 +44,11 @@ export function createCiProvider(config, options = {}) {
   if (config?.provider === 'ado-pipelines') return createAdoCi({ organization: config.organization, project: config.project, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider === 'gitlab-ci') {
     const client = createGitLabClient({ project: config.project, token: options.gitlabToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
-    return { provider: 'gitlab-ci', listPipelines: client.listPipelines, listAllPipelines: client.listAllPipelines, getPipeline: client.getPipeline };
+    return { provider: 'gitlab-ci', dispatchPipeline: client.dispatchPipeline, listPipelines: client.listPipelines, listAllPipelines: client.listAllPipelines, getPipeline: client.getPipeline };
   }
   if (config?.provider === 'bitbucket-pipelines') {
     const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
-    return { provider: 'bitbucket-pipelines', getCommitStatuses: client.getCommitStatuses, getAllCommitStatuses: client.getAllCommitStatuses };
+    return { provider: 'bitbucket-pipelines', getPipeline: client.getPipeline, dispatchPipeline: client.dispatchPipeline, getCommitStatuses: client.getCommitStatuses, getAllCommitStatuses: client.getAllCommitStatuses };
   }
   if (config?.provider !== 'github-actions') throw new Error('Unsupported CI provider');
   const client = githubClient(config, options);
