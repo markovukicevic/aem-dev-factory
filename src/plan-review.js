@@ -46,7 +46,7 @@ export function planReviewDigest(markdown) {
   return createHash('sha256').update(lines.join('\n'), 'utf8').digest('hex');
 }
 
-async function readDigest(path) {
+export async function readPlanReviewDigest(path) {
   const bytes = await readLimitedFile(path, 1024 * 1024), text = bytes.toString('utf8');
   if (!Buffer.from(text, 'utf8').equals(bytes)) throw new Error('Plan is not valid UTF-8');
   return planReviewDigest(text);
@@ -54,12 +54,12 @@ async function readDigest(path) {
 const contextFiles = ['raw-story.md', 'dor.md', 'explain.md', 'research.md'];
 
 /** Read one bounded regular file without following its final symlink. */
-async function readEvidenceFile(path) {
+async function readEvidenceFile(path, maxBytes = 1024 * 1024) {
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const before = await file.stat();
-    if (!before.isFile() || before.size > 1024 * 1024) throw new Error('Invalid evidence file');
-    const bytes = Buffer.alloc(1024 * 1024 + 1);
+    if (!before.isFile() || before.size > maxBytes) throw new Error('Invalid evidence file');
+    const bytes = Buffer.alloc(maxBytes + 1);
     let offset = 0;
     while (offset < bytes.length) {
       const result = await file.read(bytes, offset, bytes.length - offset, null);
@@ -67,7 +67,7 @@ async function readEvidenceFile(path) {
       offset += result.bytesRead;
     }
     const after = await file.stat();
-    if (offset > 1024 * 1024 || offset !== before.size || before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) throw new Error('Evidence changed');
+    if (offset > maxBytes || offset !== before.size || before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) throw new Error('Evidence changed');
     return bytes.subarray(0, offset);
   } finally { await file.close(); }
 }
@@ -107,10 +107,10 @@ export async function savePlanReview({ planPath, inputPath, outputPath }) {
   if (typeof outputPath !== 'string' || !outputPath.trim()) throw new TypeError('Output path is required');
   try { await lstat(outputPath); throw Object.assign(new Error('Output exists'), { code: 'EEXIST' }); }
   catch (error) { if (error?.code !== 'ENOENT') throw error; }
-  const digest = await readDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
+  const digest = await readPlanReviewDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
   const review = validateReview(JSON.parse((await readLimitedFile(inputPath, 1024 * 1024)).toString('utf8')));
   const contextAfter = await readContext(planPath), identityAfter = await readIdentity(planPath);
-  if (digest !== await readDigest(planPath) || context.status !== contextAfter.status || context.digest !== contextAfter.digest || identity.status !== identityAfter.status || identity.digest !== identityAfter.digest) throw new Error('Plan, requirements context or source identity changed while recording review');
+  if (digest !== await readPlanReviewDigest(planPath) || context.status !== contextAfter.status || context.digest !== contextAfter.digest || identity.status !== identityAfter.status || identity.digest !== identityAfter.digest) throw new Error('Plan, requirements context or source identity changed while recording review');
   const record = { planDigest: digest, contextDigest: context.digest, identityStatus: identity.status, identityDigest: identity.digest, ...review };
   const json = JSON.stringify(record, null, 2);
   const maxTicks = (json.match(/`+/g) ?? []).reduce((max, run) => Math.max(max, run.length), 0);
@@ -123,7 +123,9 @@ export async function savePlanReview({ planPath, inputPath, outputPath }) {
 
 /** Compare editable review conclusions against the current plan content. */
 export async function checkPlanReview({ planPath, reportPath }) {
-  const report = (await readLimitedFile(reportPath, 2 * 1024 * 1024)).toString('utf8');
+  const reportBytes = await readEvidenceFile(reportPath, 2 * 1024 * 1024), report = reportBytes.toString('utf8');
+  if (!Buffer.from(report, 'utf8').equals(reportBytes)) throw new Error('Review is not valid UTF-8');
+  const reviewDigest = createHash('sha256').update(reportBytes).digest('hex');
   const match = /^# Plan review record\n\nSupplied review conclusions follow\. This editable record does not verify the plan, requirements or review\. Execution statuses and provenance verification are excluded from the plan digest\.\n\n(`{3,})json\n([\s\S]*?)\n\1\n$/.exec(report);
   if (!match) throw new Error('Unsupported plan review format');
   const saved = JSON.parse(match[2]), review = validateReview(saved);
@@ -131,8 +133,8 @@ export async function checkPlanReview({ planPath, reportPath }) {
   if (saved.contextDigest !== undefined && saved.contextDigest !== null && (typeof saved.contextDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.contextDigest))) throw new Error('Invalid requirements context digest');
   const legacyIdentity = saved.identityStatus === undefined && saved.identityDigest === undefined;
   if (!legacyIdentity && (!['present', 'missing', 'unavailable'].includes(saved.identityStatus) || (saved.identityStatus === 'present' ? typeof saved.identityDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.identityDigest) : saved.identityDigest !== null))) throw new Error('Invalid source identity record');
-  const currentDigest = await readDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
+  const currentDigest = await readPlanReviewDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
   const contextMatches = saved.contextDigest == null || context.status === 'unavailable' ? null : context.status === 'missing' ? false : saved.contextDigest === context.digest;
   const identityMatches = legacyIdentity || saved.identityStatus === 'unavailable' || identity.status === 'unavailable' ? null : saved.identityStatus !== identity.status ? false : identity.status === 'missing' ? true : saved.identityDigest === identity.digest;
-  return { verdict: review.verdict, planMatches: saved.planDigest === currentDigest, contextMatches, contextStatus: context.status, identityMatches, identityStatus: identity.status, findings: review.findings.length, unresolved: review.unresolved.length, scope: 'Editable supplied review record only; matching local files do not establish source authenticity, that the review occurred or that requirements are satisfied. Files may change afterward.' };
+  return { verdict: review.verdict, planContentDigest: currentDigest, reviewDigest, planMatches: saved.planDigest === currentDigest, contextMatches, contextStatus: context.status, identityMatches, identityStatus: identity.status, findings: review.findings.length, unresolved: review.unresolved.length, scope: 'Editable supplied review record only; matching local files do not establish source authenticity, that the review occurred or that requirements are satisfied. Files may change afterward.' };
 }

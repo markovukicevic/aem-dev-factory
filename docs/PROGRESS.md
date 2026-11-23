@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Bound new step evidence records to plan content and plan review fingerprints and added a local consistency check; older records and actual observations require manual inspection.
+
 - Added explicit per-step evidence recording and digest-checked completion or blocking. Supplied results are editable and not independently verified; partial failures are retained.
 
 - Added a review-aware plan step preview and digest-checked start with post-transition evidence recheck. Editable records do not prove review; races remain possible.
