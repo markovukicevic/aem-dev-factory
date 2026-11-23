@@ -142,6 +142,10 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       pageQuery(page, perPage);
       return request('GET', `/actions/runs?${query}`);
     },
+    listWorkflowRunJobs(number, { page = 1, perPage = 100 } = {}) {
+      validateNumber(number, 'workflow run ID');
+      return request('GET', `/actions/runs/${number}/jobs${pageQuery(page, perPage)}&filter=latest`);
+    },
     getWorkflowRun(number) {
       validateNumber(number, 'workflow run ID');
       return request('GET', `/actions/runs/${number}`);

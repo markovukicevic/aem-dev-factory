@@ -256,6 +256,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 `ci-dispatch /path/to/providers.json build.yml feature-branch [--inputs-file /path/to/inputs.json]` explicitly requests a `workflow_dispatch` run using the configured GitHub Actions provider. The token needs Actions write permission, and the workflow must support manual dispatch. Inputs are a JSON object; do not put secrets in workflow inputs. An `accepted` result means GitHub accepted the request, not that a run completed or succeeded. The command does not retry; after an ambiguous error, inspect GitHub before trying again. This write operation has only been tested with simulated responses.
 
+`github-run-jobs <providers.json> <run-id>` inspects up to 1,000 GitHub Actions jobs and their step statuses for the latest attempt, checking the run ID, commit and attempt around collection. Results can change while a run is active. This reads metadata only, not logs or root cause; it does not establish branch policy. The path has only simulated validation.
+
 ### Prepare a PR description
 
 `pr-description <share-plan-or-dash> <explain-or-dash> <implement.md> <verification.md> <new-output.md>` assembles a description from an existing summary, completed plan steps, and supplied verification evidence. Use `-` for an unavailable optional source. The command does not run tests or validate the truth of the supplied evidence; review its output before creating a PR. It refuses to overwrite an existing file.
