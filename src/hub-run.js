@@ -1,6 +1,6 @@
 import { mkdir, lstat, open, rename, unlink, realpath } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { selectHubRepositories } from './hub-repos.js';
 import { readGitState } from './git-state.js';
 import { runTestCommand } from './command-runner.js';
@@ -51,14 +51,22 @@ async function prepareHubTask({ cwd, task }, inspect) {
   return { root, state, snapshots, task };
 }
 
+function previewDigest(prepared) {
+  const selected = prepared.task.repositories.map(name => ({ name, ...prepared.snapshots.get(name) }));
+  const input = { root: prepared.root, ticket: prepared.task.ticket, title: prepared.task.title, executable: prepared.task.executable, args: prepared.task.args, timeoutMs: prepared.task.timeoutMs, concurrency: prepared.task.concurrency, repositories: selected };
+  return createHash('sha256').update(JSON.stringify(input), 'utf8').digest('hex');
+}
+
 export async function previewHubTask({ cwd, task }, { inspect = readGitState } = {}) {
   const prepared = await prepareHubTask({ cwd, task }, inspect);
-  return { ticket: prepared.task.ticket, executable: prepared.task.executable, argumentCount: prepared.task.args.length, concurrency: prepared.task.concurrency, timeoutMs: prepared.task.timeoutMs, repositories: prepared.task.repositories.map(name => ({ name, ...prepared.snapshots.get(name) })), scope: 'Read-only preflight only; command contents, future repository state and external effects are not verified.' };
+  return { digest: previewDigest(prepared), ticket: prepared.task.ticket, executable: prepared.task.executable, argumentCount: prepared.task.args.length, concurrency: prepared.task.concurrency, timeoutMs: prepared.task.timeoutMs, repositories: prepared.task.repositories.map(name => ({ name, ...prepared.snapshots.get(name) })), scope: 'Read-only preflight only; command contents, future repository state and external effects are not verified.' };
 }
 
 /** Execute an explicit local command in selected clean repositories, with bounded concurrency. */
-export async function runHubTask({ cwd, task }, { inspect = readGitState, run = runTestCommand } = {}) {
+export async function runHubTask({ cwd, task, expectedDigest }, { inspect = readGitState, run = runTestCommand } = {}) {
+  if (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid hub preview digest');
   const prepared = await prepareHubTask({ cwd, task }, inspect);
+  if (expectedDigest !== undefined && previewDigest(prepared) !== expectedDigest) return { complete: false, reason: 'preview-changed' };
   task = prepared.task;
   const { state, snapshots } = prepared;
   await safeDirectory(state);
