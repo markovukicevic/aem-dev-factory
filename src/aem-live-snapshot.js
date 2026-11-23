@@ -4,10 +4,10 @@ import { readAemDialog } from './aem-dialog.js';
 import { readLimitedFile } from './read-limited.js';
 
 /** Save separate local dialog and live search observations to a new file. */
-export async function saveAemLiveSnapshot({ authorUrl, root, resourceType, username, password, dialogPath, outputPath }, { search = searchLiveAemUsage, readDialog = readAemDialog, now = () => new Date().toISOString() } = {}) {
+export async function saveAemLiveSnapshot({ authorUrl, root, resourceType, username, password, token, dialogPath, outputPath }, { search = searchLiveAemUsage, readDialog = readAemDialog, now = () => new Date().toISOString() } = {}) {
   if (typeof dialogPath !== 'string' || !dialogPath.trim() || typeof outputPath !== 'string' || !outputPath.trim()) throw new TypeError('Dialog and output paths are required');
   const dialog = await readDialog(dialogPath);
-  const usage = await search({ authorUrl, root, resourceType, username, password });
+  const usage = await search({ authorUrl, root, resourceType, username, password, token });
   const result = { version: 1, capturedAt: now(), localDialog: { source: dialogPath, ...dialog }, liveUsage: usage, scope: 'Local XML and live query are separate observations and may not describe the same deployed component. Authored properties and rendered output are not captured.' };
   await writeFile(outputPath, `${JSON.stringify(result, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
   return { path: outputPath, capturedAt: result.capturedAt, queryComplete: usage.queryComplete, pageCount: usage.pages.length, scope: result.scope };

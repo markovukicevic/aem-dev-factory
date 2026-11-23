@@ -21,9 +21,9 @@ async function jsonLimited(response, limit) {
   return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)));
 }
 /** Read an explicitly scoped resource-type query from an AEM author instance. */
-export async function searchLiveAemUsage({ authorUrl, root, resourceType, username, password }, { fetchImpl = globalThis.fetch, maxPages = 4, pageSize = 25, timeoutMs = 15000 } = {}) {
+export async function searchLiveAemUsage({ authorUrl, root, resourceType, username, password, token }, { fetchImpl = globalThis.fetch, maxPages = 4, pageSize = 25, timeoutMs = 15000 } = {}) {
   const origin = authorOrigin(authorUrl);
-  if (!jcrPath(root) || !(root === '/content' || root.startsWith('/content/')) || typeof resourceType !== 'string' || !/^[A-Za-z0-9_:.~-]+(?:\/[A-Za-z0-9_:.~-]+)+$/.test(resourceType) || resourceType.split('/').some(segment => segment === '.' || segment === '..') || typeof username !== 'string' || !username || /[:\r\n]/.test(username) || typeof password !== 'string' || !password || /[\r\n]/.test(password) || typeof fetchImpl !== 'function' || !Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 4 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 25 || !Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30000) throw new TypeError('Invalid AEM search options');
+  if (!jcrPath(root) || !(root === '/content' || root.startsWith('/content/')) || typeof resourceType !== 'string' || !/^[A-Za-z0-9_:.~-]+(?:\/[A-Za-z0-9_:.~-]+)+$/.test(resourceType) || resourceType.split('/').some(segment => segment === '.' || segment === '..') || (token !== undefined ? (typeof token !== 'string' || !token || /[\r\n]/.test(token) || username !== undefined || password !== undefined) : (typeof username !== 'string' || !username || /[:\r\n]/.test(username) || typeof password !== 'string' || !password || /[\r\n]/.test(password))) || typeof fetchImpl !== 'function' || !Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 4 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 25 || !Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30000) throw new TypeError('Invalid AEM search options');
   const matches = [], seen = new Set(); let complete = false, lastReportedTotal = null;
   for (let page = 0; page < maxPages; page++) {
     const offset = page * pageSize, url = new URL('/bin/querybuilder.json', origin);
@@ -31,7 +31,7 @@ export async function searchLiveAemUsage({ authorUrl, root, resourceType, userna
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeoutMs);
     let data;
     try {
-      const response = await fetchImpl(url.href, { method: 'GET', headers: { Accept: 'application/json', Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}` }, redirect: 'error', signal: controller.signal });
+      const response = await fetchImpl(url.href, { method: 'GET', headers: { Accept: 'application/json', Authorization: token !== undefined ? `Bearer ${token}` : `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}` }, redirect: 'error', signal: controller.signal });
       if (!response.ok) throw new Error(`AEM search failed (${response.status})`);
       data = await jsonLimited(response, 1024 * 1024);
     } finally { clearTimeout(timer); }
@@ -52,4 +52,15 @@ export async function searchLiveAemUsage({ authorUrl, root, resourceType, userna
     pages.get(pagePath).componentPaths.push(path);
   }
   return { authorOrigin: origin, root, resourceType, pages: [...pages.values()], unmatched, queryComplete: complete, reportedTotal: lastReportedTotal, scope: 'Read-only exact resource-type query within the selected root and account permissions. Candidate pages are derived from matching paths; references, inheritance, other roots and concurrent changes are not covered.' };
+}
+
+/** Search explicitly selected roots independently, retaining partial results. */
+export async function searchLiveAemUsageMany({ roots, ...input }, { search = searchLiveAemUsage } = {}) {
+  if (!Array.isArray(roots) || !roots.length || roots.length > 10 || new Set(roots).size !== roots.length || roots.some(root => !jcrPath(root) || !(root === '/content' || root.startsWith('/content/')))) throw new TypeError('Invalid AEM content roots');
+  const results = [];
+  for (const root of roots) {
+    try { results.push({ root, result: await search({ ...input, root }) }); }
+    catch { results.push({ root, error: 'search-unavailable' }); }
+  }
+  return { results, complete: results.every(entry => entry.result?.queryComplete === true), scope: 'Each root was searched independently; unavailable or incomplete roots and concurrent changes limit the combined result.' };
 }
