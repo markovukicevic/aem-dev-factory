@@ -72,6 +72,13 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       if (!result || result.id !== issueId) throw new Error('Sub-issue link response unclear; inspect GitHub before retrying');
       return { linked: true };
     },
+    async createInlineComment({ number, path, side, line, commit, body }) {
+      validateNumber(number, 'pull request number'); validateNumber(line, 'line');
+      if (typeof path !== 'string' || !path || path.length > 1024 || path.startsWith('/') || /[\u0000-\u001f\u007f\\]/.test(path) || path.split('/').some(part => !part || part === '.' || part === '..') || !['LEFT', 'RIGHT'].includes(side) || typeof commit !== 'string' || !/^[a-f0-9]{40,64}$/i.test(commit) || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid inline comment');
+      const result = await request('POST', `/pulls/${number}/comments`, { body, commit_id: commit, path, side, line });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Comment response unclear; inspect GitHub before retrying');
+      return { sent: true, id: result.id };
+    },
     async submitPullRequestReview({ number, event, commit, body }) {
       validateNumber(number, 'pull request number');
       if (!['APPROVE', 'REQUEST_CHANGES', 'COMMENT'].includes(event) || typeof commit !== 'string' || !/^[a-f0-9]{40,64}$/i.test(commit) || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid review');
