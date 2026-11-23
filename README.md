@@ -244,6 +244,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Offline GitHub webhook inspection
 
+`gitlab-webhook-listen <policy.json> <store-dir> <port>` and `bitbucket-webhook-listen` explicitly start local loopback-only receivers using provider-specific environment secrets. They verify and claim supported events but never enqueue or execute jobs. GitLab uses a signed timestamp and ID; Bitbucket does not provide equivalent replay protection. These listeners are not publicly reachable deployments and have only been checked with local synthetic deliveries.
+
 `gitlab-webhook-claim <policy.json> <headers.json> <body.json> <store-dir>` and `bitbucket-webhook-claim` verify a selected delivery and save metadata to an explicitly selected store. GitLab deduplicates signed message IDs; Bitbucket suppresses identical bodies, including legitimate repeats. Local records are editable and cannot independently establish authenticity. The optional `gitlab` and `bitbucket` sections of the automation policy supply provider-specific project/repository and actor allowlists. The existing local queue can inspect and enqueue those records; it does not execute agents.
 
 `bitbucket-webhook-inspect <policy.json> <headers.json> <body.json>` verifies the exact raw body using `BITBUCKET_WEBHOOK_SECRET` and the SHA-256 signature, and checks explicitly allowed repository and actor UUIDs in braces. Headers contain `signature` and `event`; the event header is unsigned. Only selected PR events are classified; no timestamp or replay protection, listener, queue or execution is provided. See [Bitbucket webhook signing](https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/). Validated with synthetic inputs only.
