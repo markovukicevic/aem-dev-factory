@@ -64,3 +64,19 @@ export async function searchLiveAemUsageMany({ roots, ...input }, { search = sea
   }
   return { results, complete: results.every(entry => entry.result?.queryComplete === true), scope: 'Each root was searched independently; unavailable or incomplete roots and concurrent changes limit the combined result.' };
 }
+
+/** Read an explicitly selected AEM node using Sling's bounded JSON depth selector. */
+export async function readLiveAemNode({ authorUrl, path, depth = 0, username, password, token }, { fetchImpl = globalThis.fetch, timeoutMs = 15000 } = {}) {
+  const origin = authorOrigin(authorUrl);
+  const validCredentials = token !== undefined ? typeof token === 'string' && !!token && !/[\r\n]/.test(token) && username === undefined && password === undefined : typeof username === 'string' && !!username && !/[:\r\n]/.test(username) && typeof password === 'string' && !!password && !/[\r\n]/.test(password);
+  if (!jcrPath(path) || !['/content', '/apps'].some(root => path.startsWith(`${root}/`)) || !Number.isSafeInteger(depth) || depth < 0 || depth > 2 || !validCredentials || typeof fetchImpl !== 'function' || !Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30000) throw new TypeError('Invalid AEM node request');
+  const url = new URL(`${path.split('/').map(encodeURIComponent).join('/')}.${depth}.json`, origin);
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url.href, { method: 'GET', headers: { Accept: 'application/json', Authorization: token !== undefined ? `Bearer ${token}` : `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}` }, redirect: 'error', signal: controller.signal });
+    if (!response.ok) throw new Error(`AEM node request failed (${response.status})`);
+    const node = await jsonLimited(response, 1024 * 1024);
+    if (!node || typeof node !== 'object' || Array.isArray(node)) throw new Error('Invalid AEM node response');
+    return { authorOrigin: origin, path, depth, node, scope: 'Read-only response for one explicitly selected node. Contents are untrusted and may include sensitive authored values; inheritance and rendered behavior are not established.' };
+  } finally { clearTimeout(timer); }
+}
