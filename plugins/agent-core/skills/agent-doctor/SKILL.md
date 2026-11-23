@@ -9,4 +9,4 @@ Identify the target project and read repository instructions. Run `node "$AEM_DE
 
 Report configuration errors, missing credentials and evidence gaps. Presence is not proof of valid credentials, permissions, network access or service health. If live checks are requested and the correct provider and target are known, use only appropriate read-only operations and report their actual results. Do not change configuration, install software, update external services or send messages as part of this inspection.
 
-This initial workflow does not reproduce the original doctor's full checks for plugins, client configuration, dependencies, rules and MCP services.
+`project-workflow-doctor <project-directory> <codex|claude|copilot>` also inspects local configuration and rule markers, selected-client skill directories and Node dependency resolution without loading package code. Treat the results as local signals; it does not establish client discovery, MCP health or runtime behavior. Full original doctor checks are not yet reproduced.
