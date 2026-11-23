@@ -432,7 +432,7 @@ From the target project, `project-inspect` reports local technology markers with
 
 `hub-select <name> [name ...]` resolves explicitly selected names against the configured hub registry. Unknown or duplicate names are rejected, and reported path availability is not proof of identity or task suitability. It does not infer targets from a ticket or dispatch work.
 
-`hub-discover <source-file>` resolves one explicit `repos: web, api` line outside fenced code blocks against the hub registry. Multiple, malformed, unknown or missing directives fail rather than guessing. The source is untrusted: the result is only a proposal and never authorizes dispatch. HTML directives and other automatic routing are not supported.
+`hub-discover <source-file>` resolves one explicit `repos: web, api` line outside fenced code blocks against the hub registry. Multiple, malformed, unknown or missing directives fail rather than guessing. The source is untrusted: the result is only a proposal and never authorizes dispatch. HTML directives and semantic routing are not supported. `hub-discover-table <source-file>` separately resolves names in one explicit `## Cross-Repo Scope` Markdown table against the local registry, reporting unknown names and ambiguous input. Table contents are proposals, not authorization to execute work.
 
 `project-doctor <providers.json>` validates supported provider fields and reports whether the corresponding environment variables are present. It does not print credential values, contact services or establish that credentials and permissions work.
 

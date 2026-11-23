@@ -71,3 +71,37 @@ export async function discoverHubRepositories({ cwd, path }) {
   const selected = await selectHubRepositories({ cwd, names: parseHubRepositoryDirective(text) });
   return { ...selected, scope: 'Untrusted source directive resolved as a proposal only; verify intent and repository identity before work.' };
 }
+
+/** Extract explicit repository names from one Cross-Repo Scope Markdown table. */
+export function parseHubScopeTable(text) {
+  if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > 262144) throw new TypeError('Invalid scope document');
+  let fence = null, inSection = false, sections = 0, header = false, separator = false; const names = [];
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (marker) { if (!fence) fence = { char: marker[1][0], length: marker[1].length }; else if (marker[1][0] === fence.char && marker[1].length >= fence.length) fence = null; continue; }
+    if (fence) continue;
+    if (/^##\s+Cross-Repo Scope(?:\s|$)/i.test(line)) { if (++sections > 1) throw new Error('Ambiguous scope sections'); inSection = true; continue; }
+    if (inSection && /^##\s+/.test(line)) { inSection = false; continue; }
+    if (!inSection || !/^\s*\|/.test(line)) continue;
+    const cells = line.trim().split('|').slice(1); if (cells.at(-1) === '') cells.pop();
+    if (cells.length < 2) throw new Error('Invalid scope table row');
+    const cell = cells[0].trim(), wrapped = /^(?:`([^`]+)`|\*\*([^*]+)\*\*|\*([^*]+)\*)$/.exec(cell);
+    const first = (wrapped ? wrapped[1] ?? wrapped[2] ?? wrapped[3] : cell).trim();
+    if (!header) { if (first.toLowerCase() !== 'repo') throw new Error('Invalid scope table header'); header = true; continue; }
+    if (!separator) { if (!cells.every(cell => /^\s*:?-{3,}:?\s*$/.test(cell))) throw new Error('Invalid scope table separator'); separator = true; continue; }
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(first) || names.some(name => name.toLowerCase() === first.toLowerCase())) throw new Error('Invalid or duplicate scope repository');
+    names.push(first); if (names.length > 100) throw new Error('Scope table exceeds limit');
+  }
+  if (fence || sections !== 1 || !header || !separator || !names.length) throw new Error('Scope table unavailable');
+  return names;
+}
+/** Resolve a scope table against registered names without executing tasks. */
+export async function discoverHubScopeTable({ cwd, path }) {
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(path, 262144));
+  const names = parseHubScopeTable(text), { repos } = await inspectHubRepositories({ cwd });
+  const byName = new Map();
+  for (const repo of repos) { const key = repo.name.toLowerCase(); if (byName.has(key)) throw new Error('Ambiguous registry names'); byName.set(key, repo); }
+  const selected = [], unknown = [];
+  for (const name of names) { const repo = byName.get(name.toLowerCase()); if (repo) selected.push(repo); else unknown.push(name); }
+  return { repos: selected, unknown, complete: unknown.length === 0, scope: 'Explicit names in one untrusted scope table are proposals only; verify repository identity and intent before work.' };
+}
