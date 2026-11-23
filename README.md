@@ -387,3 +387,5 @@ The GitHub Actions test workflow runs for pull requests or by explicit manual di
 `scm-review-batch <providers.json> <number> [number ...]` collects existing provider-specific review contexts for 1–10 explicitly selected pull requests sequentially. Failed or changing PRs are identified while successful results are retained. It does not list PRs, review code, post comments, establish a complete diff or verify that the contexts remain current. Outputs may contain private provider data.
 
 `scm-pr-list <providers.json>` reads a single bounded page of up to 20 open pull requests from the configured repository. It is a selection aid, not a complete inventory; results can change and may omit inaccessible items. GitLab, Bitbucket and Azure list calls are validated only with simulated responses.
+
+`pr-reviews-report <reviews.json> <output.md>` bundles 1–20 supplied review records in one new Markdown file. Use `{ "reviews": [...] }`, with each item in the existing `pr-review-report` input format. It rejects duplicate repository/PR pairs and never posts or authenticates the findings.

@@ -321,6 +321,8 @@
 
 - Added a bounded one-page active PR listing for GitHub, GitLab, Bitbucket Cloud and Azure Repos as a batch-review selection aid; simulated responses only, and listing is not complete.
 
+- Added a local multi-PR review report bundler and initial reporting skill. It formats supplied evidence without running reviews or publishing externally.
+
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.
