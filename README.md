@@ -303,7 +303,7 @@ GitLab issue/MR comments and Bitbucket PR comments starting with `@aem-dev` can 
 
 ### Install one skill into a project
 
-`skill-compare <codex|claude|copilot> <target-project> <skill>` compares an installed skill with the bundled copy by file bytes and executable flags. It reports missing, extra and changed files without replacing either copy. A difference may be an intentional customization; paths may be sensitive and files can change after inspection.
+`skill-compare <codex|claude|copilot> <target-project> <skill>` compares an installed skill with the bundled copy by file bytes and executable flags. It reports missing, extra and changed files without replacing either copy. A difference may be an intentional customization; paths may be sensitive and files can change after inspection. `skill-audit <codex|claude|copilot> <target-project>` compares up to 100 installed skill directories with bundled versions and separately identifies custom or unreadable entries. It does not replace files or prove the client can discover or run them.
 
 `install-skills-plan <codex|claude|copilot> <target-project> <skill> [skill ...]` previews selected skills and destination collisions without creating files. A later installation rechecks inputs; the preview cannot guarantee the files remain unchanged.
 
