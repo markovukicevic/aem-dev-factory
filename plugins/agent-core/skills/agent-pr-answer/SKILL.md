@@ -1,6 +1,6 @@
 ---
 name: agent-pr-answer
-description: Prepare evidence-based local reply drafts for pull request discussion without posting comments.
+description: Prepare evidence-based pull request reply drafts and support explicitly requested replies.
 ---
 
 # Prepare PR discussion responses
@@ -9,4 +9,4 @@ Identify the intended repository, provider and PR. Read repository instructions 
 
 Use `pr-response-draft <context.json> <output.md>` to create a new local workspace without replacing an existing file. The tool copies discussion data but does not write replies or determine whether threads are resolved. Inspect current code, the actual PR revisions and existing thread state before drafting any response. For each relevant item, distinguish confirmed changes from proposed work and unanswered questions. Do not invent test outcomes, commitments or explanations. Avoid including private content in anything shared without review.
 
-Present draft replies to the user. If the user explicitly requests sending a GitHub reply to a top-level review comment, `github-review-reply-plan <providers.json> <pr> <comment-id> <body.md>` previews the exact message and current target; `github-review-reply-send` accepts the same arguments plus the preview digest and sends one reply after rechecks. A request to draft is not authorization to send. GitHub does not support replying to a reply through this endpoint. Inspect GitHub before retrying an unclear send. This write path has only simulated validation. Do not apply patches, resolve threads or send messages as a side effect; other providers' posting and follow-up automation are not implemented.
+Present draft replies to the user. If the user explicitly requests sending a GitHub reply to a top-level review comment, `github-review-reply-plan <providers.json> <pr> <comment-id> <body.md>` previews the exact message and current target; `github-review-reply-send` accepts the same arguments plus the preview digest and sends one reply after rechecks. A request to draft is not authorization to send. GitHub does not support replying to a reply through this endpoint. Inspect GitHub before retrying an unclear send. This write path has only simulated validation. For GitLab.com, inspect `gitlab-mr-discussions`, then use `gitlab-review-reply-plan` and the corresponding `-send` with its digest for an explicit reply to a discussion. For Bitbucket Cloud, use `bitbucket-review-reply-plan` and the corresponding `-send` with its digest for an explicit reply to a PR comment. Both write paths have only simulated validation. Inspect the provider before retrying an unclear send. Do not apply patches, resolve threads or send messages as a side effect; Azure posting and follow-up automation are not implemented.

@@ -66,6 +66,17 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
       number(id);
       return collect(`${root}/pullrequests/${id}/statuses`, new URLSearchParams({ pagelen: '100' }));
     },
+    getPullRequestComment(id, commentId) {
+      number(id); number(commentId);
+      return get(endpoint(`/pullrequests/${id}/comments/${commentId}`));
+    },
+    async replyPullRequestComment({ number: id, commentId, body }) {
+      number(id); number(commentId);
+      if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid Bitbucket comment');
+      const result = await request(endpoint(`/pullrequests/${id}/comments`), { method: 'POST', body: { content: { raw: body }, parent: { id: commentId } } });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Comment response unclear; inspect Bitbucket before retrying');
+      return { sent: true, id: result.id };
+    },
     getPullRequestComments(id) {
       number(id);
       return collect(`${root}/pullrequests/${id}/comments`, new URLSearchParams({ pagelen: '100' }));
