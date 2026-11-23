@@ -102,6 +102,14 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
       if (head === base) throw new TypeError('Source and target branches must differ');
       return request(endpoint('/pullrequests'), { method: 'POST', body: { title, description: body, source: { branch: { name: head } }, destination: { branch: { name: base } }, draft, close_source_branch: false } });
     },
+    getPipelineStep(pipelineId, stepId) {
+      for (const id of [pipelineId, stepId]) if (typeof id !== 'string' || !/^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i.test(id)) throw new TypeError('Invalid pipeline or step UUID');
+      return get(endpoint(`/pipelines/${encodeURIComponent(pipelineId)}/steps/${encodeURIComponent(stepId)}`));
+    },
+    getPipelineStepLogResponse(pipelineId, stepId) {
+      for (const id of [pipelineId, stepId]) if (typeof id !== 'string' || !/^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i.test(id)) throw new TypeError('Invalid pipeline or step UUID');
+      return fetchImpl(endpoint(`/pipelines/${encodeURIComponent(pipelineId)}/steps/${encodeURIComponent(stepId)}/log`), { method: 'GET', headers: { Accept: 'text/plain', Authorization: `Bearer ${token}` }, redirect: 'manual', signal: AbortSignal.timeout(30000) });
+    },
     getPipelineSteps(id) {
       if (typeof id !== 'string' || !/^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i.test(id)) throw new TypeError('Invalid pipeline UUID');
       return collect(`${root}/pipelines/${encodeURIComponent(id)}/steps`, new URLSearchParams({ pagelen: '100' }));
