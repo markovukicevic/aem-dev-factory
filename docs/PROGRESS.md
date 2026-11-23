@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added offline Bitbucket Cloud SHA-256 webhook verification with repository and actor UUID allowlists; synthetic input only, with no replay protection, listener or execution.
+
 - Added offline GitLab signing-token verification and allowlisted issue/MR classification with a timestamp window; synthetic signatures only, no replay store, listener or execution.
 
 - Added an explicit metadata-only local automation queue tied to existing claims and the current allowlist; no agent executes and local records do not establish authenticity.
