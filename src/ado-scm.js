@@ -52,6 +52,13 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
       }
       return { changes, complete: false };
     },
+    async createPullRequestComment({ number, body }) {
+      validId(number);
+      if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid pull request comment');
+      const result = await request(`${root}/${number}/threads?api-version=7.1`, { method: 'POST', body: { comments: [{ parentCommentId: 0, content: body, commentType: 'text' }], status: 'active' } });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Thread response unclear; inspect Azure before retrying');
+      return { sent: true, threadId: result.id };
+    },
     getPullRequestThread(number, threadId) {
       validId(number); validId(threadId);
       return request(`${root}/${number}/threads/${threadId}?api-version=7.1`);

@@ -119,6 +119,13 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       if (!Number.isSafeInteger(data?.id) || data.id < 1) throw new Error('Note response unclear; inspect GitLab before retrying');
       return { sent: true, id: data.id };
     },
+    async createPullRequestComment({ number, body }) {
+      iid(number);
+      if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid merge request comment');
+      const data = (await request(`/merge_requests/${number}/notes`, { method: 'POST', body: { body } })).data;
+      if (!Number.isSafeInteger(data?.id) || data.id < 1) throw new Error('Comment response unclear; inspect GitLab before retrying');
+      return { sent: true, id: data.id };
+    },
     async replyMergeRequestDiscussion({ number, discussionId, body }) {
       iid(number);
       if (typeof discussionId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(discussionId) || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid GitLab discussion reply');
