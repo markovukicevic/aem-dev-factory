@@ -14,6 +14,13 @@ export function createAdoTracker({ organization, project, token, fetchImpl = glo
       if (typeof type !== 'string' || !type.trim() || type !== type.trim() || type.length > 128 || /[\u0000-\u001f\u007f\/\\]/.test(type)) throw new TypeError('Invalid work item type');
       return get(`/_apis/wit/workitemtypes/${encodeURIComponent(type)}/states?api-version=7.1`);
     },
+    async createWorkItemComment({ id, body }) {
+      if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid work item comment');
+      const item = await get(`/_apis/wit/workItems/${id}/comments?format=markdown&api-version=7.1-preview.4`, { method: 'POST', body: { text: body } });
+      const commentId = item?.id ?? item?.commentId;
+      if (item?.workItemId !== id || !Number.isSafeInteger(commentId) || commentId < 1) throw new Error('Comment response unclear; inspect Azure before retrying');
+      return { sent: true, id: commentId };
+    },
     async updateWorkItemState({ id, revision, state }) {
       if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || !Number.isSafeInteger(revision) || revision < 1 || typeof state !== 'string' || !state.trim() || state !== state.trim() || state.length > 128 || /[\u0000-\u001f\u007f]/.test(state)) throw new TypeError('Invalid work item state');
       const body = [{ op: 'test', path: '/rev', value: revision }, { op: 'add', path: '/fields/System.State', value: state }];

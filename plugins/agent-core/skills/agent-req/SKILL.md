@@ -47,3 +47,5 @@ If the user explicitly requests a GitHub issue comment, `github-issue-comment-pl
 If the user explicitly requests a GitLab issue comment, use `gitlab-issue-comment-plan <providers.json> <issue> <body.md>` to preview it and `gitlab-issue-comment-send` with the preview digest to send it. Inspect GitLab before retrying an unclear send. This path has only simulated validation.
 
 For an explicitly requested Jira comment, provide the exact ADF JSON document and use `jira-comment-plan` followed by `jira-comment-send` with its digest. Inspect Jira before retrying an unclear result. This path has only simulated validation.
+
+For an explicitly requested Azure work item comment, use `ado-work-item-comment-plan` followed by `ado-work-item-comment-send` with its digest. Inspect Azure before retrying an unclear result. This path has only simulated validation.
