@@ -307,6 +307,8 @@
 - Linked the new project to its GitHub origin and added a test workflow. The first GitHub Actions run passed on Node 20 and 22; action versions were then updated to address a deprecation warning.
 - Most recent observed five-hour quota reset: 2026-11-20 21:27 Europe/Berlin. Scheduled sessions must verify the reset and current usage before starting; limits are shared across the account.
 
+- Added a provider-independent commit preview and an initial commit workflow. It preserves existing staging and does not create commits, push, create PRs or verify tests as a side effect of previewing. Client behavior remains unverified.
+
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.
