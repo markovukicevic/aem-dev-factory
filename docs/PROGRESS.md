@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Extended ticket file search to optionally inspect bounded untracked, non-ignored text files and report skipped files. Results remain candidates, not proof of impact.
+
 - Extended explicit skill installation to bounded supporting files, rejecting symlinks and preserving existing destinations; client discovery and behavior remain unverified.
 
 - Added a provider-independent commit preview and an initial commit workflow. It preserves existing staging and does not create commits, push, create PRs or verify tests as a side effect of previewing. Client behavior remains unverified.

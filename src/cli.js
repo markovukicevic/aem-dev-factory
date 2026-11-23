@@ -298,7 +298,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
   }
   if (args[0] === 'ticket-file-search') {
     if (args.length !== 2 || !args[1]?.trim()) { output.error(usage); return 2; }
-    try { output.log(JSON.stringify(await searchTicketFiles({ cwd, inputPath: args[1] }), null, 2)); return 0; }
+    try { const result = await searchTicketFiles({ cwd, inputPath: args[1] }); output.log(JSON.stringify(result, null, 2)); return result.untrackedComplete === false ? 1 : 0; }
     catch { output.error('Unable to search ticket terms. Check the Git repository and selected terms.'); return 1; }
   }
   if (args[0] === 'task-plan-create' || args[0] === 'task-plan-check') {
