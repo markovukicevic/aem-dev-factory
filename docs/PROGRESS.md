@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added preview-bound explicit GitHub issue comments and top-level PR review replies, with target and revision rechecks. Simulated transport only; no live messages sent.
+
 - Added initial evidence-based documentation workflows for completed and historical work. Automatic wiki publication, live deployment verification and client behavior remain unimplemented or unverified.
 
 - Added read-only comparison of installed skill files and executable flags with bundled sources, plus initial upgrade and multi-project sync workflows. No copies, commits, pushes or PRs occur as a side effect.

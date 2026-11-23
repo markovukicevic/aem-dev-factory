@@ -65,6 +65,24 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       if (!result || result.id !== issueId) throw new Error('Sub-issue link response unclear; inspect GitHub before retrying');
       return { linked: true };
     },
+    getReviewComment(id) {
+      validateNumber(id, 'review comment ID');
+      return request('GET', `/pulls/comments/${id}`);
+    },
+    async createIssueComment({ number, body }) {
+      validateNumber(number, 'issue number');
+      if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid comment');
+      const result = await request('POST', `/issues/${number}/comments`, { body });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Comment response unclear; inspect GitHub before retrying');
+      return { sent: true, id: result.id };
+    },
+    async replyReviewComment({ number, commentId, body }) {
+      validateNumber(number, 'pull request number'); validateNumber(commentId, 'review comment ID');
+      if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid reply');
+      const result = await request('POST', `/pulls/${number}/comments/${commentId}/replies`, { body });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Reply response unclear; inspect GitHub before retrying');
+      return { sent: true, id: result.id };
+    },
     getPullRequest(number) {
       validateNumber(number, 'pull request number');
       return request('GET', `/pulls/${number}`);

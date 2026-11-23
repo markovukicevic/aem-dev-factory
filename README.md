@@ -301,6 +301,8 @@ Skill installation copies an explicitly selected skill directory, including supp
 
 ### Pull request review context
 
+`github-issue-comment-plan <providers.json> <issue> <body.md>` previews a new GitHub issue comment using the tracker configuration. `github-review-reply-plan <providers.json> <pr> <comment-id> <body.md>` previews a reply to a top-level GitHub review comment using the SCM configuration. The corresponding `-send` commands require the preview digest, recheck the target and send one message only when explicitly requested. GitHub does not allow replies to replies through this endpoint. If a send result is unclear, inspect GitHub before retrying. These write paths have only simulated validation; no live comments were sent. See [GitHub review comment API](https://docs.github.com/en/rest/pulls/comments#create-a-reply-for-a-review-comment) and [issue comments API](https://docs.github.com/en/rest/issues/comments#create-an-issue-comment).
+
 `commit-preview`, run from the target repository, lists staged, unstaged and untracked paths and reports conflicts and a local index fingerprint. It does not stage or commit files, inspect working file contents, run tests or check remote state. Review diffs and scope before committing.
 
 `scm-review-batch <providers.json> <number> [number ...]` collects existing provider-specific review contexts for 1–10 explicitly selected pull requests sequentially. Failed or changing PRs are identified while successful results are retained. It does not list PRs, review code, post comments, establish a complete diff or verify that the contexts remain current. Outputs may contain private provider data.
