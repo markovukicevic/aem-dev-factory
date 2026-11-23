@@ -291,6 +291,8 @@ GitLab issue/MR comments and Bitbucket PR comments starting with `@aem-dev` can 
 
 ### Install one skill into a project
 
+`skill-compare <codex|claude|copilot> <target-project> <skill>` compares an installed skill with the bundled copy by file bytes and executable flags. It reports missing, extra and changed files without replacing either copy. A difference may be an intentional customization; paths may be sensitive and files can change after inspection.
+
 `install-skills-plan <codex|claude|copilot> <target-project> <skill> [skill ...]` previews selected skills and destination collisions without creating files. A later installation rechecks inputs; the preview cannot guarantee the files remain unchanged.
 
 Skill installation copies an explicitly selected skill directory, including supporting files, with limits of 100 files, 1 MiB per file, 8 MiB total and five directory levels. Symlinks and special files are rejected. Existing destination skills are preserved; inspect any partial installation after a copy failure. Executable bits are retained. Client discovery and behavior remain unverified.

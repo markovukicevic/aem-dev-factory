@@ -3,7 +3,7 @@ import { lstat, open, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 /** Collect bounded regular skill files; reject links and mutable sources. */
-export async function collectSkillAssets(root) {
+export async function collectSkillAssets(root, { requireMain = true } = {}) {
   const files = []; let total = 0;
   async function walk(directory, parts, depth) {
     if (depth > 5) throw new Error('Skill directory depth exceeded');
@@ -29,6 +29,6 @@ export async function collectSkillAssets(root) {
     }
   }
   await walk(root, [], 0);
-  if (!files.some(file => file.parts.length === 1 && file.parts[0] === 'SKILL.md')) throw new Error('Skill metadata file missing');
+  if (requireMain && !files.some(file => file.parts.length === 1 && file.parts[0] === 'SKILL.md')) throw new Error('Skill metadata file missing');
   return files;
 }

@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added read-only comparison of installed skill files and executable flags with bundled sources, plus initial upgrade and multi-project sync workflows. No copies, commits, pushes or PRs occur as a side effect.
+
 - Added initial small-change, focused simplification and project-pattern workflows using existing local AEM and project inspection; live authoring and client behavior remain unverified.
 
 - Added explicit one-page axe execution through target-project Playwright and axe-core, with restricted request origins/methods and non-overwriting raw results; simulated browser only, no live AEM validation.
