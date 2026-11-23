@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added preview-bound explicit creation of one Azure child task, rechecking parent project and revision; simulated transport only and no live task created.
+
 - Added preview-bound explicit creation of one Jira subtask from a current local task plan; simulated transport only, no live task created and ambiguous writes require inspection.
 
 - Added allowlisted GitLab issue/MR and Bitbucket PR comment events with explicit mentions, storing comment IDs without comment text; no automated execution or live provider verification.

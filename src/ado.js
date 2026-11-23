@@ -6,6 +6,13 @@ export function createAdoTracker({ organization, project, token, fetchImpl = glo
   const { base, request: get } = createAdoHttp({ organization, project, token, fetchImpl });
   return {
     provider: 'ado',
+    async createSubtask({ parent, workItemType, summary, description }) {
+      if (!Number.isSafeInteger(parent) || parent < 1 || parent > 2147483647 || typeof workItemType !== 'string' || !workItemType.trim() || workItemType !== workItemType.trim() || workItemType.length > 128 || /[\u0000-\u001f\u007f\/\\$]/.test(workItemType) || typeof summary !== 'string' || !summary.trim() || summary.length > 255 || /[\u0000-\u001f\u007f]/.test(summary) || typeof description !== 'string' || !description.trim() || description.length > 262144) throw new TypeError('Invalid Azure subtask');
+      const operations = [ { op: 'add', path: '/fields/System.Title', value: summary }, { op: 'add', path: '/fields/System.Description', value: description }, { op: 'add', path: '/relations/-', value: { rel: 'System.LinkTypes.Hierarchy-Reverse', url: `${base}/_apis/wit/workItems/${parent}` } } ];
+      const item = await get(`/_apis/wit/workitems/$${encodeURIComponent(workItemType)}?api-version=7.1`, { method: 'POST', body: operations, contentType: 'application/json-patch+json' });
+      if (!item || !Number.isSafeInteger(item.id) || item.id < 1 || item.id > 2147483647) throw new Error('Subtask response unclear; inspect Azure before retrying');
+      return { created: true, id: item.id, url: `${base}/_workitems/edit/${item.id}` };
+    },
     async getTicket(id) {
       if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) throw new TypeError('Invalid Azure DevOps work item ID');
       const item = await get(`/_apis/wit/workitems/${id}?%24expand=All&api-version=7.1`);
@@ -25,7 +32,7 @@ export function createAdoTracker({ organization, project, token, fetchImpl = glo
         }
         const next = result.continuationToken;
         if (next === undefined || next === null || next === '') {
-          return { provider: 'ado', number: id, title: item.fields['System.Title'], body: item.fields['System.Description'] ?? '', bodyFormat: 'html', state: item.fields['System.State'] ?? null, author: item.fields['System.CreatedBy']?.displayName ?? null, url: `${base}/_workitems/edit/${id}`, fields: item.fields, relations: item.relations ?? [], comments };
+          return { provider: 'ado', number: id, revision: Number.isSafeInteger(item.rev) && item.rev > 0 ? item.rev : null, title: item.fields['System.Title'], body: item.fields['System.Description'] ?? '', bodyFormat: 'html', state: item.fields['System.State'] ?? null, author: item.fields['System.CreatedBy']?.displayName ?? null, url: `${base}/_workitems/edit/${id}`, fields: item.fields, relations: item.relations ?? [], comments };
         }
         if (typeof next !== 'string' || next.length > 4096 || seen.has(next)) throw new Error('Invalid Azure DevOps continuation token');
         seen.add(next);

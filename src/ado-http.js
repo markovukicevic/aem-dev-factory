@@ -6,10 +6,11 @@ export function createAdoHttp({ organization, project, token, fetchImpl = global
   if (typeof fetchImpl !== 'function') throw new TypeError('Invalid Azure DevOps client options');
   const base = `https://dev.azure.com/${encodeURIComponent(organization)}/${encodeURIComponent(project)}`;
   const authorization = `Basic ${Buffer.from(`:${token}`).toString('base64')}`;
-  async function requestWithMetadata(path, { method = 'GET', body } = {}) {
+  async function requestWithMetadata(path, { method = 'GET', body, contentType = 'application/json' } = {}) {
+    if (!['application/json', 'application/json-patch+json'].includes(contentType)) throw new TypeError('Invalid content type');
     const response = await fetchImpl(`${base}${path}`, {
       method,
-      headers: { Accept: 'application/json', Authorization: authorization, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+      headers: { Accept: 'application/json', Authorization: authorization, ...(body === undefined ? {} : { 'Content-Type': contentType }) },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       redirect: 'error',
     });

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { checkTaskPlan, readTaskPlan } from './task-plan.js';
 import { createJiraTracker } from './jira.js';
 
-async function sourceIdentity(spec) {
+export async function readTaskSourceIdentity(spec) {
   const directory = await lstat(spec);
   if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error('Invalid spec directory');
   const handle = await open(join(spec, 'source-identity.json'), constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -29,7 +29,7 @@ function buildDescription(task) {
 }
 async function prepare({ spec, recordPath, index, issueTypeId, config, tracker }) {
   if (!Number.isSafeInteger(index) || index < 1 || typeof issueTypeId !== 'string' || !/^[1-9][0-9]{0,19}$/.test(issueTypeId) || config?.provider !== 'jira') throw new TypeError('Invalid subtask request');
-  const [check, plan, identity] = await Promise.all([checkTaskPlan({ path: spec, recordPath }), readTaskPlan(recordPath), sourceIdentity(spec)]);
+  const [check, plan, identity] = await Promise.all([checkTaskPlan({ path: spec, recordPath }), readTaskPlan(recordPath), readTaskSourceIdentity(spec)]);
   if (!check.matches || !check.sourceComplete || index > plan.tasks.length) throw new Error('Task plan or requirements context is incomplete or changed');
   const source = identity.value;
   if (source?.version !== 1 || source.provider !== 'jira' || typeof source.id !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(source.id) || source.source !== new URL(config.baseUrl).origin) throw new Error('Jira source identity mismatch');
@@ -37,7 +37,7 @@ async function prepare({ spec, recordPath, index, issueTypeId, config, tracker }
   if (task.title.length > 255 || /[\u0000-\u001f\u007f]/.test(task.title)) throw new Error('Invalid subtask title');
   const parent = await tracker.getTicket(source.id);
   if (parent?.provider !== 'jira' || typeof parent.key !== 'string' || parent.key.toLowerCase() !== source.id.toLowerCase()) throw new Error('Jira parent mismatch');
-  const [afterCheck, afterPlan, afterIdentity] = await Promise.all([checkTaskPlan({ path: spec, recordPath }), readTaskPlan(recordPath), sourceIdentity(spec)]);
+  const [afterCheck, afterPlan, afterIdentity] = await Promise.all([checkTaskPlan({ path: spec, recordPath }), readTaskPlan(recordPath), readTaskSourceIdentity(spec)]);
   if (!afterCheck.matches || !afterCheck.sourceComplete || afterPlan.digest !== plan.digest || afterIdentity.digest !== identity.digest) throw new Error('Task source changed while preparing request');
   const request = { parent: source.id, issueTypeId, summary: task.title, description: buildDescription(task) };
   const digest = createHash('sha256').update(JSON.stringify({ origin: source.source, request, taskPlanDigest: plan.digest, identityDigest: identity.digest })).digest('hex');
