@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
-import { lstat, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { lstat, open, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 import { parseImplementationPlan } from './plan-parser.js';
 
@@ -49,6 +51,33 @@ async function readDigest(path) {
   if (!Buffer.from(text, 'utf8').equals(bytes)) throw new Error('Plan is not valid UTF-8');
   return planReviewDigest(text);
 }
+const contextFiles = ['raw-story.md', 'dor.md', 'explain.md', 'research.md'];
+
+/** Fingerprint the local requirements context without exposing its contents. */
+async function readContext(planPath) {
+  const directory = dirname(planPath), hash = createHash('sha256');
+  for (const name of contextFiles) {
+    let file;
+    try {
+      file = await open(join(directory, name), constants.O_RDONLY | constants.O_NOFOLLOW);
+      const before = await file.stat();
+      if (!before.isFile() || before.size > 1024 * 1024) throw new Error('Invalid context file');
+      const bytes = Buffer.alloc(1024 * 1024 + 1);
+      let offset = 0;
+      while (offset < bytes.length) {
+        const result = await file.read(bytes, offset, bytes.length - offset, null);
+        if (!result.bytesRead) break;
+        offset += result.bytesRead;
+      }
+      const after = await file.stat();
+      if (offset > 1024 * 1024 || offset !== before.size || before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) throw new Error('Context changed');
+      hash.update(name, 'utf8').update('\0').update(String(offset), 'utf8').update('\0').update(bytes.subarray(0, offset));
+    } catch (error) { return { status: error?.code === 'ENOENT' ? 'missing' : 'unavailable', digest: null }; }
+    finally { if (file) await file.close(); }
+  }
+  return { status: 'complete', digest: hash.digest('hex') };
+}
+
 function cleanText(value, max) {
   if (typeof value !== 'string' || !value.trim() || value.length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) throw new TypeError('Invalid plan review text');
   return value;
@@ -64,17 +93,18 @@ export async function savePlanReview({ planPath, inputPath, outputPath }) {
   if (typeof outputPath !== 'string' || !outputPath.trim()) throw new TypeError('Output path is required');
   try { await lstat(outputPath); throw Object.assign(new Error('Output exists'), { code: 'EEXIST' }); }
   catch (error) { if (error?.code !== 'ENOENT') throw error; }
-  const digest = await readDigest(planPath);
+  const digest = await readDigest(planPath), context = await readContext(planPath);
   const review = validateReview(JSON.parse((await readLimitedFile(inputPath, 1024 * 1024)).toString('utf8')));
-  if (digest !== await readDigest(planPath)) throw new Error('Plan changed while recording review');
-  const record = { planDigest: digest, ...review };
+  const contextAfter = await readContext(planPath);
+  if (digest !== await readDigest(planPath) || context.status !== contextAfter.status || context.digest !== contextAfter.digest) throw new Error('Plan or requirements context changed while recording review');
+  const record = { planDigest: digest, contextDigest: context.digest, ...review };
   const json = JSON.stringify(record, null, 2);
   const maxTicks = (json.match(/`+/g) ?? []).reduce((max, run) => Math.max(max, run.length), 0);
   const fence = '`'.repeat(Math.max(3, maxTicks + 1));
   const report = `# Plan review record\n\nSupplied review conclusions follow. This editable record does not verify the plan, requirements or review. Execution statuses and provenance verification are excluded from the plan digest.\n\n${fence}json\n${json}\n${fence}\n`;
   if (Buffer.byteLength(report, 'utf8') > 2 * 1024 * 1024) throw new Error('Plan review exceeds size limit');
   await writeFile(outputPath, report, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-  return { path: outputPath, verdict: review.verdict, scope: 'Supplied conclusions only; review and plan correctness are not verified.' };
+  return { path: outputPath, verdict: review.verdict, contextStatus: context.status, scope: 'Supplied conclusions only; review and plan correctness are not verified.' };
 }
 
 /** Compare editable review conclusions against the current plan content. */
@@ -84,6 +114,8 @@ export async function checkPlanReview({ planPath, reportPath }) {
   if (!match) throw new Error('Unsupported plan review format');
   const saved = JSON.parse(match[2]), review = validateReview(saved);
   if (typeof saved.planDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.planDigest)) throw new Error('Invalid plan review digest');
-  const currentDigest = await readDigest(planPath);
-  return { verdict: review.verdict, planMatches: saved.planDigest === currentDigest, findings: review.findings.length, unresolved: review.unresolved.length, scope: 'Editable supplied review record only; matching content does not establish that the review occurred or that requirements are satisfied.' };
+  if (saved.contextDigest !== undefined && saved.contextDigest !== null && (typeof saved.contextDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.contextDigest))) throw new Error('Invalid requirements context digest');
+  const currentDigest = await readDigest(planPath), context = await readContext(planPath);
+  const contextMatches = saved.contextDigest == null || context.status === 'unavailable' ? null : context.status === 'missing' ? false : saved.contextDigest === context.digest;
+  return { verdict: review.verdict, planMatches: saved.planDigest === currentDigest, contextMatches, contextStatus: context.status, findings: review.findings.length, unresolved: review.unresolved.length, scope: 'Editable supplied review record only; matching local files do not establish that the review occurred or that requirements are satisfied. Files may change afterward.' };
 }

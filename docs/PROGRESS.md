@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Bound structured plan review records to available local requirements and research artifacts; missing or changed context requires inspection or a fresh review. Records remain editable and do not prove correctness.
+
 - Added editable structured plan review records, content consistency checks and review-aware workflow suggestions. Status-only transitions do not stale a review; actual review and correctness are not verified.
 
 - Added separate local AEM knowledge staging with byte comparison; it does not update target files or validate source contents.

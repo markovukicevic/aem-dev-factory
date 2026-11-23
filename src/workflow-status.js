@@ -24,7 +24,8 @@ export async function inspectWorkflowStatus({ path }) {
   else if (ticket.plan.counts.blocked > 0) phase = 'inspect-blocked-step';
   else if (ticket.plan.counts['in-progress'] > 0) phase = 'inspect-in-progress-step';
   else if (review?.format !== 'structured') phase = 'inspect-plan-review';
-  else if (!review.planMatches) phase = 'review-plan';
+  else if (!review.planMatches || review.contextMatches === false) phase = 'review-plan';
+  else if (review.contextMatches !== true) phase = 'inspect-plan-review';
   else if (review.verdict !== 'ready') phase = 'resolve-plan-review';
   else if (ticket.plan.next) { phase = 'execute-next-step'; nextStep = ticket.plan.next; }
   else if (status('verification.md') === 'missing') phase = 'verify-change';
