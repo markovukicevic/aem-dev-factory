@@ -9,8 +9,10 @@ Identify the target component, requirements, repository instructions and availab
 
 When the user has authorized a live AEM environment and the necessary tools are available, inspect the actual rendered component against the supplied requirements or design. Record the page, environment, revision when known, viewport, actions and observations. Do not claim visual, accessibility or responsive verification from local XML alone. If live AEM, browser access or reference designs are unavailable, report those checks as not run.
 
-Do not deploy, create or change remote AEM content, or send messages as a side effect. This initial workflow does not reproduce the original screenshot comparison, live deployment or automated fix loop.
+Do not deploy, create or change remote AEM content, or send messages as a side effect. This workflow does not yet provide live deployment or an automated fix loop.
 
 If axe-core JSON results are available from a real authorized browser run, `axe-summary`, `axe-report` and `axe-compare` can format observations and compare rule/selector candidates. Incomplete rules need manual review; the commands do not run a browser or establish accessibility conformance.
 
 For an explicitly authorized page, `axe-run <project-directory> <config.json> <new-output.json>` can use the project's existing Playwright and axe-core. Blocked resources, page timing, login and raw-result sensitivity require review; this does not establish accessibility conformance.
+
+For an explicitly authorized page, `aem-screenshot <project-directory> <config.json> <new-output.png>` uses the project's Playwright to capture a viewport or unique element. Inspect blocked requests, viewport and timing. Browser behavior has only been validated with a simulated browser; the screenshot alone does not prove correctness.
