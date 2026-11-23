@@ -315,6 +315,8 @@
 
 - Added identity-bound tracker source comparison and optional staging of a new fetched export without replacing local work; non-GitHub providers remain unverified live.
 
+- Added local source-bound task proposals and freshness checks with an initial task-breakdown skill. Remote task creation, closing and live tracker validation are not implemented.
+
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.
