@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-/** A read-only Jira Cloud issue client. Atlassian Document Format is preserved. */
+/** Jira Cloud issue client; writes require a separate explicit invocation. */
 export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThis.fetch, maxPages = 10 }) {
   let url;
   try { url = new URL(baseUrl); } catch { throw new TypeError('Invalid Jira Cloud URL'); }
@@ -60,6 +60,16 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
   }
   return {
     provider: 'jira',
+    async createSubtask({ parent, issueTypeId, summary, description }) {
+      if (typeof parent !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(parent) || typeof issueTypeId !== 'string' || !/^[1-9][0-9]{0,19}$/.test(issueTypeId) || typeof summary !== 'string' || !summary.trim() || summary.length > 255 || /[\u0000-\u001f\u007f]/.test(summary) || !description || description.type !== 'doc' || description.version !== 1 || !Array.isArray(description.content)) throw new TypeError('Invalid Jira subtask');
+      const project = parent.slice(0, parent.lastIndexOf('-'));
+      const payload = { fields: { project: { key: project }, parent: { key: parent }, issuetype: { id: issueTypeId }, summary, description } };
+      const response = await fetchImpl(`${origin}/rest/api/3/issue`, { method: 'POST', headers: { Accept: 'application/json', Authorization: authorization, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), redirect: 'error' });
+      if (!response.ok) throw new Error('Subtask request failed; inspect Jira before retrying');
+      const result = await response.json();
+      if (typeof result?.key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(result.key) || result.key.slice(0, result.key.lastIndexOf('-')).toLowerCase() !== project.toLowerCase()) throw new Error('Subtask response unclear; inspect Jira before retrying');
+      return { created: true, key: result.key, url: `${origin}/browse/${encodeURIComponent(result.key)}` };
+    },
     async getAttachmentMetadata(id) {
       attachmentId(id);
       const data = await get(`/rest/api/3/attachment/${id}`);

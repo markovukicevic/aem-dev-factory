@@ -62,3 +62,11 @@ export async function checkTaskPlan({ path, recordPath }) {
   const files = current.map((item, i) => ({ name: item.name, status: item.status, matches: item.status === record.sources[i].status && item.sha256 === record.sources[i].sha256 }));
   return { taskCount: tasks.length, files, sourceComplete: current.every(item => item.status === 'present'), matches: files.every(item => item.matches), scope: 'Editable proposal and local source comparison only; actual work, tracker state, estimates and requirements are not verified. Files may change afterward.' };
 }
+
+/** Read validated task content and a digest for explicit publication planning. */
+export async function readTaskPlan(recordPath) {
+  const bytes = await readFile(recordPath, 1024 * 1024);
+  const record = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  if (record?.version !== 1) throw new Error('Invalid task plan');
+  return { tasks: parseTasks(record), digest: hash(bytes) };
+}

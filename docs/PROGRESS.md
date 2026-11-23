@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added preview-bound explicit creation of one Jira subtask from a current local task plan; simulated transport only, no live task created and ambiguous writes require inspection.
+
 - Added allowlisted GitLab issue/MR and Bitbucket PR comment events with explicit mentions, storing comment IDs without comment text; no automated execution or live provider verification.
 
 - Added explicit Azure build-definition queueing with optional commit and selected-field build status, using simulated responses only; no live build was triggered.
