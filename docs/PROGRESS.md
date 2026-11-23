@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added local axe-core result summaries, non-overwriting reports and candidate before/after comparisons; no browser run, accessibility conformance or actual fixes are inferred.
+
 - Added arithmetic summaries for explicitly supplied task estimates and an initial estimation skill; unknown work remains unestimated and no tracker comment is posted.
 
 - Added bounded local CSS/Sass convention candidate discovery and an initial project-scan skill; names and paths are heuristic, values and live behavior are not checked.

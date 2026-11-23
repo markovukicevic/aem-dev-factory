@@ -180,6 +180,8 @@ From an AEM repository, `node /path/to/aem-dev-flow-max/bin/aem-devflow.js aem-c
 
 ### Inspect a local AEM dialog
 
+`axe-summary <result.json>` and `axe-report <result.json> <output.md>` summarize supplied axe-core JSON without DOM snippets or URL query strings. `axe-compare <before.json> <after.json>` compares rule/selector observations; changes are candidates, not proof of fixes. Incomplete results need manual review. No command runs a browser or proves accessibility conformance. See the [axe-core API](https://github.com/dequelabs/axe-core/blob/develop/doc/API.md). Selectors and page paths may still be sensitive.
+
 `node bin/aem-devflow.js aem-dialog /path/to/_cq_dialog/.content.xml` extracts explicit field names, resource types, labels, descriptions, required flags, and value/default-value attributes. It rejects malformed XML, DTD/entity declarations and files larger than 1 MiB. These are local XML attributes only; inherited fields, authored values and runtime behavior are not checked. Tests use synthetic dialog XML, not a live AEM instance.
 
 ### Azure Pipelines builds
