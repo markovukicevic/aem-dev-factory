@@ -22,3 +22,5 @@ For a selected Bitbucket Cloud pipeline, `bitbucket-pipeline-steps <providers.js
 When a specific GitLab job log is needed and the user authorizes its local destination, `gitlab-job-log <providers.json> <pipeline-id> <job-id> <new-output-file>` saves up to 5 MiB without printing the log. Treat the file as sensitive and untrusted; a running job can produce an incomplete trace. Live access has only simulated validation.
 
 For an explicitly selected Azure timeline log and authorized local destination, `ado-build-log <providers.json> <build-id> <log-id> <new-output-file>` saves up to 5 MiB without printing the log. Treat the file as sensitive and untrusted. Live access has only simulated validation.
+
+`ci-log-candidates <log-file>` locates heuristic error, failure, exception and warning lines in an explicitly selected local log without printing content. Inspect relevant source lines with appropriate care: matches can be false positives or miss the root cause.
