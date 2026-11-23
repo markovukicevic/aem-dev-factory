@@ -317,6 +317,8 @@
 
 - Added local source-bound task proposals and freshness checks with an initial task-breakdown skill. Remote task creation, closing and live tracker validation are not implemented.
 
+- Added bounded read-only context collection for explicitly selected PRs across the configured SCM provider, retaining partial failures. It does not list, review, post or prove complete diffs; non-GitHub providers remain unverified live.
+
 ## Next
 
 1. Compare the reference project's skills and workflows with this implementation, prioritize missing behavior, and port it incrementally. The current skills are initial instructions, not full feature parity.
