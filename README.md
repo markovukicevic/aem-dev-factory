@@ -266,7 +266,7 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 `automation-doctor <target-project>` checks local policy structure, configured secret presence, claim and queue records, and available provider configuration. GitHub/GitLab SCM paths can be compared with allowlists; a Bitbucket repository UUID requires separate verification. Missing runtime evidence stays unknown: this command does not inspect running listeners or cloud services.
 
-`project-workflow-doctor <project-directory> <codex|claude|copilot>` inspects local configuration markers, selected-client skill directories and whether the project's Node resolution finds Playwright and axe-core. When present, provider configuration is checked and credential presence reported without values. The command does not load packages or establish client discovery, MCP health, valid credentials or live access.
+`project-workflow-doctor <project-directory> <codex|claude|copilot>` inspects local configuration markers, selected-client skill directories and whether the project's Node resolution finds Playwright and axe-core. When present, provider configuration is checked and credential presence reported without values. The command does not load packages or establish client discovery, MCP health, valid credentials or live access. `project-provider-propose <project-directory>` derives non-secret SCM, CI and tracker candidates from a recognized local Git origin and reports local project signals. Candidates require review: trackers and CI can be independent, local remote metadata can be stale, and credentialed or unsupported URLs are not printed or interpreted. It does not write configuration or contact providers.
 
 Example local policy input (provide only providers you use):
 
