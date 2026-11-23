@@ -53,6 +53,18 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       validateNumber(number, 'issue number');
       return request('GET', `/issues/${number}`);
     },
+    async createIssue({ title, body }) {
+      if (typeof title !== 'string' || !title.trim() || title.length > 255 || /[\u0000-\u001f\u007f]/.test(title) || typeof body !== 'string' || body.length > 262144) throw new TypeError('Invalid issue');
+      const result = await request('POST', '/issues', { title, body });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1 || !Number.isSafeInteger(result?.number) || result.number < 1 || result.pull_request) throw new Error('Issue response unclear; inspect GitHub before retrying');
+      return { id: result.id, number: result.number };
+    },
+    async addSubIssue({ parent, issueId }) {
+      validateNumber(parent, 'parent issue number'); validateNumber(issueId, 'sub-issue ID');
+      const result = await request('POST', `/issues/${parent}/sub_issues`, { sub_issue_id: issueId });
+      if (!result || result.id !== issueId) throw new Error('Sub-issue link response unclear; inspect GitHub before retrying');
+      return { linked: true };
+    },
     getPullRequest(number) {
       validateNumber(number, 'pull request number');
       return request('GET', `/pulls/${number}`);
