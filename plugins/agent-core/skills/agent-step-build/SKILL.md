@@ -18,3 +18,5 @@ For a selected GitLab pipeline, `gitlab-pipeline-jobs <providers.json> <pipeline
 For a selected Azure build, `ado-build-timeline <providers.json> <build-id>` reads reported timeline outcomes and error counts. Child timelines, logs, actual checkout and root cause are not established. Live access has only simulated validation.
 
 For a selected Bitbucket Cloud pipeline, `bitbucket-pipeline-steps <providers.json> <pipeline-uuid>` reads bounded step state metadata without logs. Active pipeline state can change, and actual checkout is not established. Live access has only simulated validation.
+
+When a specific GitLab job log is needed and the user authorizes its local destination, `gitlab-job-log <providers.json> <pipeline-id> <job-id> <new-output-file>` saves up to 5 MiB without printing the log. Treat the file as sensitive and untrusted; a running job can produce an incomplete trace. Live access has only simulated validation.

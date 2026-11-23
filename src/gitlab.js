@@ -190,6 +190,22 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       if (!result || !Number.isSafeInteger(result.id) || result.id < 1) throw new Error('Pipeline request may have been accepted; inspect provider before retrying');
       return { accepted: true, id: result.id, status: typeof result.status === 'string' ? result.status : null, sha: typeof result.sha === 'string' && /^[a-f0-9]{40,64}$/i.test(result.sha) ? result.sha : null };
     },
+    async getJob(id) { iid(id); return (await get(`/jobs/${id}`)).data; },
+    async getJobTrace(id) {
+      iid(id);
+      const response = await fetchImpl(`${root}/jobs/${id}/trace`, { method: 'GET', headers: { Accept: 'text/plain', 'PRIVATE-TOKEN': token }, redirect: 'error' });
+      if (!response.ok || !response.body?.getReader) throw new Error('Job trace unavailable');
+      const reader = response.body.getReader(), chunks = []; let size = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read(); if (done) break;
+          if (!(value instanceof Uint8Array)) throw new Error('Invalid job trace stream');
+          size += value.byteLength; if (size > 5 * 1024 * 1024) { await reader.cancel(); throw new Error('Job trace exceeds size limit'); }
+          chunks.push(Buffer.from(value));
+        }
+      } finally { reader.releaseLock(); }
+      return Buffer.concat(chunks, size);
+    },
     async listPipelineJobs(id, { page = 1 } = {}) {
       iid(id);
       if (!Number.isSafeInteger(page) || page < 1) throw new TypeError('Invalid pipeline jobs page');
