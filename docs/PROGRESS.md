@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added arithmetic summaries for explicitly supplied task estimates and an initial estimation skill; unknown work remains unestimated and no tracker comment is posted.
+
 - Added bounded local CSS/Sass convention candidate discovery and an initial project-scan skill; names and paths are heuristic, values and live behavior are not checked.
 
 - Added bounded local Node/Maven/AEM project-profile signals and an initial project-adaptation workflow, without executing scripts or modifying project settings.
