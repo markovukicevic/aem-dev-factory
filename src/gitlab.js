@@ -81,6 +81,7 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       return { values: result.data, nextPage: result.headers?.get?.('x-next-page') || null };
     },
     getPullRequestComments(number) { return notes('merge_requests', number); },
+    async listPullRequestsPage() { return (await get('/merge_requests?state=opened&scope=all&per_page=20&page=1')).data; },
     async listOpenPullRequests({ head, base }) {
       branchRef(head);
       branchRef(base);

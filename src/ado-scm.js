@@ -56,6 +56,7 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
       validId(number);
       return request(`${root}/${number}/threads?api-version=7.1`);
     },
+    listPullRequestsPage() { return request(`${root}?searchCriteria.status=active&%24top=20&api-version=7.1`); },
     async listActivePullRequests({ head, base }) {
       const query = new URLSearchParams({ 'searchCriteria.sourceRefName': branchRef(head), 'searchCriteria.targetRefName': branchRef(base), 'searchCriteria.status': 'active', '$top': '1', 'api-version': '7.1' });
       const result = await request(`${root}?${query}`);

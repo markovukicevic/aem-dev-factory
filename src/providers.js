@@ -28,16 +28,16 @@ export function createTrackerProvider(config, options = {}) {
 export function createScmProvider(config, options = {}) {
   if (config?.provider === 'gitlab') {
     const client = createGitLabClient({ project: config.project, token: options.gitlabToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
-    return { provider: 'gitlab', getPullRequest: client.getPullRequest, getPullRequestComments: client.getPullRequestComments, listMergeRequestDiffs: client.listMergeRequestDiffs, getMergeRequestCommits: client.getMergeRequestCommits, createPullRequest: client.createPullRequest };
+    return { provider: 'gitlab', listPullRequestsPage: client.listPullRequestsPage, getPullRequest: client.getPullRequest, getPullRequestComments: client.getPullRequestComments, listMergeRequestDiffs: client.listMergeRequestDiffs, getMergeRequestCommits: client.getMergeRequestCommits, createPullRequest: client.createPullRequest };
   }
   if (config?.provider === 'bitbucket-cloud') {
     const client = createBitbucketClient({ workspace: config.workspace, repository: config.repository, token: options.bitbucketToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
-    return { provider: 'bitbucket-cloud', getPullRequest: client.getPullRequest, getPullRequestStatuses: client.getPullRequestStatuses, getPullRequestCommits: client.getPullRequestCommits, getPullRequestDiffstat: client.getPullRequestDiffstat, getPullRequestComments: client.getPullRequestComments, getRepository: client.getRepository, createPullRequest: client.createPullRequest };
+    return { provider: 'bitbucket-cloud', listPullRequestsPage: client.listPullRequestsPage, getPullRequest: client.getPullRequest, getPullRequestStatuses: client.getPullRequestStatuses, getPullRequestCommits: client.getPullRequestCommits, getPullRequestDiffstat: client.getPullRequestDiffstat, getPullRequestComments: client.getPullRequestComments, getRepository: client.getRepository, createPullRequest: client.createPullRequest };
   }
   if (config?.provider === 'ado') return createAdoScm({ organization: config.organization, project: config.project, repository: config.repository, token: options.adoToken, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
   if (config?.provider !== 'github') throw new Error('Unsupported SCM provider');
   const client = githubClient(config, options);
-  return { provider: 'github', getPullRequest: number => client.getPullRequest(number), listPullRequestFiles: client.listPullRequestFiles, listPullRequestCommits: client.listPullRequestCommits, listIssueComments: client.listIssueComments, listReviewComments: client.listReviewComments, listReviews: client.listReviews, createPullRequest: input => client.createPullRequest(input) };
+  return { provider: 'github', listPullRequestsPage: client.listPullRequestsPage, getPullRequest: number => client.getPullRequest(number), listPullRequestFiles: client.listPullRequestFiles, listPullRequestCommits: client.listPullRequestCommits, listIssueComments: client.listIssueComments, listReviewComments: client.listReviewComments, listReviews: client.listReviews, createPullRequest: input => client.createPullRequest(input) };
 }
 
 export function createCiProvider(config, options = {}) {

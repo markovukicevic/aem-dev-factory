@@ -70,6 +70,7 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
       number(id);
       return collect(`${root}/pullrequests/${id}/comments`, new URLSearchParams({ pagelen: '100' }));
     },
+    listPullRequestsPage() { return get(endpoint('/pullrequests?state=OPEN&pagelen=20')); },
     listOpenPullRequests({ head, base }) {
       branchRef(head);
       branchRef(base);
