@@ -52,6 +52,17 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
       }
       return { changes, complete: false };
     },
+    getPullRequestThread(number, threadId) {
+      validId(number); validId(threadId);
+      return request(`${root}/${number}/threads/${threadId}?api-version=7.1`);
+    },
+    async replyPullRequestThread({ number, threadId, commentId, body }) {
+      validId(number); validId(threadId);
+      if (!Number.isSafeInteger(commentId) || commentId < 1 || commentId > 32767 || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid Azure reply');
+      const result = await request(`${root}/${number}/threads/${threadId}/comments?api-version=7.1`, { method: 'POST', body: { parentCommentId: commentId, content: body, commentType: 'text' } });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Comment response unclear; inspect Azure before retrying');
+      return { sent: true, id: result.id };
+    },
     getPullRequestThreads(number) {
       validId(number);
       return request(`${root}/${number}/threads?api-version=7.1`);
