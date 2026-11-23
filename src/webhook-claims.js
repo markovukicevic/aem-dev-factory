@@ -16,6 +16,14 @@ export async function listWebhookClaims({ directory, maxEntries = 10000 }) {
     try {
       if (!entry.isFile() || entry.isSymbolicLink()) throw new Error('Invalid claim');
       const record = JSON.parse((await readLimitedFile(join(directory, entry.name), 16384)).toString('utf8'));
+      if (record.version === 2) {
+        const uuid = /^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i;
+        if (record.digest !== entry.name.slice(0, 64) || !['gitlab', 'bitbucket-cloud'].includes(record.provider) || typeof record.deliveryId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(record.deliveryId) || typeof record.claimedAt !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(record.claimedAt) || typeof record.bodyDigest !== 'string' || !/^[a-f0-9]{64}$/.test(record.bodyDigest) || !Number.isSafeInteger(record.number) || record.number < 1) throw new Error('Invalid provider claim');
+        const gitlab = record.provider === 'gitlab';
+        if (gitlab ? typeof record.repository !== 'string' || !/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+$/.test(record.repository) || typeof record.actor !== 'string' || !/^[A-Za-z0-9_.-]+$/.test(record.actor) || !['issue', 'pull-request'].includes(record.kind) || !['opened', 'reopened', 'updated'].includes(record.action) : typeof record.repository !== 'string' || !uuid.test(record.repository) || typeof record.actor !== 'string' || !uuid.test(record.actor) || record.kind !== 'pull-request' || record.action !== 'observed' || !['pullrequest:created', 'pullrequest:updated'].includes(record.eventHeader)) throw new Error('Invalid provider claim metadata');
+        claims.push({ digest: record.digest, provider: record.provider, deliveryId: record.deliveryId, claimedAt: record.claimedAt, metadataAvailable: true, repository: record.repository, actor: record.actor, kind: record.kind, number: record.number, action: record.action, bodyDigest: record.bodyDigest, ...(gitlab ? {} : { eventHeader: record.eventHeader }) });
+        continue;
+      }
       if (record.digest !== entry.name.slice(0, 64) || typeof record.deliveryId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(record.deliveryId) || typeof record.claimedAt !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(record.claimedAt)) throw new Error('Invalid claim');
       const metadata = ['repository', 'actor', 'kind', 'number', 'action'];
       const legacy = metadata.every(key => record[key] === undefined);
@@ -23,5 +31,5 @@ export async function listWebhookClaims({ directory, maxEntries = 10000 }) {
       claims.push({ digest: record.digest, deliveryId: record.deliveryId, claimedAt: record.claimedAt, ...(legacy ? { metadataAvailable: false } : { metadataAvailable: true, repository: record.repository, actor: record.actor, kind: record.kind, number: record.number, action: record.action }) });
     } catch { errors.push({ file: entry.name, message: 'Claim is invalid or unreadable' }); }
   }
-  return { claims, errors, complete: errors.length === 0, scope: 'Local claim records only; headers are not signed and task execution is not established.' };
+  return { claims, errors, complete: errors.length === 0, scope: 'Editable local claim records only; signatures are not reverified and task execution is not established. Some provider headers are unsigned.' };
 }

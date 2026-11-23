@@ -4,12 +4,25 @@ import { readLimitedFile } from './read-limited.js';
 import { listWebhookClaims } from './webhook-claims.js';
 
 export function validateAutomationPolicy(policy) {
-  if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['allowedRepositories', 'allowedActors'].includes(key))) throw new TypeError('Invalid automation policy');
-  for (const [field, pattern] of [['allowedRepositories', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/], ['allowedActors', /^[A-Za-z0-9-]+$/]]) {
-    const values = policy[field];
-    if (!Array.isArray(values) || !values.length || values.length > 100 || values.some(value => typeof value !== 'string' || value.length > 200 || !pattern.test(value)) || new Set(values.map(value => value.toLowerCase())).size !== values.length) throw new TypeError('Invalid allowlist');
+  if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['allowedRepositories', 'allowedActors', 'gitlab', 'bitbucket'].includes(key))) throw new TypeError('Invalid automation policy');
+  const result = {};
+  const check = (value, name, pattern) => {
+    if (!Array.isArray(value) || !value.length || value.length > 100 || value.some(item => typeof item !== 'string' || item.length > 200 || !pattern.test(item)) || new Set(value.map(item => item.toLowerCase())).size !== value.length) throw new TypeError(`Invalid ${name}`);
+    return [...value];
+  };
+  const uuid = /^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i;
+  if (policy.allowedRepositories !== undefined || policy.allowedActors !== undefined) {
+    result.allowedRepositories = check(policy.allowedRepositories, 'GitHub repositories', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
+    result.allowedActors = check(policy.allowedActors, 'GitHub actors', /^[A-Za-z0-9-]+$/);
   }
-  return { allowedRepositories: [...policy.allowedRepositories], allowedActors: [...policy.allowedActors] };
+  for (const [name, repoKey, repoPattern, actorPattern] of [['gitlab', 'allowedProjects', /^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+$/, /^[A-Za-z0-9_.-]+$/], ['bitbucket', 'allowedRepositories', uuid, uuid]]) {
+    if (policy[name] === undefined) continue;
+    const item = policy[name];
+    if (!item || typeof item !== 'object' || Array.isArray(item) || Object.keys(item).some(key => ![repoKey, 'allowedActors'].includes(key))) throw new TypeError('Invalid provider policy');
+    result[name] = { [repoKey]: check(item[repoKey], name, repoPattern), allowedActors: check(item.allowedActors, name, actorPattern) };
+  }
+  if (!Object.keys(result).length) throw new TypeError('At least one provider policy is required');
+  return result;
 }
 
 export async function projectAutomationDirectory(target, create) {
@@ -30,7 +43,7 @@ export async function initializeLocalAutomation({ target, config }) {
   const policy = validateAutomationPolicy(config);
   const directory = await projectAutomationDirectory(target, true), path = join(directory, 'policy.json');
   await writeFile(path, `${JSON.stringify(policy, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
-  return { path, claimsDirectory: join(directory, 'claims'), scope: 'Local GitHub receiver policy only; no listener, agent, CI pipeline, cloud resources or remote configuration was created. Keep the webhook secret in the environment.' };
+  return { path, claimsDirectory: join(directory, 'claims'), scope: 'Local provider allowlists only; no listener, agent, CI pipeline, cloud resources or remote configuration was created. Keep the webhook secret in the environment.' };
 }
 
 /** Inspect only local policy and claim records; no network access or mutation. */
@@ -51,5 +64,6 @@ export async function inspectLocalAutomation({ target, env = process.env }) {
     for (const claim of result.claims) { const kind = claim.kind ?? 'legacy-unknown'; byKind[kind] = (byKind[kind] ?? 0) + 1; }
     claims = { status: result.complete ? 'readable' : 'incomplete', count: result.claims.length, invalid: result.errors.length, byKind };
   } catch (error) { claims = { status: error?.code === 'ENOENT' ? 'missing' : 'unavailable', count: null, invalid: null, byKind: null }; }
-  return { configured: typeof policy === 'object', policy: typeof policy === 'object' ? { status: 'valid', repositories: policy.allowedRepositories.length, actors: policy.allowedActors.length } : { status: policy }, claims, secretPresent: typeof env.GITHUB_WEBHOOK_SECRET === 'string' && !!env.GITHUB_WEBHOOK_SECRET.trim(), scope: 'Local policy and claim metadata only; configured secret validity, active listeners, delivery, cloud health, task execution and readiness were not checked. Claims may change afterward.' };
+  const secrets = { github: !!env.GITHUB_WEBHOOK_SECRET?.trim(), gitlab: !!env.GITLAB_WEBHOOK_SIGNING_TOKEN?.trim(), bitbucket: !!env.BITBUCKET_WEBHOOK_SECRET?.trim() };
+  return { secrets, configured: typeof policy === 'object', policy: typeof policy === 'object' ? { status: 'valid', providers: [...(policy.allowedRepositories ? ['github'] : []), ...(policy.gitlab ? ['gitlab'] : []), ...(policy.bitbucket ? ['bitbucket-cloud'] : [])] } : { status: policy }, claims, secretPresent: typeof env.GITHUB_WEBHOOK_SECRET === 'string' && !!env.GITHUB_WEBHOOK_SECRET.trim(), scope: 'Local policy and claim metadata only; configured secret validity, active listeners, delivery, cloud health, task execution and readiness were not checked. Claims may change afterward.' };
 }

@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Connected explicitly verified GitLab and Bitbucket webhook claims to provider-specific local allowlists and the existing metadata queue. No listener, worker, live delivery or authenticity of editable records is established.
+
 - Added offline Bitbucket Cloud SHA-256 webhook verification with repository and actor UUID allowlists; synthetic input only, with no replay protection, listener or execution.
 
 - Added offline GitLab signing-token verification and allowlisted issue/MR classification with a timestamp window; synthetic signatures only, no replay store, listener or execution.
