@@ -3,7 +3,7 @@ import { branchRef } from './git-ref.js';
 
 /** Read Azure DevOps builds and queue only explicitly selected definitions. */
 export function createAdoCi({ organization, project, token, fetchImpl = globalThis.fetch }) {
-  const { request, requestWithMetadata } = createAdoHttp({ organization, project, token, fetchImpl });
+  const { request, requestWithMetadata, requestBytes } = createAdoHttp({ organization, project, token, fetchImpl });
   return {
     provider: 'ado-pipelines',
     async dispatchPipeline({ definition, branch, commit }) {
@@ -16,6 +16,10 @@ export function createAdoCi({ organization, project, token, fetchImpl = globalTh
     getBuild(id) {
       if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) throw new TypeError('Invalid build ID');
       return request(`/_apis/build/builds/${id}?api-version=7.1`);
+    },
+    getBuildLog(buildId, logId) {
+      if (![buildId, logId].every(id => Number.isSafeInteger(id) && id > 0 && id <= 2147483647)) throw new TypeError('Invalid build log ID');
+      return requestBytes(`/_apis/build/builds/${buildId}/logs/${logId}?api-version=7.1`);
     },
     getBuildTimeline(id) {
       if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) throw new TypeError('Invalid build ID');

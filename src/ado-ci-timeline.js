@@ -9,7 +9,7 @@ export async function readAzureBuildTimeline({ ci, buildId }) {
   const records = timeline.records.map(item => {
     if (typeof item?.id !== 'string' || !/^[a-f0-9-]{36}$/i.test(item.id) || seen.has(item.id)) throw new Error('Invalid timeline record');
     seen.add(item.id);
-    return { id: item.id, parentId: safe(item.parentId), name: safe(item.name), type: safe(item.type), state: safe(item.state), result: safe(item.result), attempt: Number.isSafeInteger(item.attempt) ? item.attempt : null, errors: Number.isSafeInteger(item.errorCount) ? item.errorCount : null, warnings: Number.isSafeInteger(item.warningCount) ? item.warningCount : null };
+    return { id: item.id, parentId: safe(item.parentId), name: safe(item.name), type: safe(item.type), state: safe(item.state), result: safe(item.result), attempt: Number.isSafeInteger(item.attempt) ? item.attempt : null, logId: Number.isSafeInteger(item.log?.id) && item.log.id > 0 ? item.log.id : null, errors: Number.isSafeInteger(item.errorCount) ? item.errorCount : null, warnings: Number.isSafeInteger(item.warningCount) ? item.warningCount : null };
   });
   const after = await ci.getBuild(buildId);
   if (!valid(after) || after.sourceVersion !== before.sourceVersion) throw new Error('Build changed during inspection');

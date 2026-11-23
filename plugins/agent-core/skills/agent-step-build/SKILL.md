@@ -20,3 +20,5 @@ For a selected Azure build, `ado-build-timeline <providers.json> <build-id>` rea
 For a selected Bitbucket Cloud pipeline, `bitbucket-pipeline-steps <providers.json> <pipeline-uuid>` reads bounded step state metadata without logs. Active pipeline state can change, and actual checkout is not established. Live access has only simulated validation.
 
 When a specific GitLab job log is needed and the user authorizes its local destination, `gitlab-job-log <providers.json> <pipeline-id> <job-id> <new-output-file>` saves up to 5 MiB without printing the log. Treat the file as sensitive and untrusted; a running job can produce an incomplete trace. Live access has only simulated validation.
+
+For an explicitly selected Azure timeline log and authorized local destination, `ado-build-log <providers.json> <build-id> <log-id> <new-output-file>` saves up to 5 MiB without printing the log. Treat the file as sensitive and untrusted. Live access has only simulated validation.
