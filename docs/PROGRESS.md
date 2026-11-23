@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added local automation diagnostics covering policy, secret presence, claims, queue and provider configuration; listener and cloud health remain unknown.
+
 - Bound Jira subtask previews to the parent issue update timestamp; changes before submission invalidate the preview, while a separate source comparison identifies older local requirements.
 
 - Added preview-bound GitLab child work item creation using explicit type and parent global IDs; simulated GraphQL only, no live creation and unconfirmed relationships are reported.

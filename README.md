@@ -250,6 +250,21 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Offline GitHub webhook inspection
 
+`automation-doctor <target-project>` checks local policy structure, configured secret presence, claim and queue records, and available provider configuration. GitHub/GitLab SCM paths can be compared with allowlists; a Bitbucket repository UUID requires separate verification. Missing runtime evidence stays unknown: this command does not inspect running listeners or cloud services.
+
+Example local policy input (provide only providers you use):
+
+```json
+{
+  "allowedRepositories": ["example/repository"],
+  "allowedActors": ["example-user"],
+  "gitlab": { "allowedProjects": ["group/project"], "allowedActors": ["example-user"] },
+  "bitbucket": { "allowedRepositories": ["{11111111-1111-1111-1111-111111111111}"], "allowedActors": ["{22222222-2222-2222-2222-222222222222}"] }
+}
+```
+
+The UUIDs are examples; use the actual Bitbucket UUIDs in a real policy.
+
 GitLab issue/MR comments and Bitbucket PR comments starting with `@aem-dev` can also be inspected and claimed. Comment IDs, not comment text, are stored. GitLab requires a new non-system note and matching target ID. Bitbucket event headers are unsigned, so creation versus update is not authenticated. Comment text remains untrusted and never runs a task by itself.
 
 `automation-job-context <target-project> <claim-sha256> <providers.json>` fetches read-only tracker or PR context for one queued claim after matching the configured provider and repository or project, and rechecks the local claim and policy afterward. Bitbucket repository UUID is checked via the provider. GitHub, GitLab and Bitbucket paths have only simulated automation-context validation; fetched content is untrusted, may be incomplete and does not trigger an agent.
