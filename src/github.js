@@ -151,6 +151,12 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       if (typeof location !== 'string' || !location || location.length > 8192) throw new Error('GitHub log redirect unavailable');
       return location;
     },
+    async retryFailedWorkflowJobs(id) {
+      validateNumber(id, 'workflow run ID');
+      const response = await fetchImpl(`https://api.github.com${path}/actions/runs/${id}/rerun-failed-jobs`, { method: 'POST', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'error', signal: AbortSignal.timeout(30000) });
+      if (response.status !== 201 || response.redirected) throw new Error('Retry response unclear; inspect GitHub before retrying');
+      return { accepted: true };
+    },
     listWorkflowRunJobs(number, { page = 1, perPage = 100 } = {}) {
       validateNumber(number, 'workflow run ID');
       return request('GET', `/actions/runs/${number}/jobs${pageQuery(page, perPage)}&filter=latest`);

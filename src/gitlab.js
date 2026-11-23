@@ -213,6 +213,12 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       if (!Array.isArray(data) || data.length > 100) throw new Error('Invalid pipeline jobs response');
       return { values: data, nextPage: headers?.get?.('x-next-page') || null };
     },
+    async retryPipeline(id) {
+      iid(id);
+      const result = (await request(`/pipelines/${id}/retry`, { method: 'POST' })).data;
+      if (result?.id !== id) throw new Error('Retry response unclear; inspect GitLab before retrying');
+      return { accepted: true, id };
+    },
     async getPipeline(id) { iid(id); return (await get(`/pipelines/${id}`)).data; },
     async listPipelines({ sha, page = 1, perPage = 100 } = {}) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha) || !Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100) throw new TypeError('Invalid GitLab pipeline query');
