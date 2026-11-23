@@ -82,6 +82,43 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       const hierarchy = Array.isArray(item.widgets) ? item.widgets.find(widget => widget?.__typename === 'WorkItemWidgetHierarchy') : null;
       return { created: true, iid: Number(item.iid), linked: !response?.errors?.length && Array.isArray(data.errors) && data.errors.length === 0 && hierarchy?.parent?.id === parentId };
     },
+    async getIssueMetadata(number) { iid(number); return (await get(`/issues/${number}`)).data; },
+    async getMergeRequestDiscussions(number) {
+      iid(number);
+      let page = 1;
+      const values = [];
+      for (let count = 0; count < maxPages; count++) {
+        const { data, headers } = await get(`/merge_requests/${number}/discussions?per_page=100&page=${page}`);
+        if (!Array.isArray(data) || data.length > 100) throw new Error('Invalid GitLab discussions response');
+        values.push(...data);
+        const next = headers?.get?.('x-next-page');
+        if (next !== null && next !== undefined && next !== '') {
+          if (!/^[1-9][0-9]*$/.test(next) || !Number.isSafeInteger(Number(next)) || Number(next) <= page) throw new Error('Invalid GitLab next page');
+          page = Number(next);
+        } else if (data.length === 100) page++;
+        else return values;
+      }
+      throw new Error('GitLab page limit reached; discussions are incomplete');
+    },
+    async getMergeRequestDiscussion(number, discussionId) {
+      iid(number);
+      if (typeof discussionId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(discussionId)) throw new TypeError('Invalid GitLab discussion ID');
+      return (await get(`/merge_requests/${number}/discussions/${discussionId}`)).data;
+    },
+    async createIssueNote({ number, body }) {
+      iid(number);
+      if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid GitLab note');
+      const data = (await request(`/issues/${number}/notes`, { method: 'POST', body: { body } })).data;
+      if (!Number.isSafeInteger(data?.id) || data.id < 1) throw new Error('Note response unclear; inspect GitLab before retrying');
+      return { sent: true, id: data.id };
+    },
+    async replyMergeRequestDiscussion({ number, discussionId, body }) {
+      iid(number);
+      if (typeof discussionId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(discussionId) || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid GitLab discussion reply');
+      const data = (await request(`/merge_requests/${number}/discussions/${discussionId}/notes`, { method: 'POST', body: { body } })).data;
+      if (!Number.isSafeInteger(data?.id) || data.id < 1) throw new Error('Reply response unclear; inspect GitLab before retrying');
+      return { sent: true, id: data.id };
+    },
     async getTicket(number) {
       iid(number);
       const { data: issue } = await get(`/issues/${number}`);
