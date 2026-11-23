@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added initial small-change, focused simplification and project-pattern workflows using existing local AEM and project inspection; live authoring and client behavior remain unverified.
+
 - Added explicit one-page axe execution through target-project Playwright and axe-core, with restricted request origins/methods and non-overwriting raw results; simulated browser only, no live AEM validation.
 
 - Added local axe-core result summaries, non-overwriting reports and candidate before/after comparisons; no browser run, accessibility conformance or actual fixes are inferred.
