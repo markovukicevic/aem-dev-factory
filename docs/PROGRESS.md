@@ -1,5 +1,9 @@
 # Progress
 
+## 2026-11-23
+
+- Added a local ticket workflow phase suggestion and initial requirements-to-implementation coordination skills. Artifact presence and plan statuses do not verify readiness or checks.
+
 ## 2026-11-22
 
 - Connected explicitly configured AEM component roots to bounded local component discovery; live AEM and inherited behavior remain unverified.

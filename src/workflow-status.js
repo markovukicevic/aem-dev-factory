@@ -1,0 +1,24 @@
+import { inspectTicketDirectory } from './ticket-status.js';
+
+/** Suggest a workflow phase from local artifacts and declared statuses only. */
+export async function inspectWorkflowStatus({ path }) {
+  const ticket = await inspectTicketDirectory(path);
+  const status = name => ticket.files.find(item => item.name === name)?.status ?? 'missing';
+  const critical = ['source-identity.json', 'raw-story.md', 'dor.md', 'explain.md', 'research.md', 'implement.md', 'validation-report.md', 'verification.md', 'dod.md'];
+  const unsafe = critical.filter(name => !['present', 'missing'].includes(status(name)));
+  const missing = critical.filter(name => status(name) === 'missing');
+  let phase, nextStep = null;
+  if (unsafe.length) phase = 'inspect-unreadable-artifacts';
+  else if (status('raw-story.md') === 'missing') phase = 'collect-source';
+  else if (['dor.md', 'explain.md', 'research.md'].some(name => status(name) === 'missing')) phase = 'prepare-requirements';
+  else if (status('implement.md') === 'missing') phase = 'prepare-plan';
+  else if (status('validation-report.md') === 'missing') phase = 'review-plan';
+  else if (!ticket.plan) phase = 'inspect-plan';
+  else if (ticket.plan.counts.blocked > 0) phase = 'inspect-blocked-step';
+  else if (ticket.plan.counts['in-progress'] > 0) phase = 'inspect-in-progress-step';
+  else if (ticket.plan.next) { phase = 'execute-next-step'; nextStep = ticket.plan.next; }
+  else if (status('verification.md') === 'missing') phase = 'verify-change';
+  else if (status('dod.md') === 'missing') phase = 'review-definition-of-done';
+  else phase = 'review-existing-evidence';
+  return { path, phase, nextStep, missing, unsafe, sourceIdentityAvailable: !!ticket.identity, plan: ticket.plan, scope: 'Suggestions from local artifact presence and declared statuses only. Requirement readiness, plan approval, completed checks, source identity and release readiness are not verified; inspect the actual evidence before acting.' };
+}
