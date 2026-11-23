@@ -106,8 +106,13 @@ export async function runHubTask({ cwd, task, expectedDigest }, { inspect = read
       try { result = await run({ cwd: snapshot.path, executable: task.executable, args: task.args, timeoutMs: task.timeoutMs }); } catch { result = { passed: false, exitCode: null }; }
       const passed = result?.passed === true && result.exitCode === 0;
       if (!passed) stopped = true;
+      let endingGit = null;
+      try {
+        const end = await inspect(snapshot.path);
+        if (typeof end?.head === 'string' && end.head && /^[a-f0-9]{40,64}$/i.test(end.commit ?? '') && typeof end.workingTreeClean === 'boolean') endingGit = { head: end.head, commit: end.commit, workingTreeClean: end.workingTreeClean };
+      } catch { /* An unavailable or detached repository leaves ending state unknown. */ }
       status.repos[name] = passed ? 'done' : 'failed';
-      status.details[name] = { state: passed ? 'process-succeeded' : 'process-failed', startingCommit: snapshot.commit, exitCode: Number.isInteger(result?.exitCode) ? result.exitCode : null };
+      status.details[name] = { state: passed ? 'process-succeeded' : 'process-failed', startingCommit: snapshot.commit, exitCode: Number.isInteger(result?.exitCode) ? result.exitCode : null, endingGit };
       await persist();
     }
   }

@@ -34,7 +34,8 @@ function localDetails(data) {
     if (!Object.hasOwn(data.details, name) || !item || typeof item !== 'object' || Array.isArray(item) || !allowed[data.repos[name]].includes(item.state)) throw new Error('Invalid local task details');
     if (item.startingCommit !== undefined && (typeof item.startingCommit !== 'string' || !/^[a-f0-9]{40,64}$/i.test(item.startingCommit))) throw new Error('Invalid starting commit');
     if (item.exitCode !== undefined && item.exitCode !== null && !Number.isSafeInteger(item.exitCode)) throw new Error('Invalid exit code');
-    return [name, { state: item.state, ...(item.startingCommit !== undefined ? { startingCommit: item.startingCommit } : {}), ...(item.exitCode !== undefined ? { exitCode: item.exitCode } : {}) }];
+    if (item.endingGit !== undefined && item.endingGit !== null && (typeof item.endingGit !== 'object' || Array.isArray(item.endingGit) || typeof item.endingGit.head !== 'string' || !item.endingGit.head || !/^[a-f0-9]{40,64}$/i.test(item.endingGit.commit ?? '') || typeof item.endingGit.workingTreeClean !== 'boolean')) throw new Error('Invalid ending Git state');
+    return [name, { state: item.state, ...(item.startingCommit !== undefined ? { startingCommit: item.startingCommit } : {}), ...(item.exitCode !== undefined ? { exitCode: item.exitCode } : {}), ...(item.endingGit !== undefined ? { endingGit: item.endingGit } : {}) }];
   }));
 }
 
