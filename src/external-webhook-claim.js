@@ -15,8 +15,8 @@ export async function claimExternalWebhook({ provider, body, headers, policy, se
   const bodyDigest = hash(body);
   const digest = provider === 'gitlab' ? hash(`gitlab\0${result.id}`) : hash(`bitbucket-cloud\0${bodyDigest}`);
   const deliveryId = provider === 'gitlab' ? result.id : `body-${bodyDigest}`;
-  const action = provider === 'gitlab' ? ({ open: 'opened', reopen: 'reopened', update: 'updated' })[result.action] : 'observed';
-  const record = { version: 2, provider, digest, bodyDigest, deliveryId, claimedAt: new Date(now).toISOString(), repository: provider === 'gitlab' ? result.project : result.repository, actor: result.actor, kind: provider === 'gitlab' && result.kind === 'issue' ? 'issue' : 'pull-request', number: result.number, action, ...(provider === 'bitbucket-cloud' ? { eventHeader: result.eventHeader } : {}) };
+  const action = provider === 'gitlab' ? ({ open: 'opened', reopen: 'reopened', update: 'updated', create: 'created' })[result.action] : 'observed';
+  const record = { version: 2, provider, digest, bodyDigest, deliveryId, claimedAt: new Date(now).toISOString(), repository: provider === 'gitlab' ? result.project : result.repository, actor: result.actor, kind: provider === 'gitlab' && result.kind === 'merge_request' ? 'pull-request' : result.kind, number: result.number, action, ...(result.commentId ? { commentId: result.commentId } : {}), ...(provider === 'bitbucket-cloud' ? { eventHeader: result.eventHeader } : {}) };
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const info = await lstat(directory);
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Invalid claim directory');

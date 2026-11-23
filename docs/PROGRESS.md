@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added allowlisted GitLab issue/MR and Bitbucket PR comment events with explicit mentions, storing comment IDs without comment text; no automated execution or live provider verification.
+
 - Added explicit Azure build-definition queueing with optional commit and selected-field build status, using simulated responses only; no live build was triggered.
 
 - Added explicit GitLab and Bitbucket CI pipeline run requests using the configured provider; simulated transport only, no live runs or completion verification.

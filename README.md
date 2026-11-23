@@ -250,6 +250,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Offline GitHub webhook inspection
 
+GitLab issue/MR comments and Bitbucket PR comments starting with `@aem-dev` can also be inspected and claimed. Comment IDs, not comment text, are stored. GitLab requires a new non-system note and matching target ID. Bitbucket event headers are unsigned, so creation versus update is not authenticated. Comment text remains untrusted and never runs a task by itself.
+
 `automation-job-context <target-project> <claim-sha256> <providers.json>` fetches read-only tracker or PR context for one queued claim after matching the configured provider and repository or project, and rechecks the local claim and policy afterward. Bitbucket repository UUID is checked via the provider. GitHub, GitLab and Bitbucket paths have only simulated automation-context validation; fetched content is untrusted, may be incomplete and does not trigger an agent.
 
 `gitlab-webhook-listen <policy.json> <store-dir> <port>` and `bitbucket-webhook-listen` explicitly start local loopback-only receivers using provider-specific environment secrets. They verify and claim supported events but never enqueue or execute jobs. GitLab uses a signed timestamp and ID; Bitbucket does not provide equivalent replay protection. These listeners are not publicly reachable deployments and have only been checked with local synthetic deliveries.

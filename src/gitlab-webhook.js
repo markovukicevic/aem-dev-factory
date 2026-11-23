@@ -28,8 +28,15 @@ export function inspectGitLabWebhook({ body, signingToken, id, timestamp, signat
   try { payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)); } catch { return { accepted: false, reason: 'invalid-json' }; }
   const project = payload?.project?.path_with_namespace, actor = payload?.user?.username;
   if (typeof project !== 'string' || typeof actor !== 'string' || !allowedProjects.some(value => value.toLowerCase() === project.toLowerCase()) || !allowedActors.some(value => value.toLowerCase() === actor.toLowerCase())) return { accepted: false, reason: 'not-allowlisted' };
-  const kind = payload?.object_kind, action = payload?.object_attributes?.action, number = payload?.object_attributes?.iid;
-  if (!((event === 'Issue Hook' && kind === 'issue' && ['open', 'reopen'].includes(action)) || (event === 'Merge Request Hook' && kind === 'merge_request' && ['open', 'reopen', 'update'].includes(action)))) return { accepted: false, reason: 'unsupported-event' };
+  let kind = payload?.object_kind, action = payload?.object_attributes?.action, number = payload?.object_attributes?.iid, commentId;
+  if (event === 'Note Hook' && kind === 'note') {
+    const note = payload?.object_attributes;
+    if (note?.action !== 'create' || note?.system !== false || !['Issue', 'MergeRequest'].includes(note?.noteable_type)) return { accepted: false, reason: 'unsupported-event' };
+    if (typeof note.note !== 'string' || !/^@aem-dev(?:\s|$)/i.test(note.note.trimStart())) return { accepted: false, reason: 'no-command' };
+    const target = note.noteable_type === 'Issue' ? payload.issue : payload.merge_request;
+    if (!Number.isSafeInteger(note.id) || note.id < 1 || !Number.isSafeInteger(note.noteable_id) || target?.id !== note.noteable_id) return { accepted: false, reason: 'invalid-payload' };
+    number = target.iid; commentId = note.id; kind = note.noteable_type === 'Issue' ? 'issue-comment' : 'pull-request-comment'; action = 'create';
+  } else if (!((event === 'Issue Hook' && kind === 'issue' && ['open', 'reopen'].includes(action)) || (event === 'Merge Request Hook' && kind === 'merge_request' && ['open', 'reopen', 'update'].includes(action)))) return { accepted: false, reason: 'unsupported-event' };
   if (!Number.isSafeInteger(number) || number < 1) return { accepted: false, reason: 'invalid-payload' };
-  return { accepted: true, provider: 'gitlab', id, project, actor, kind, number, action, scope: 'Offline signed payload classification only; event header is not signed, freshness window does not prevent replay, and no task was queued or executed.' };
+  return { accepted: true, provider: 'gitlab', id, project, actor, kind, number, action, ...(commentId ? { commentId } : {}), scope: 'Offline signed payload classification only; event header is not signed, freshness window does not prevent replay, and no task was queued or executed.' };
 }

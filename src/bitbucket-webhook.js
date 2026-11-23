@@ -10,7 +10,14 @@ export function inspectBitbucketWebhook({ body, secret, signature, event, allowe
   try { payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)); } catch { return { accepted: false, reason: 'invalid-json' }; }
   const repository = payload?.repository?.uuid, actor = payload?.actor?.uuid, number = payload?.pullrequest?.id;
   if (typeof repository !== 'string' || typeof actor !== 'string' || !uuidPattern.test(repository) || !uuidPattern.test(actor) || !allowedRepositories.some(value => value.toLowerCase() === repository.toLowerCase()) || !allowedActors.some(value => value.toLowerCase() === actor.toLowerCase())) return { accepted: false, reason: 'not-allowlisted' };
-  if (!['pullrequest:created', 'pullrequest:updated'].includes(event)) return { accepted: false, reason: 'unsupported-event' };
+  if (!['pullrequest:created', 'pullrequest:updated', 'pullrequest:comment_created'].includes(event)) return { accepted: false, reason: 'unsupported-event' };
+  let kind = 'pull-request', commentId;
+  if (event === 'pullrequest:comment_created') {
+    const comment = payload?.comment;
+    if (typeof comment?.content?.raw !== 'string' || !/^@aem-dev(?:\s|$)/i.test(comment.content.raw.trimStart())) return { accepted: false, reason: 'no-command' };
+    if (!Number.isSafeInteger(comment.id) || comment.id < 1) return { accepted: false, reason: 'invalid-payload' };
+    kind = 'pull-request-comment'; commentId = comment.id;
+  } else if (payload?.comment !== undefined) return { accepted: false, reason: 'invalid-payload' };
   if (!Number.isSafeInteger(number) || number < 1) return { accepted: false, reason: 'invalid-payload' };
-  return { accepted: true, provider: 'bitbucket-cloud', repository, actor, kind: 'pull-request', number, eventHeader: event, scope: 'Offline signed payload classification only; event header is not signed, there is no timestamp or replay protection, and no task was queued or executed.' };
+  return { accepted: true, provider: 'bitbucket-cloud', repository, actor, kind, number, ...(commentId ? { commentId } : {}), eventHeader: event, scope: 'Offline signed payload classification only; event header is not signed, there is no timestamp or replay protection, and no task was queued or executed.' };
 }
