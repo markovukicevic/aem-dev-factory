@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+- Added offline GitLab signing-token verification and allowlisted issue/MR classification with a timestamp window; synthetic signatures only, no replay store, listener or execution.
+
 - Added an explicit metadata-only local automation queue tied to existing claims and the current allowlist; no agent executes and local records do not establish authenticity.
 
 - Added an explicit non-overwriting local GitHub webhook policy setup and read-only status summary, plus initial automation setup and status skills. No agents or cloud infrastructure are deployed and runtime health is unknown.

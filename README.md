@@ -244,6 +244,8 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Offline GitHub webhook inspection
 
+`gitlab-webhook-inspect <policy.json> <headers.json> <body.json>` verifies GitLab signing-token HMAC against raw bytes, signed message ID and timestamp, with a five-minute window. Policy supplies `allowedProjects` and `allowedActors`; headers contain `id`, `timestamp`, `signature` and `event`; `GITLAB_WEBHOOK_SIGNING_TOKEN` stays in the environment. It classifies selected issue and merge-request events only. The event header is not signed; timestamp freshness does not prevent replay, and this command does not listen, queue or execute. GitLab signature format is documented in [GitLab webhooks](https://docs.gitlab.com/user/project/integrations/webhooks/#signing-tokens). Tested with synthetic signatures only.
+
 `automation-enqueue <target-project> <claim-sha256>` records one explicitly selected local webhook claim as a new metadata-only job if its actor and repository remain allowlisted. `automation-jobs <target-project>` compares job records to current claims and policy. This queue does not execute agents or verify signatures again; local files are editable and untrusted. Duplicate jobs are not overwritten.
 
 `automation-init <policy.json> <target-project>` saves explicit `allowedRepositories` and `allowedActors` lists to a new `.ai/automation/policy.json` without overwriting. `automation-status <target-project>` inspects this local policy, webhook-secret environment presence and local claim counts; it does not check whether a listener is running, process events or query any cloud service. No infrastructure or agent is deployed.
