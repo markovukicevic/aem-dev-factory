@@ -72,6 +72,14 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       if (!result || result.id !== issueId) throw new Error('Sub-issue link response unclear; inspect GitHub before retrying');
       return { linked: true };
     },
+    async submitPullRequestReview({ number, event, commit, body }) {
+      validateNumber(number, 'pull request number');
+      if (!['APPROVE', 'REQUEST_CHANGES', 'COMMENT'].includes(event) || typeof commit !== 'string' || !/^[a-f0-9]{40,64}$/i.test(commit) || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid review');
+      const result = await request('POST', `/pulls/${number}/reviews`, { commit_id: commit, event, body });
+      const state = { APPROVE: 'APPROVED', REQUEST_CHANGES: 'CHANGES_REQUESTED', COMMENT: 'COMMENTED' }[event];
+      if (!Number.isSafeInteger(result?.id) || result.id < 1 || result.commit_id !== commit || result.state !== state) throw new Error('Review response unclear; inspect GitHub before retrying');
+      return { submitted: true, id: result.id, state: result.state, commit: result.commit_id };
+    },
     getReviewComment(id) {
       validateNumber(id, 'review comment ID');
       return request('GET', `/pulls/comments/${id}`);
