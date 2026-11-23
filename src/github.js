@@ -53,6 +53,13 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       validateNumber(number, 'issue number');
       return request('GET', `/issues/${number}`);
     },
+    async updateIssueState({ number, state }) {
+      validateNumber(number, 'issue number');
+      if (!['open', 'closed'].includes(state)) throw new TypeError('Invalid issue state');
+      const result = await request('PATCH', `/issues/${number}`, { state });
+      if (result?.number !== number || result.pull_request || result.state !== state) throw new Error('Issue update unclear; inspect GitHub before retrying');
+      return { updated: true, state: result.state };
+    },
     async createIssue({ title, body }) {
       if (typeof title !== 'string' || !title.trim() || title.length > 255 || /[\u0000-\u001f\u007f]/.test(title) || typeof body !== 'string' || body.length > 262144) throw new TypeError('Invalid issue');
       const result = await request('POST', '/issues', { title, body });

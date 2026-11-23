@@ -82,6 +82,13 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       const hierarchy = Array.isArray(item.widgets) ? item.widgets.find(widget => widget?.__typename === 'WorkItemWidgetHierarchy') : null;
       return { created: true, iid: Number(item.iid), linked: !response?.errors?.length && Array.isArray(data.errors) && data.errors.length === 0 && hierarchy?.parent?.id === parentId };
     },
+    async updateIssueState({ number, state }) {
+      iid(number);
+      if (!['opened', 'closed'].includes(state)) throw new TypeError('Invalid issue state');
+      const result = (await request(`/issues/${number}`, { method: 'PUT', body: { state_event: state === 'opened' ? 'reopen' : 'close' } })).data;
+      if (result?.iid !== number || result.state !== state) throw new Error('Issue update unclear; inspect GitLab before retrying');
+      return { updated: true, state: result.state };
+    },
     async getIssueMetadata(number) { iid(number); return (await get(`/issues/${number}`)).data; },
     async getMergeRequestDiscussions(number) {
       iid(number);
