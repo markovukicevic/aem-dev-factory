@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added a current-comment and author recheck to the generated GitHub Actions workflow before installing dependencies or starting the selected script. Live GitHub execution remains unverified.
+
 - Added preview-bound local generation of a restricted GitHub Actions comment workflow around an explicit repository script. No workflow was installed or run on GitHub.
 
 - Added local comparison of supported legacy provider settings with existing Max configuration; target-only and omitted sections remain explicit.
