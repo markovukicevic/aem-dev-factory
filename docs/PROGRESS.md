@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added preview-bound local generation of a restricted GitHub Actions comment workflow around an explicit repository script. No workflow was installed or run on GitHub.
+
 - Added local comparison of supported legacy provider settings with existing Max configuration; target-only and omitted sections remain explicit.
 
 - Added preview-bound conversion of restricted reference-style YAML provider settings into a new Max JSON configuration, with explicit omissions and no credential copying.
