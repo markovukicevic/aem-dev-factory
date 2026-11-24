@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added a read-only hub discovery proposal combining tagged comments, simple blocks and scope tables in reference order; malformed selected inputs do not silently fall back.
+
 - Extended new hub setup to write explicitly supplied role, platform and brand routing metadata; partial routing input is rejected.
 
 - Added local simple-block hub routing from explicit reference-style role, platform and brand metadata; targets remain proposals and are not dispatched.
