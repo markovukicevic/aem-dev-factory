@@ -56,6 +56,17 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
       }
       return { changes, complete: false };
     },
+    async createInlineThread({ number, path, side, line, body, iteration, changeTrackingId }) {
+      validId(number); validId(iteration); validId(changeTrackingId);
+      if (typeof path !== 'string' || !path.startsWith('/') || path.length <= 1 || path.length > 1024 || /[\u0000-\u001f\u007f\\]/.test(path) || path.slice(1).split('/').some(part => !part || part === '.' || part === '..') || !['LEFT', 'RIGHT'].includes(side) || !Number.isSafeInteger(line) || line < 1 || line > 2147483647 || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid Azure inline thread');
+      const prefix = side === 'LEFT' ? 'left' : 'right', point = { line, offset: 0 };
+      const threadContext = { filePath: path, [`${prefix}FileStart`]: point, [`${prefix}FileEnd`]: point };
+      const pullRequestThreadContext = { changeTrackingId, iterationContext: { firstComparingIteration: iteration, secondComparingIteration: iteration } };
+      const result = await request(`${root}/${number}/threads?api-version=7.1`, { method: 'POST', body: { comments: [{ parentCommentId: 0, content: body, commentType: 'text' }], status: 'active', threadContext, pullRequestThreadContext } });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Thread response unclear; inspect Azure before retrying');
+      const returned = result.threadContext, start = returned?.[`${prefix}FileStart`];
+      return { sent: true, threadId: result.id, positionVerified: returned?.filePath === path && start?.line === line && start?.offset === 0 };
+    },
     async createPullRequestComment({ number, body }) {
       validId(number);
       if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid pull request comment');
