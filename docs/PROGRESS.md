@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added offline inspection of saved Azure DevOps PR-created service-hook payloads with Basic credential comparison and repository/author allowlists. It does not receive, authenticate payload signatures, queue or execute; only synthetic payloads were checked.
+
 - Added non-overwriting local export of a selected automation job context for an explicitly chosen command to consume. Optional per-job context files, including in batches, are checked against each selected job and bound to the execution preview by digest; it remains untrusted and editable after the check.
 
 - Added ordered batch context collection for explicitly selected automation jobs, retaining partial results. Provider responses remain untrusted and non-atomic; only simulated behavior was checked.
