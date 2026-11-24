@@ -1,5 +1,6 @@
 import { lstat, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
+import { inspectAutomationIgnore } from './automation-ignore.js';
 import { inspectLocalAutomation, projectAutomationDirectory, validateAutomationPolicy } from './automation-local.js';
 import { listAutomationJobs } from './automation-queue.js';
 import { validateProjectConfig } from './project-init.js';
@@ -23,6 +24,8 @@ export async function diagnoseLocalAutomation({ target, env = process.env }) {
       const variable = provider === 'github' ? 'GITHUB_WEBHOOK_SECRET' : provider === 'gitlab' ? 'GITLAB_WEBHOOK_SIGNING_TOKEN' : 'BITBUCKET_WEBHOOK_SECRET';
       checks.push({ name: `${provider}-webhook-secret`, status: typeof env[variable] === 'string' && !!env[variable].trim() ? 'present' : 'missing', variable });
     }
+    try { const observed = await inspectAutomationIgnore({ target: targetRoot }); checks.push({ name: 'runtime-ignore', status: observed.claimsIgnored && observed.jobsIgnored ? 'covered' : 'not-covered', claimsIgnored: observed.claimsIgnored, jobsIgnored: observed.jobsIgnored, ignoreFile: observed.ignoreFile, workingTreeClean: observed.workingTreeClean }); }
+    catch { checks.push({ name: 'runtime-ignore', status: 'unavailable' }); }
     const claimStatus = state.claims.status;
     checks.push({ name: 'claim-store', status: claimStatus, count: state.claims.count, invalid: state.claims.invalid });
     try {
@@ -49,6 +52,6 @@ export async function diagnoseLocalAutomation({ target, env = process.env }) {
     else if (scm.provider === 'bitbucket-cloud') checks.push({ name: 'scm-policy-match', status: 'unknown', detail: 'Repository UUID requires a separate provider lookup.' });
     else checks.push({ name: 'scm-policy-match', status: 'not-supported' });
   }
-  const needsInspection = checks.some(item => ['missing-or-invalid', 'invalid-or-unreadable', 'incomplete', 'unavailable', 'needs-inspection', 'not-allowlisted'].includes(item.status) || ((item.name.endsWith('-webhook-secret') || item.name.startsWith('ado-ado_webhook_')) && item.status === 'missing'));
+  const needsInspection = checks.some(item => ['missing-or-invalid', 'invalid-or-unreadable', 'incomplete', 'unavailable', 'needs-inspection', 'not-allowlisted', 'not-covered'].includes(item.status) || ((item.name.endsWith('-webhook-secret') || item.name.startsWith('ado-ado_webhook_')) && item.status === 'missing') || (item.name === 'runtime-ignore' && item.workingTreeClean === false));
   return { checks, needsInspection, scope: 'Local configuration, environment presence and editable records only; no listener status, provider access, secret validity, cloud health, agent execution or readiness was verified. Files may change afterward.' };
 }
