@@ -19,13 +19,14 @@ async function readLocalJson(path, max = 262144) {
 }
 const fields = ['digest', 'deliveryId', 'claimedAt', 'repository', 'actor', 'kind', 'number', 'action', 'provider', 'eventHeader', 'bodyDigest', 'commentId'];
 const allowed = (claim, policy) => {
-  const selected = claim.provider === 'gitlab' ? policy.gitlab && { repositories: policy.gitlab.allowedProjects, actors: policy.gitlab.allowedActors } : claim.provider === 'bitbucket-cloud' ? policy.bitbucket && { repositories: policy.bitbucket.allowedRepositories, actors: policy.bitbucket.allowedActors } : policy.allowedRepositories && { repositories: policy.allowedRepositories, actors: policy.allowedActors };
+  const selected = claim.provider === 'ado' ? policy.ado && { repositories: policy.ado.allowedRepositories, actors: policy.ado.allowedAuthors } : claim.provider === 'gitlab' ? policy.gitlab && { repositories: policy.gitlab.allowedProjects, actors: policy.gitlab.allowedActors } : claim.provider === 'bitbucket-cloud' ? policy.bitbucket && { repositories: policy.bitbucket.allowedRepositories, actors: policy.bitbucket.allowedActors } : policy.allowedRepositories && { repositories: policy.allowedRepositories, actors: policy.allowedActors };
   return !!selected && selected.repositories.some(value => value.toLowerCase() === claim.repository.toLowerCase()) && selected.actors.some(value => value.toLowerCase() === claim.actor.toLowerCase());
 };
 async function loadInputs(target) {
   const directory = await projectAutomationDirectory(target, false);
   const policy = validateAutomationPolicy(await readLocalJson(join(directory, 'policy.json')));
   const result = await listWebhookClaims({ directory: join(directory, 'claims') });
+  if (new Set(result.claims.map(claim => claim.digest)).size !== result.claims.length) throw new Error('Ambiguous claim digest');
   return { directory, policy, claims: result.claims, claimErrors: result.errors.length };
 }
 

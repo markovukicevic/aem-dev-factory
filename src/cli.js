@@ -395,7 +395,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     if (args.length !== 4 || args.slice(1).some(value => !value?.trim()) || (listening && (!/^[1-9][0-9]*$/.test(args[3]) || Number(args[3]) < 1024 || Number(args[3]) > 65535))) { output.error(usage); return 2; }
     if (!env.ADO_WEBHOOK_USERNAME || !env.ADO_WEBHOOK_PASSWORD || (!listening && !env.ADO_WEBHOOK_AUTHORIZATION)) { output.error('Set Azure webhook credentials in the environment.'); return 2; }
     try {
-      const policy = JSON.parse((await readLimitedFile(args[1], 65536)).toString('utf8'));
+      const configured = JSON.parse((await readLimitedFile(args[1], 65536)).toString('utf8')), policy = configured.ado ?? configured;
       if (listening) { const server = await startAdoWebhookListener({ port: Number(args[3]), username: env.ADO_WEBHOOK_USERNAME, password: env.ADO_WEBHOOK_PASSWORD, policy, directory: args[2] }); server.on('error', () => output.error('Azure webhook listener encountered an error.')); output.log(JSON.stringify({ provider: 'ado', listening: '127.0.0.1', port: Number(args[3]), path: '/webhook', scope: 'Separate local claims only; no queue, execution or public deployment.' })); return 0; }
       const body = await readLimitedFile(args[2], 1024 * 1024), result = await claimAdoWebhook({ body, authorization: env.ADO_WEBHOOK_AUTHORIZATION, username: env.ADO_WEBHOOK_USERNAME, password: env.ADO_WEBHOOK_PASSWORD, policy, directory: args[3] }); output.log(JSON.stringify(result, null, 2)); return result.claimed ? 0 : 1;
     } catch { output.error('Unable to claim or receive Azure event. Check policy, credentials, store and port.'); return 1; }

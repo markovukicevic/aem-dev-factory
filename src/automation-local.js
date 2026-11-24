@@ -4,7 +4,7 @@ import { readLimitedFile } from './read-limited.js';
 import { listWebhookClaims } from './webhook-claims.js';
 
 export function validateAutomationPolicy(policy) {
-  if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['allowedRepositories', 'allowedActors', 'gitlab', 'bitbucket'].includes(key))) throw new TypeError('Invalid automation policy');
+  if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['allowedRepositories', 'allowedActors', 'gitlab', 'bitbucket', 'ado'].includes(key))) throw new TypeError('Invalid automation policy');
   const result = {};
   const check = (value, name, pattern) => {
     if (!Array.isArray(value) || !value.length || value.length > 100 || value.some(item => typeof item !== 'string' || item.length > 200 || !pattern.test(item)) || new Set(value.map(item => item.toLowerCase())).size !== value.length) throw new TypeError(`Invalid ${name}`);
@@ -20,6 +20,11 @@ export function validateAutomationPolicy(policy) {
     const item = policy[name];
     if (!item || typeof item !== 'object' || Array.isArray(item) || Object.keys(item).some(key => ![repoKey, 'allowedActors'].includes(key))) throw new TypeError('Invalid provider policy');
     result[name] = { [repoKey]: check(item[repoKey], name, repoPattern), allowedActors: check(item.allowedActors, name, actorPattern) };
+  }
+  if (policy.ado !== undefined) {
+    const item = policy.ado, azureGuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+    if (!item || typeof item !== 'object' || Array.isArray(item) || Object.keys(item).some(key => !['allowedRepositories', 'allowedAuthors'].includes(key))) throw new TypeError('Invalid Azure policy');
+    result.ado = { allowedRepositories: check(item.allowedRepositories, 'Azure repositories', azureGuid), allowedAuthors: check(item.allowedAuthors, 'Azure authors', azureGuid) };
   }
   if (!Object.keys(result).length) throw new TypeError('At least one provider policy is required');
   return result;
@@ -65,5 +70,5 @@ export async function inspectLocalAutomation({ target, env = process.env }) {
     claims = { status: result.complete ? 'readable' : 'incomplete', count: result.claims.length, invalid: result.errors.length, byKind };
   } catch (error) { claims = { status: error?.code === 'ENOENT' ? 'missing' : 'unavailable', count: null, invalid: null, byKind: null }; }
   const secrets = { github: !!env.GITHUB_WEBHOOK_SECRET?.trim(), gitlab: !!env.GITLAB_WEBHOOK_SIGNING_TOKEN?.trim(), bitbucket: !!env.BITBUCKET_WEBHOOK_SECRET?.trim() };
-  return { secrets, configured: typeof policy === 'object', policy: typeof policy === 'object' ? { status: 'valid', providers: [...(policy.allowedRepositories ? ['github'] : []), ...(policy.gitlab ? ['gitlab'] : []), ...(policy.bitbucket ? ['bitbucket-cloud'] : [])] } : { status: policy }, claims, secretPresent: typeof env.GITHUB_WEBHOOK_SECRET === 'string' && !!env.GITHUB_WEBHOOK_SECRET.trim(), scope: 'Local policy and claim metadata only; configured secret validity, active listeners, delivery, cloud health, task execution and readiness were not checked. Claims may change afterward.' };
+  return { secrets, configured: typeof policy === 'object', policy: typeof policy === 'object' ? { status: 'valid', providers: [...(policy.allowedRepositories ? ['github'] : []), ...(policy.gitlab ? ['gitlab'] : []), ...(policy.bitbucket ? ['bitbucket-cloud'] : []), ...(policy.ado ? ['ado'] : [])] } : { status: policy }, claims, secretPresent: typeof env.GITHUB_WEBHOOK_SECRET === 'string' && !!env.GITHUB_WEBHOOK_SECRET.trim(), scope: 'Local policy and claim metadata only; configured secret validity, active listeners, delivery, cloud health, task execution and readiness were not checked. Claims may change afterward.' };
 }

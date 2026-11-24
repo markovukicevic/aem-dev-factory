@@ -12,10 +12,16 @@ export async function listWebhookClaims({ directory, maxEntries = 10000 }) {
   const claims = [];
   const errors = [];
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!/^[a-f0-9]{64}\.json$/.test(entry.name)) continue;
+    if (!/^[a-f0-9]{64}(?:\.ado)?\.json$/.test(entry.name)) continue;
     try {
       if (!entry.isFile() || entry.isSymbolicLink()) throw new Error('Invalid claim');
       const record = JSON.parse((await readLimitedFile(join(directory, entry.name), 16384)).toString('utf8'));
+      if (entry.name.endsWith('.ado.json')) {
+        const guid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
+        if (record.version !== 1 || record.provider !== 'ado' || record.digest !== entry.name.slice(0, 64) || !guid(record.eventId) || !guid(record.repository) || !guid(record.author) || !Number.isSafeInteger(record.number) || record.number < 1 || record.number > 2147483647 || record.kind !== 'pull-request' || record.action !== 'created' || typeof record.claimedAt !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(record.claimedAt)) throw new Error('Invalid Azure claim');
+        claims.push({ digest: record.digest, provider: 'ado', deliveryId: record.eventId, claimedAt: record.claimedAt, metadataAvailable: true, repository: record.repository, actor: record.author, kind: record.kind, number: record.number, action: record.action, bodyDigest: record.digest });
+        continue;
+      }
       if (record.version === 2) {
         const uuid = /^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i;
         if (record.digest !== entry.name.slice(0, 64) || !['gitlab', 'bitbucket-cloud'].includes(record.provider) || typeof record.deliveryId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(record.deliveryId) || typeof record.claimedAt !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(record.claimedAt) || typeof record.bodyDigest !== 'string' || !/^[a-f0-9]{64}$/.test(record.bodyDigest) || !Number.isSafeInteger(record.number) || record.number < 1) throw new Error('Invalid provider claim');
@@ -32,5 +38,7 @@ export async function listWebhookClaims({ directory, maxEntries = 10000 }) {
       claims.push({ digest: record.digest, deliveryId: record.deliveryId, claimedAt: record.claimedAt, ...(legacy ? { metadataAvailable: false } : { metadataAvailable: true, repository: record.repository, actor: record.actor, kind: record.kind, number: record.number, action: record.action }) });
     } catch { errors.push({ file: entry.name, message: 'Claim is invalid or unreadable' }); }
   }
+  const seen = new Set();
+  for (const claim of claims) { if (seen.has(claim.digest)) errors.push({ file: claim.digest, message: 'Ambiguous claim digest' }); seen.add(claim.digest); }
   return { claims, errors, complete: errors.length === 0, scope: 'Editable local claim records only; signatures are not reverified and task execution is not established. Some provider headers are unsigned.' };
 }
