@@ -2,9 +2,11 @@
 
 ## 2026-11-24
 
+- Added optional full-commit pins for generated GitHub Actions dependencies and moved the current-comment recheck immediately before the selected script.
+
 - Added local GitHub Actions template freshness comparison and separated the generated comment-recheck script into a readable, digest-bound template.
 
-- Added a current-comment and author recheck to the generated GitHub Actions workflow before installing dependencies or starting the selected script. Live GitHub execution remains unverified.
+- Added a current-comment and author recheck to the generated GitHub Actions workflow after dependency installation and immediately before starting the selected script. Live GitHub execution remains unverified.
 
 - Added preview-bound local generation of a restricted GitHub Actions comment workflow around an explicit repository script. No workflow was installed or run on GitHub.
 

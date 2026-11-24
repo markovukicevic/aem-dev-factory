@@ -1,7 +1,15 @@
 node --input-type=module <<'NODE'
-import { readFile } from 'node:fs/promises';
-const bytes = await readFile(process.env.GITHUB_EVENT_PATH);
-if (bytes.length > 1024 * 1024) throw new Error('Event exceeds limit');
+import { open } from 'node:fs/promises';
+const file = await open(process.env.GITHUB_EVENT_PATH, 'r');
+let bytes;
+try {
+  const stat = await file.stat(); if (!stat.isFile() || stat.size > 1024 * 1024) throw new Error('Event exceeds limit');
+  const buffer = Buffer.alloc(1024 * 1024 + 1); let used = 0;
+  while (used < buffer.length) { const next = await file.read(buffer, used, buffer.length - used, null); if (!next.bytesRead) break; used += next.bytesRead; }
+  const after = await file.stat();
+  if (used > 1024 * 1024 || used !== stat.size || stat.dev !== after.dev || stat.ino !== after.ino || stat.size !== after.size || stat.mtimeMs !== after.mtimeMs || stat.ctimeMs !== after.ctimeMs) throw new Error('Event changed or exceeds limit');
+  bytes = buffer.subarray(0, used);
+} finally { await file.close(); }
 const event = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 const repo = process.env.GITHUB_REPOSITORY, actor = process.env.GITHUB_ACTOR;
 if (typeof repo !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo) || typeof actor !== 'string' || typeof process.env.GITHUB_TOKEN !== 'string' || !process.env.GITHUB_TOKEN) throw new Error('Missing event context');
