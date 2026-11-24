@@ -65,3 +65,27 @@ export async function processAutomationJob({ target, claimDigest, command, store
     return { started: true, status: record.status, exitCode: record.exitCode, executionPath: first.path, endingGit: record.endingGit, scope: 'One explicit local process result. Correctness, external effects, descendant termination and event authenticity are not established.' };
   } finally { await handle.close(); }
 }
+
+/** Inspect an execution record and current local context without assuming a process is alive. */
+export async function inspectAutomationExecution({ target, claimDigest, store }, { readJob = readAutomationJob, inspect = readGitState } = {}) {
+  if (typeof claimDigest !== 'string' || !/^[a-f0-9]{64}$/.test(claimDigest)) throw new TypeError('Invalid claim digest');
+  const root = await checkedDirectory(target), stateRoot = await checkedDirectory(store), rel = relative(root, stateRoot);
+  if (!rel || (!rel.startsWith('../') && rel !== '..' && !isAbsolute(rel))) throw new Error('Execution store must be outside the project');
+  const path = join(stateRoot, `${claimDigest}.json`), { constants } = await import('node:fs');
+  const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  let record;
+  try {
+    const before = await handle.stat();
+    if (!before.isFile() || before.size > 65536) throw new Error('Invalid execution record');
+    const bytes = Buffer.alloc(65537); let offset = 0;
+    while (offset < bytes.length) { const next = await handle.read(bytes, offset, bytes.length - offset, null); if (!next.bytesRead) break; offset += next.bytesRead; }
+    const after = await handle.stat();
+    if (offset !== before.size || before.ino !== after.ino || before.dev !== after.dev || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) throw new Error('Execution record changed');
+    record = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, offset)));
+  } finally { await handle.close(); }
+  if (record?.version !== 1 || record.claimDigest !== claimDigest || record.target !== root || !['reserved', 'running', 'blocked', 'process-succeeded', 'process-failed'].includes(record.status) || typeof record.previewDigest !== 'string' || !/^[a-f0-9]{64}$/.test(record.previewDigest) || typeof record.commandDigest !== 'string' || !/^[a-f0-9]{64}$/.test(record.commandDigest) || typeof record.repository !== 'string' || typeof record.startedAt !== 'string' || typeof record.startingGit?.head !== 'string' || !/^[a-f0-9]{40,64}$/i.test(record.startingGit?.commit ?? '')) throw new Error('Invalid execution record');
+  let jobAvailable = false, currentGit = null;
+  try { await readJob({ target: root, digest: claimDigest }); jobAvailable = true; } catch { /* Job or policy may have changed. */ }
+  try { const value = await inspect(root); if (typeof value?.head === 'string' && /^[a-f0-9]{40,64}$/i.test(value.commit ?? '') && typeof value.workingTreeClean === 'boolean') currentGit = { head: value.head, commit: value.commit, workingTreeClean: value.workingTreeClean }; } catch { /* Detached, inaccessible or unavailable. */ }
+  return { path, claimDigest, status: record.status, repository: record.repository, startedAt: record.startedAt, finishedAt: typeof record.finishedAt === 'string' ? record.finishedAt : null, exitCode: Number.isSafeInteger(record.exitCode) ? record.exitCode : null, startingGit: record.startingGit, endingGit: record.endingGit ?? null, currentGit, jobAvailable, scope: 'Editable local execution record and current local observations only. Running status does not establish process liveness, event authenticity, correctness or external effects.' };
+}
