@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added a local Figma-versus-page screenshot comparison report with input digests and explicit non-comparable results; visual correctness and real browser behavior remain unverified.
+
 - Added preview-bound Figma PNG render download restricted to one Figma image host, without forwarding the API token. Only simulated responses were checked; real render hosts and live output remain unverified.
 
 - Added local parsing of selected Figma design, file and prototype node links into file and node identifiers; it does not validate access or fetch content.
