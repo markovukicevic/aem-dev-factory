@@ -13,6 +13,7 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
   }
   return {
     provider: 'ado',
+    getRepository() { return request(`/_apis/git/repositories/${encodeURIComponent(repository)}?api-version=7.1`); },
     getPullRequest(number) {
       validId(number);
       return request(`${root}/${number}?api-version=7.1`);

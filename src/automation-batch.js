@@ -3,7 +3,7 @@ import { isAbsolute } from 'node:path';
 import { processAutomationJob } from './automation-job-run.js';
 const hash = value => createHash('sha256').update(value, 'utf8').digest('hex');
 /** Preview or explicitly execute a selected ordered batch of local queue records. */
-export async function processAutomationBatch({ target, claimDigests, command, store, bitbucketToken, expectedDigest }, { processJob = processAutomationJob } = {}) {
+export async function processAutomationBatch({ target, claimDigests, command, store, bitbucketToken, adoToken, expectedDigest }, { processJob = processAutomationJob } = {}) {
   if (!Array.isArray(claimDigests) || !claimDigests.length || claimDigests.length > 20 || !command || typeof command !== 'object' || Array.isArray(command) || (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest)))) throw new TypeError('Invalid automation batch');
   const selected = claimDigests.map(value => {
     if (typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)) return { claimDigest: value, command };
@@ -13,7 +13,7 @@ export async function processAutomationBatch({ target, claimDigests, command, st
   if (new Set(selected.map(item => item.claimDigest)).size !== selected.length) throw new TypeError('Duplicate automation job');
   const jobs = [];
   for (const item of selected) {
-    try { const result = await processJob({ target, claimDigest: item.claimDigest, command: item.command, store, bitbucketToken }); if (!result?.preview || !/^[a-f0-9]{64}$/.test(result.digest ?? '')) throw new Error('Invalid job preview'); jobs.push({ claimDigest: item.claimDigest, status: 'ready', preview: result.preview, digest: result.digest }); }
+    try { const result = await processJob({ target, claimDigest: item.claimDigest, command: item.command, store, bitbucketToken, adoToken }); if (!result?.preview || !/^[a-f0-9]{64}$/.test(result.digest ?? '')) throw new Error('Invalid job preview'); jobs.push({ claimDigest: item.claimDigest, status: 'ready', preview: result.preview, digest: result.digest }); }
     catch { jobs.push({ claimDigest: item.claimDigest, status: 'unavailable' }); }
   }
   const complete = jobs.every(item => item.status === 'ready'), previewDigest = hash(JSON.stringify({ jobs }));
@@ -24,7 +24,7 @@ export async function processAutomationBatch({ target, claimDigests, command, st
   for (let index = 0; index < jobs.length; index++) {
     const job = jobs[index], item = selected[index];
     try {
-      const result = await processJob({ target, claimDigest: job.claimDigest, command: item.command, store, bitbucketToken, expectedDigest: job.digest });
+      const result = await processJob({ target, claimDigest: job.claimDigest, command: item.command, store, bitbucketToken, adoToken, expectedDigest: job.digest });
       results.push({ claimDigest: job.claimDigest, ...result });
       if (!result.started || result.status !== 'process-succeeded') return { completed: false, reason: 'partial-or-failed', results, scope: 'Earlier runs and records remain; inspect results before retrying.' };
     } catch { results.push({ claimDigest: job.claimDigest, status: 'unavailable-or-changed' }); return { completed: false, reason: 'partial-or-failed', results, scope: 'Earlier runs and records remain; inspect results before retrying.' }; }

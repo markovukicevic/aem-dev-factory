@@ -28,11 +28,19 @@ export async function readAutomationJobContext({ target, digest, config, env = p
       const repository = await scm.getRepository();
       if (typeof repository?.uuid !== 'string' || repository.uuid.toLowerCase() !== claim.repository.toLowerCase()) throw new Error('Bitbucket repository does not match job');
     }
+    if (provider === 'ado') {
+      const repository = await scm.getRepository();
+      if (typeof repository?.id !== 'string' || repository.id.toLowerCase() !== claim.repository.toLowerCase()) throw new Error('Azure repository does not match job');
+    }
     const ci = provider === 'github' ? makeCi({ provider: 'github-actions', owner: selected.owner, repository: selected.repository }, options) : undefined;
     context = await readReview({ scm, ci, number: claim.number });
     if (provider === 'bitbucket-cloud') {
       const repository = await scm.getRepository();
       if (typeof repository?.uuid !== 'string' || repository.uuid.toLowerCase() !== claim.repository.toLowerCase()) throw new Error('Bitbucket repository changed');
+    }
+    if (provider === 'ado') {
+      const repository = await scm.getRepository();
+      if (typeof repository?.id !== 'string' || repository.id.toLowerCase() !== claim.repository.toLowerCase()) throw new Error('Azure repository changed');
     }
   }
   const after = await readJob({ target, digest });

@@ -409,7 +409,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
   if (args[0] === 'automation-batch-plan' || args[0] === 'automation-batch-run') {
     const running = args[0].endsWith('-run');
     if (args.length !== (running ? 6 : 5) || args.slice(1, 5).some(value => !value?.trim()) || (running && !/^[a-f0-9]{64}$/.test(args[5]))) { output.error(usage); return 2; }
-    try { const claimDigests = JSON.parse((await readLimitedFile(args[2], 262144)).toString('utf8')), command = JSON.parse((await readLimitedFile(args[3], 262144)).toString('utf8')); const result = await processAutomationBatch({ target: args[1], claimDigests, command, store: args[4], bitbucketToken: env.BITBUCKET_TOKEN, ...(running ? { expectedDigest: args[5] } : {}) }); output.log(JSON.stringify(result, null, 2)); return running ? (result.completed ? 0 : 1) : (result.complete ? 0 : 1); }
+    try { const claimDigests = JSON.parse((await readLimitedFile(args[2], 262144)).toString('utf8')), command = JSON.parse((await readLimitedFile(args[3], 262144)).toString('utf8')); const result = await processAutomationBatch({ target: args[1], claimDigests, command, store: args[4], bitbucketToken: env.BITBUCKET_TOKEN, adoToken: env.ADO_PAT, ...(running ? { expectedDigest: args[5] } : {}) }); output.log(JSON.stringify(result, null, 2)); return running ? (result.completed ? 0 : 1) : (result.complete ? 0 : 1); }
     catch { output.error('Unable to prepare or run the automation batch. Inspect the job records and any partial results before retrying.'); return 1; }
   }
   if (args[0] === 'slack-notification-plan' || args[0] === 'slack-notification-send') {
@@ -427,7 +427,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
   if (args[0] === 'automation-job-plan' || args[0] === 'automation-job-run') {
     const running = args[0].endsWith('-run');
     if (args.length !== (running ? 6 : 5) || !args[1]?.trim() || !/^[a-f0-9]{64}$/.test(args[2]) || !args[3]?.trim() || !args[4]?.trim() || (running && !/^[a-f0-9]{64}$/.test(args[5]))) { output.error(usage); return 2; }
-    try { const command = JSON.parse((await readLimitedFile(args[3], 262144)).toString('utf8')); const result = await processAutomationJob({ target: args[1], claimDigest: args[2], command, store: args[4], bitbucketToken: env.BITBUCKET_TOKEN, ...(running ? { expectedDigest: args[5] } : {}) }); output.log(JSON.stringify(result, null, 2)); return running && (!result.started || result.status !== 'process-succeeded') ? 1 : 0; }
+    try { const command = JSON.parse((await readLimitedFile(args[3], 262144)).toString('utf8')); const result = await processAutomationJob({ target: args[1], claimDigest: args[2], command, store: args[4], bitbucketToken: env.BITBUCKET_TOKEN, adoToken: env.ADO_PAT, ...(running ? { expectedDigest: args[5] } : {}) }); output.log(JSON.stringify(result, null, 2)); return running && (!result.started || result.status !== 'process-succeeded') ? 1 : 0; }
     catch { output.error('Unable to prepare or run the local job. Check the event, command, origin, clean state and execution record before retrying.'); return 1; }
   }
   if (args[0] === 'automation-context-export') {

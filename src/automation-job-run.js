@@ -9,6 +9,8 @@ import { readGitState } from './git-state.js';
 import { parseGitHubOrigin } from './github-origin.js';
 import { parseGitLabOrigin } from './gitlab-origin.js';
 import { parseBitbucketOrigin } from './bitbucket-origin.js';
+import { parseAdoOrigin } from './ado-origin.js';
+import { createAdoScm } from './ado-scm.js';
 import { createBitbucketClient } from './bitbucket.js';
 import { runTestCommand } from './command-runner.js';
 const exec = promisify(execFile);
@@ -41,7 +43,7 @@ async function readContextSnapshot(path, root, claimDigest, claim) {
     return { path: resolved, sha256: createHash('sha256').update(data).digest('hex') };
   } finally { await handle.close(); }
 }
-async function prepare({ target, claimDigest, command, store, bitbucketToken }, { readJob, inspect, origin, makeBitbucket }, { existing = false } = {}) {
+async function prepare({ target, claimDigest, command, store, bitbucketToken, adoToken }, { readJob, inspect, origin, makeBitbucket, makeAdo }, { existing = false } = {}) {
   if (typeof claimDigest !== 'string' || !/^[a-f0-9]{64}$/.test(claimDigest)) throw new TypeError('Invalid claim digest');
   const normalized = commandFields(command), root = await checkedDirectory(target), stateRoot = await checkedDirectory(store);
   const rel = relative(root, stateRoot);
@@ -56,6 +58,11 @@ async function prepare({ target, claimDigest, command, store, bitbucketToken }, 
     const current = await client.getRepository();
     if (typeof current?.uuid !== 'string' || typeof claim.repository !== 'string' || current.uuid.toLowerCase() !== claim.repository.toLowerCase()) throw new Error('Bitbucket repository UUID does not match queued event');
     repository = `${value.workspace}/${value.repository}`;
+  } else if (provider === 'ado') {
+    const value = parseAdoOrigin(remote), client = makeAdo({ ...value, token: adoToken });
+    const current = await client.getRepository();
+    if (typeof current?.id !== 'string' || typeof claim.repository !== 'string' || current.id.toLowerCase() !== claim.repository.toLowerCase()) throw new Error('Azure repository GUID does not match queued event');
+    repository = `${value.organization}/${value.project}/${value.repository}`;
   } else throw new Error('Unsupported local event provider');
   if (provider === 'github' ? repository.toLowerCase() !== claim.repository?.toLowerCase() : provider === 'gitlab' ? repository !== claim.repository : false) throw new Error('Local origin does not match queued event');
   const git = await inspect(root);
@@ -70,9 +77,9 @@ async function writeRecord(handle, value) {
   const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`); await handle.truncate(0); await handle.write(bytes, 0, bytes.length, 0); await handle.sync();
 }
 /** Preview or explicitly run one local command for one existing queue record. */
-export async function processAutomationJob({ target, claimDigest, command, store, bitbucketToken, expectedDigest }, { readJob = readAutomationJob, inspect = readGitState, origin = readOrigin, run = runTestCommand, makeBitbucket = createBitbucketClient, environment = process.env } = {}) {
+export async function processAutomationJob({ target, claimDigest, command, store, bitbucketToken, adoToken, expectedDigest }, { readJob = readAutomationJob, inspect = readGitState, origin = readOrigin, run = runTestCommand, makeBitbucket = createBitbucketClient, makeAdo = createAdoScm, environment = process.env } = {}) {
   if (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid preview digest');
-  const dependencies = { readJob, inspect, origin, makeBitbucket }, input = { target, claimDigest, command, store, bitbucketToken }, first = await prepare(input, dependencies);
+  const dependencies = { readJob, inspect, origin, makeBitbucket, makeAdo }, input = { target, claimDigest, command, store, bitbucketToken, adoToken }, first = await prepare(input, dependencies);
   const preview = { target: first.snapshot.target, store: first.snapshot.store, claimDigest, provider: first.snapshot.claim.claim.provider ?? 'github', kind: first.snapshot.claim.claim.kind, number: first.snapshot.claim.claim.number, repository: first.snapshot.repository, git: first.snapshot.git, executable: first.command.executable, argumentCount: first.command.args.length, timeoutMs: first.command.timeoutMs, context: first.snapshot.context };
   if (expectedDigest === undefined) return { preview, digest: first.digest, scope: 'Read-only preview. Inspect the complete command file; queue records do not prove event authenticity or authorize execution.' };
   if (first.digest !== expectedDigest) return { started: false, reason: 'preview-changed' };
