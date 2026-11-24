@@ -13,6 +13,7 @@ export async function inspectLocalWorker({ port }, { send = request } = {}) {
     });
     req.on('error', reject); req.on('timeout', () => req.destroy(new Error('Worker status timeout'))); req.end();
   });
-  if (value?.service !== 'aem-dev-flow-max-github-worker' || value.version !== 1 || typeof value.busy !== 'boolean') throw new Error('Unexpected worker status');
-  return { port, responding: true, busy: value.busy, scope: 'Unauthenticated loopback response only; service identity, process liveness, queue health and readiness are not established.' };
+  const provider = value?.service === 'aem-dev-flow-max-github-worker' ? 'github' : value?.service === 'aem-dev-flow-max-automation-worker' ? value.provider : null;
+  if (value?.version !== 1 || !['github', 'gitlab'].includes(provider) || typeof value.busy !== 'boolean') throw new Error('Unexpected worker status');
+  return { port, responding: true, provider, busy: value.busy, scope: 'Unauthenticated loopback response only; service identity, process liveness, queue health and readiness are not established.' };
 }

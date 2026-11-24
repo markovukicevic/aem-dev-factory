@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Extended the explicitly started local worker to signed GitLab issue and merge-request comments with author and allowlist checks. Only synthetic deliveries and mocked execution were checked.
+
 - Added an explicitly started loopback GitHub worker for a fixed local command on selected signed comment events. It is experimental, single-delivery, not a public service, and a synthetic delivery ran a harmless command in a temporary Git repository. Real delivery and agent behavior remain unverified. A local status command reports the busy flag without claiming readiness.
 
 - Added a local Figma-versus-page screenshot comparison report with input digests and explicit non-comparable results; visual correctness and real browser behavior remain unverified.

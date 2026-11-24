@@ -5,31 +5,34 @@ import { join, relative, isAbsolute } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 import { projectAutomationDirectory, validateAutomationPolicy } from './automation-local.js';
 import { inspectGitHubWebhook } from './github-webhook.js';
+import { inspectGitLabWebhook, verifyGitLabWebhookSignature } from './gitlab-webhook.js';
+import { claimExternalWebhook } from './external-webhook-claim.js';
 import { claimGitHubWebhook } from './webhook-claim.js';
 import { enqueueAutomationClaim, readAutomationJob } from './automation-queue.js';
 import { processAutomationJob, normalizeAutomationCommand } from './automation-job-run.js';
 const limit = 1024 * 1024;
-async function currentPolicy(target) {
+async function currentPolicy(target, provider) {
   const directory = await projectAutomationDirectory(target, false);
   const policy = validateAutomationPolicy(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(join(directory, 'policy.json'), 262144))));
-  if (!policy.allowedRepositories || !policy.allowedActors) throw new Error('GitHub automation policy is required');
+  if (provider === 'github' ? !policy.allowedRepositories || !policy.allowedActors : !policy.gitlab) throw new Error('Provider automation policy is required');
   return { directory, policy };
 }
 function response(res, code, value) { if (!res.headersSent && !res.destroyed) { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(`${JSON.stringify(value)}\n`); } }
 
-/** Explicit loopback worker for one fixed command and signed GitHub comment events. */
-export async function startGitHubAutomationWorker({ target, command, store, port, secret, environment = process.env }, { runJob = processAutomationJob } = {}) {
-  if (typeof target !== 'string' || !target.trim() || typeof store !== 'string' || !store.trim() || !Number.isSafeInteger(port) || port < 0 || port > 65535 || typeof secret !== 'string' || !secret || secret.length > 4096 || !environment || typeof environment !== 'object' || Array.isArray(environment)) throw new TypeError('Invalid worker options');
+/** Explicit loopback worker for one fixed command and signed comment events. */
+export async function startAutomationWorker({ provider, target, command, store, port, secret, environment = process.env }, { runJob = processAutomationJob } = {}) {
+  if (!['github', 'gitlab'].includes(provider) || typeof target !== 'string' || !target.trim() || typeof store !== 'string' || !store.trim() || !Number.isSafeInteger(port) || port < 0 || port > 65535 || typeof secret !== 'string' || !secret || secret.length > 4096 || !environment || typeof environment !== 'object' || Array.isArray(environment)) throw new TypeError('Invalid worker options');
   const task = normalizeAutomationCommand(command);
   if (task.contextFile !== undefined) throw new TypeError('Event-specific context is not supported by this worker');
   const root = await realpath(target), storeInfo = await lstat(store);
   if (!storeInfo.isDirectory() || storeInfo.isSymbolicLink()) throw new Error('Invalid execution store');
   const stateRoot = await realpath(store), rel = relative(root, stateRoot);
   if (!rel || (!rel.startsWith('../') && rel !== '..' && !isAbsolute(rel))) throw new Error('Execution store must be outside the project');
-  await currentPolicy(root);
+  await currentPolicy(root, provider);
+  if (provider === 'gitlab') verifyGitLabWebhookSignature({ body: Buffer.from('{}'), signingToken: secret, id: 'startup', timestamp: String(Math.floor(Date.now() / 1000)), signature: '' });
   let busy = false;
   const server = createServer(async (req, res) => {
-    if (req.method === 'GET' && req.url === '/health') { response(res, 200, { service: 'aem-dev-flow-max-github-worker', version: 1, busy }); return; }
+    if (req.method === 'GET' && req.url === '/health') { response(res, 200, { service: 'aem-dev-flow-max-automation-worker', version: 1, provider, busy }); return; }
     if (req.method !== 'POST' || req.url !== '/webhook') { response(res, 404, { accepted: false }); return; }
     if (busy) { response(res, 503, { accepted: false, reason: 'worker-busy' }); req.resume(); return; }
     busy = true;
@@ -39,18 +42,34 @@ export async function startGitHubAutomationWorker({ target, command, store, port
       if (length !== undefined && (!/^\d+$/.test(length) || Number(length) > limit)) { response(res, 413, { accepted: false }); req.resume(); return; }
       const chunks = []; let size = 0;
       for await (const chunk of req) { size += chunk.length; if (size > limit) { response(res, 413, { accepted: false }); req.resume(); return; } chunks.push(chunk); }
-      const body = Buffer.concat(chunks, size), { directory, policy } = await currentPolicy(root);
-      const input = { body, signature: req.headers['x-hub-signature-256'], secret, event: req.headers['x-github-event'], deliveryId: req.headers['x-github-delivery'], allowedRepositories: policy.allowedRepositories, allowedActors: policy.allowedActors };
-      const inspected = inspectGitHubWebhook(input);
-      if (!inspected.accepted || input.event !== 'issue_comment' || !['issue-comment', 'pull-request-comment'].includes(inspected.kind)) { response(res, inspected.reason === 'invalid-signature' ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
-      const payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
-      if (!Number.isSafeInteger(payload.comment?.id) || payload.comment.id < 1 || typeof payload.comment?.user?.login !== 'string' || payload.comment.user.login.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
-      const claimDigest = createHash('sha256').update(body).digest('hex'), claimed = await claimGitHubWebhook(input, { directory: join(directory, 'claims') });
-      if (!claimed.claimed) { response(res, claimed.reason === 'duplicate-payload' ? 200 : 403, { accepted: false, reason: claimed.reason }); return; }
+      const body = Buffer.concat(chunks, size), { directory, policy } = await currentPolicy(root, provider);
+      let payload;
+      const bodyDigest = createHash('sha256').update(body).digest('hex');
+      let inspected, claimed, claimDigest, expected;
+      if (provider === 'github') {
+        const input = { body, signature: req.headers['x-hub-signature-256'], secret, event: req.headers['x-github-event'], deliveryId: req.headers['x-github-delivery'], allowedRepositories: policy.allowedRepositories, allowedActors: policy.allowedActors };
+        inspected = inspectGitHubWebhook(input);
+        if (!inspected.accepted || input.event !== 'issue_comment' || !['issue-comment', 'pull-request-comment'].includes(inspected.kind)) { response(res, inspected.reason === 'invalid-signature' ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
+        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
+        if (!Number.isSafeInteger(payload.comment?.id) || payload.comment.id < 1 || typeof payload.comment?.user?.login !== 'string' || payload.comment.user.login.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
+        claimDigest = bodyDigest;
+        claimed = await claimGitHubWebhook(input, { directory: join(directory, 'claims') });
+        expected = { provider: 'github', deliveryId: inspected.deliveryId, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action };
+      } else {
+        const headers = { id: req.headers['webhook-id'], timestamp: req.headers['webhook-timestamp'], signature: req.headers['webhook-signature'], event: req.headers['x-gitlab-event'] };
+        inspected = inspectGitLabWebhook({ body, signingToken: secret, ...headers, allowedProjects: policy.gitlab.allowedProjects, allowedActors: policy.gitlab.allowedActors });
+        if (!inspected.accepted || headers.event !== 'Note Hook' || !['issue-comment', 'pull-request-comment'].includes(inspected.kind)) { response(res, ['invalid-signature', 'timestamp-outside-window'].includes(inspected.reason) ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
+        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
+        if (!Number.isSafeInteger(payload.user?.id) || payload.user.id < 1 || payload.object_attributes?.author_id !== payload.user.id) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
+        claimed = await claimExternalWebhook({ provider: 'gitlab', body, headers, policy: policy.gitlab, secret, directory: join(directory, 'claims') });
+        claimDigest = claimed.digest;
+        expected = { provider: 'gitlab', deliveryId: inspected.id, repository: inspected.project, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'created', commentId: inspected.commentId, bodyDigest };
+      }
+      if (!claimed.claimed) { response(res, ['duplicate-payload', 'duplicate-claim'].includes(claimed.reason) ? 200 : 403, { accepted: false, reason: claimed.reason }); return; }
       await enqueueAutomationClaim({ target: root, digest: claimDigest });
       const readBoundJob = async args => {
         const job = await readAutomationJob(args), claim = job.claim;
-        if (claim.digest !== claimDigest || claim.deliveryId !== inspected.deliveryId || claim.repository !== inspected.repository || claim.actor !== inspected.actor || claim.kind !== inspected.kind || claim.number !== inspected.number || claim.action !== inspected.action || (claim.provider !== undefined && claim.provider !== 'github')) throw new Error('Queued event changed');
+        if (claim.digest !== claimDigest || Object.entries(expected).some(([key, value]) => (key === 'provider' ? claim.provider ?? 'github' : claim[key]) !== value)) throw new Error('Queued event changed');
         return job;
       };
       launched = true;
@@ -74,3 +93,6 @@ export async function startGitHubAutomationWorker({ target, command, store, port
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', () => { server.off('error', reject); resolve(); }); });
   return server;
 }
+
+export async function startGitHubAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'github' }, dependencies); }
+export async function startGitLabAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'gitlab' }, dependencies); }
