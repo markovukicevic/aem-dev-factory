@@ -119,6 +119,14 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       if (!Number.isSafeInteger(data?.id) || data.id < 1) throw new Error('Note response unclear; inspect GitLab before retrying');
       return { sent: true, id: data.id };
     },
+    async createInlineDiscussion({ number, body, position }) {
+      iid(number);
+      if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536 || !position || position.position_type !== 'text' || !['base_sha', 'head_sha', 'start_sha'].every(key => typeof position[key] === 'string' && /^[a-f0-9]{40,64}$/i.test(position[key])) || !['old_path', 'new_path'].every(key => typeof position[key] === 'string' && position[key].length > 0 && position[key].length <= 1024 && !position[key].startsWith('/') && !/[\u0000-\u001f\u007f\\]/.test(position[key]) && position[key].split('/').every(part => part && part !== '.' && part !== '..')) || !['old_line', 'new_line'].some(key => Number.isSafeInteger(position[key]) && position[key] > 0) || ['old_line', 'new_line'].some(key => position[key] !== undefined && (!Number.isSafeInteger(position[key]) || position[key] < 1))) throw new TypeError('Invalid GitLab diff discussion');
+      const payload = { position_type: position.position_type, base_sha: position.base_sha, head_sha: position.head_sha, start_sha: position.start_sha, old_path: position.old_path, new_path: position.new_path, ...(position.old_line === undefined ? {} : { old_line: position.old_line }), ...(position.new_line === undefined ? {} : { new_line: position.new_line }) };
+      const result = (await request(`/merge_requests/${number}/discussions`, { method: 'POST', body: { body, position: payload } })).data;
+      if (typeof result?.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(result.id)) throw new Error('Discussion response unclear; inspect GitLab before retrying');
+      return { sent: true, discussionId: result.id };
+    },
     async createPullRequestComment({ number, body }) {
       iid(number);
       if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid merge request comment');
