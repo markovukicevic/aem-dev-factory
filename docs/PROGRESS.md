@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added non-overwriting local task staging from a complete hub discovery proposal and a user-supplied command template; staging does not run the command.
+
 - Extended tagged hub comment discovery to a restricted HTML subset for Azure history, rejecting attributes and unsupported markup.
 
 - Added preview-bound routing setup for existing hubs without routing metadata, with exact registry matching and preserved YAML comments where supported.
