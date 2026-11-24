@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added initial coordinated Figma extraction, local prototype and verification workflows. Actual Figma access, browser rendering and full reference parity remain unverified.
+
 - Added offline comparison and local reports for selected properties of two Figma node observations. It does not compare rendered designs or verify live page behavior.
 
 - Added bounded local Figma node reports for selected observed layout, typography and fill properties; they do not render designs or verify appearance.
