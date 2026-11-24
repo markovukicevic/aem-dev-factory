@@ -6,6 +6,17 @@ function inputs({ fileKey, nodeId, depth }) {
   if (typeof fileKey !== 'string' || !/^[A-Za-z0-9]{1,128}$/.test(fileKey) || typeof nodeId !== 'string' || !/^[A-Za-z0-9:;_-]{1,200}$/.test(nodeId) || !Number.isSafeInteger(depth) || depth < 1 || depth > 5) throw new TypeError('Invalid Figma node request');
   return { fileKey, nodeId: /^\d+-\d+$/.test(nodeId) ? nodeId.replace('-', ':') : nodeId, depth };
 }
+/** Parse an explicit Figma design link without making a network request. */
+export function parseFigmaNodeUrl(value) {
+  if (typeof value !== 'string' || value.length > 8192 || /[\u0000-\u001f\u007f]/.test(value)) throw new TypeError('Invalid Figma URL');
+  let url; try { url = new URL(value); } catch { throw new TypeError('Invalid Figma URL'); }
+  if (url.protocol !== 'https:' || !['figma.com', 'www.figma.com'].includes(url.hostname.toLowerCase()) || url.username || url.password || url.port || url.hash) throw new TypeError('Unsupported Figma URL');
+  const parts = url.pathname.split('/').filter(Boolean), ids = url.searchParams.getAll('node-id');
+  if (parts.length !== 3 || !['design', 'file', 'proto'].includes(parts[0]) || !parts[2] || ids.length !== 1) throw new TypeError('Figma node URL is required');
+  const selected = inputs({ fileKey: parts[1], nodeId: ids[0], depth: 1 });
+  return { fileKey: selected.fileKey, nodeId: selected.nodeId, scope: 'URL parsing only; access, file identity and node existence were not checked.' };
+}
+
 async function boundedJson(response) {
   if (!response.ok || response.redirected || !response.body?.getReader) throw new Error('Figma response unavailable');
   const reader = response.body.getReader(), chunks = []; let size = 0;

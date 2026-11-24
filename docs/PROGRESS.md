@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added local parsing of selected Figma design, file and prototype node links into file and node identifiers; it does not validate access or fetch content.
+
 - Added initial coordinated Figma extraction, local prototype and verification workflows. Actual Figma access, browser rendering and full reference parity remain unverified.
 
 - Added offline comparison and local reports for selected properties of two Figma node observations. It does not compare rendered designs or verify live page behavior.
