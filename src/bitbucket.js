@@ -50,6 +50,28 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
       return { accepted: true, approved: true };
     },
     getPullRequest(id) { number(id); return get(endpoint(`/pullrequests/${id}`)); },
+    async getPullRequestDiff(id) {
+      number(id);
+      const response = await fetchImpl(endpoint(`/pullrequests/${id}/diff`), { method: 'GET', headers: { Accept: 'text/plain', Authorization: `Bearer ${token}` }, redirect: 'manual', signal: AbortSignal.timeout(30000) });
+      if (response.status !== 302 || response.redirected) throw new Error('Expected a Bitbucket diff redirect');
+      const location = response.headers?.get?.('location');
+      if (typeof location !== 'string' || location.length > 8192) throw new Error('Invalid Bitbucket diff redirect');
+      let target; try { target = new URL(location, endpoint('')); } catch { throw new Error('Invalid Bitbucket diff redirect'); }
+      const prefix = `${root}/diff/`, spec = target.pathname.startsWith(prefix) ? target.pathname.slice(prefix.length) : '';
+      if (target.protocol !== 'https:' || target.hostname !== 'api.bitbucket.org' || target.port || target.username || target.password || target.hash || !/^[A-Za-z0-9._~-]{1,256}$/.test(spec) || spec === '.' || spec === '..') throw new Error('Invalid Bitbucket diff redirect');
+      const data = await fetchImpl(target.href, { method: 'GET', headers: { Accept: 'text/plain', Authorization: `Bearer ${token}` }, redirect: 'error', signal: AbortSignal.timeout(30000) });
+      if (!data.ok || data.redirected || !data.body?.getReader) throw new Error('Bitbucket diff unavailable');
+      const reader = data.body.getReader(), chunks = []; let size = 0;
+      try { while (true) { const { done, value } = await reader.read(); if (done) break; if (!(value instanceof Uint8Array)) throw new Error('Invalid diff stream'); size += value.byteLength; if (size > 2 * 1024 * 1024) { await reader.cancel(); throw new Error('Diff exceeds size limit'); } chunks.push(Buffer.from(value)); } } finally { reader.releaseLock(); }
+      return new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, size));
+    },
+    async createInlineComment({ number: id, path, side, line, body }) {
+      number(id);
+      if (typeof path !== 'string' || !path || path.length > 1024 || !/^[A-Za-z0-9_./-]+$/.test(path) || path.startsWith('/') || path.split('/').some(part => !part || part === '.' || part === '..') || !['LEFT', 'RIGHT'].includes(side) || !Number.isSafeInteger(line) || line < 1 || typeof body !== 'string' || !body.trim() || Buffer.byteLength(body, 'utf8') > 65536) throw new TypeError('Invalid Bitbucket inline comment');
+      const result = await request(endpoint(`/pullrequests/${id}/comments`), { method: 'POST', body: { content: { raw: body }, inline: { path, [side === 'LEFT' ? 'from' : 'to']: line } } });
+      if (!Number.isSafeInteger(result?.id) || result.id < 1) throw new Error('Comment response unclear; inspect Bitbucket before retrying');
+      return { sent: true, id: result.id };
+    },
     async getPullRequestDiffstat(id) {
       number(id);
       const response = await fetchImpl(endpoint(`/pullrequests/${id}/diffstat`), { method: 'GET', headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }, redirect: 'manual' });
