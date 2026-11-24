@@ -1,5 +1,5 @@
 {
   "name": "agent-automation-max",
   "version": "0.1.0",
-  "description": "Initial offline GitHub webhook inspection workflow"
+  "description": "Local multi-provider webhook and explicit automation workflows"
 }
