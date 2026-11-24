@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added explicit plain-text tagged comment repository discovery, matching a reference workflow while keeping selections as untrusted proposals and rejecting unknown or ambiguous names.
+
 - Added non-overwriting batch export of explicitly selected job contexts for separate use in local batch execution previews; partial failures remain visible.
 
 - Added a paginated read-only queue and execution-record overview, preserving uncertainty about missing records and process liveness.

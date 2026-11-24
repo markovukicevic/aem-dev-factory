@@ -520,3 +520,5 @@ The command is started directly without a shell, inherits the user's environment
 
 The GitHub Actions test workflow runs for pull requests or by explicit manual dispatch; it does not run automatically on every push.
 Skill installation copies an explicitly selected skill directory, including supporting files, with limits of 100 files, 1 MiB per file, 8 MiB total and five directory levels. Symlinks and special files are rejected. Existing destination skills are preserved; inspect any partial installation after a copy failure. Executable bits are retained. Client discovery and behavior remain unverified.
+
+`hub-discover-comment <comment-file>` resolves one plain-text line such as `@aem-simple repos: brand-one, platform-core please update the page` against the local hub registry. It rejects unknown, repeated or ambiguous names and ignores fenced code. It does not process HTML comments or prove the comment author, intent, repository identity or permission to dispatch work. The result is a proposal only; no tasks are started.

@@ -105,3 +105,29 @@ export async function discoverHubScopeTable({ cwd, path }) {
   for (const name of names) { const repo = byName.get(name.toLowerCase()); if (repo) selected.push(repo); else unknown.push(name); }
   return { repos: selected, unknown, complete: unknown.length === 0, scope: 'Explicit names in one untrusted scope table are proposals only; verify repository identity and intent before work.' };
 }
+
+/** Parse a tagged plain-text comment with one inline repos directive. */
+export function parseHubCommentDirective(text) {
+  if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > 262144 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) throw new TypeError('Invalid comment text');
+  let fence = null; const directives = [];
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (marker) { if (!fence) fence = { char: marker[1][0], length: marker[1].length }; else if (marker[1][0] === fence.char && marker[1].length >= fence.length) fence = null; continue; }
+    if (fence) continue;
+    const match = /^\s*@aem(?:-[a-z0-9-]+)?\s+repos\s*:\s*(.*)$/i.exec(line);
+    if (!match) continue;
+    if (!match[1] || /(?:^|\s)repos\s*:/i.test(match[1]) || /[<>]/.test(match[1])) throw new Error('Invalid comment directive');
+    const names = match[1].split(',').map(part => part.trim().split(/\s+/)[0]);
+    if (names.some(name => !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) || new Set(names.map(name => name.toLowerCase())).size !== names.length || names.length > 100) throw new Error('Invalid comment repository names');
+    directives.push(names);
+  }
+  if (fence || directives.length !== 1) throw new Error('Comment must contain exactly one tagged directive outside fenced code');
+  return directives[0];
+}
+
+/** Resolve untrusted comment targets as proposals, never as execution authority. */
+export async function discoverHubCommentRepositories({ cwd, path }) {
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(path, 262144));
+  const selected = await selectHubRepositories({ cwd, names: parseHubCommentDirective(text) });
+  return { ...selected, scope: 'Untrusted tagged comment resolved as a proposal only; author identity, intent and repository identity were not verified. No work was dispatched.' };
+}
