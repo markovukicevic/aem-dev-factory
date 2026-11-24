@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 import { summarizePlanStatus } from './plan-status.js';
 
-const artifacts = ['source-identity.json', 'raw-story.md', 'dor.md', 'explain.md', 'research.md', 'share-req.md', 'implement.md', 'validation-report.md', 'verification.md', 'dod.md', 'triage.md', 'bug-reproduction.md', 'bug-fix.md', 'bug-verification.md', 'qa-handoff.md'];
+const artifacts = ['source-identity.json', 'raw-story.md', 'dor.md', 'explain.md', 'research.md', 'share-req.md', 'implement.md', 'validation-report.md', 'verification.md', 'dod.md', 'triage.md', 'bug-reproduction.md', 'bug-fix.md', 'bug-verification.md', 'qa-handoff.md', 'run-state.json'];
 /** Inspect declared artifacts without inferring their validity or doing remote calls. */
 export async function inspectTicketDirectory(path) {
   if (typeof path !== 'string' || !path.trim()) throw new TypeError('Ticket directory is required');

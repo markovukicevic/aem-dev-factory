@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added non-overwriting persistent ticket run state with digest-bound phase updates and reference-style state reading. Declared phases are not proof of work or a live process.
+
 - Added a read-only preflight for selected signed worker events, current comments, reservations and Git state, sharing event validation with the workers. It does not run or queue jobs.
 
 - Added a best-effort GitHub App installation-token revocation after command execution or rejected scope, with unconfirmed revocation reported explicitly.
