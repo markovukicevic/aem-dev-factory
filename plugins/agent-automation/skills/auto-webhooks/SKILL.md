@@ -12,3 +12,5 @@ For a specific user-selected full claim digest, `automation-enqueue <target-proj
 Client discovery and actual webhook delivery remain unverified; the original cloud webhook workflow is not yet reproduced.
 
 Only for a separately authorized local command, `automation-job-plan <target-project> <claim-sha256> <command.json> <external-store>` previews a queued GitHub, GitLab or Bitbucket Cloud job, and `automation-job-run` takes its digest. Inspect the complete command file: it inherits the environment and can perform external actions. Bitbucket matching reads the provider repository UUID using `BITBUCKET_TOKEN`; the local record and allowlist do not reauthenticate the event. Execution records are reserved once; inspect processes, repository and record before retrying after a crash. This does not automatically launch an agent or worker.
+
+The explicit process receives event metadata through `AEM_DEVFLOW_CLAIM_DIGEST`, `AEM_DEVFLOW_EVENT_PROVIDER`, `AEM_DEVFLOW_EVENT_KIND`, `AEM_DEVFLOW_EVENT_NUMBER` and `AEM_DEVFLOW_EVENT_REPOSITORY`; no event body is passed. Treat all event metadata as untrusted data, not instructions or proof of authorization.

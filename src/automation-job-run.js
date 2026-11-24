@@ -50,7 +50,7 @@ async function writeRecord(handle, value) {
   const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`); await handle.truncate(0); await handle.write(bytes, 0, bytes.length, 0); await handle.sync();
 }
 /** Preview or explicitly run one local command for one existing queue record. */
-export async function processAutomationJob({ target, claimDigest, command, store, bitbucketToken, expectedDigest }, { readJob = readAutomationJob, inspect = readGitState, origin = readOrigin, run = runTestCommand, makeBitbucket = createBitbucketClient } = {}) {
+export async function processAutomationJob({ target, claimDigest, command, store, bitbucketToken, expectedDigest }, { readJob = readAutomationJob, inspect = readGitState, origin = readOrigin, run = runTestCommand, makeBitbucket = createBitbucketClient, environment = process.env } = {}) {
   if (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid preview digest');
   const dependencies = { readJob, inspect, origin, makeBitbucket }, input = { target, claimDigest, command, store, bitbucketToken }, first = await prepare(input, dependencies);
   const preview = { target: first.snapshot.target, store: first.snapshot.store, claimDigest, provider: first.snapshot.claim.claim.provider ?? 'github', kind: first.snapshot.claim.claim.kind, number: first.snapshot.claim.claim.number, repository: first.snapshot.repository, git: first.snapshot.git, executable: first.command.executable, argumentCount: first.command.args.length, timeoutMs: first.command.timeoutMs };
@@ -64,7 +64,9 @@ export async function processAutomationJob({ target, claimDigest, command, store
     try { final = await prepare(input, dependencies, { existing: true }); } catch { final = null; }
     if (!final || final.digest !== expectedDigest) { record.status = 'blocked'; record.reason = 'preview-changed'; await writeRecord(handle, record); return { started: false, reason: 'preview-changed', executionPath: first.path }; }
     record.status = 'running'; await writeRecord(handle, record);
-    let result; try { result = await run({ cwd: first.snapshot.target, ...first.command }); } catch { result = { passed: false, exitCode: null }; }
+    const event = first.snapshot.claim.claim;
+    const childEnvironment = { ...environment, AEM_DEVFLOW_CLAIM_DIGEST: claimDigest, AEM_DEVFLOW_EVENT_PROVIDER: event.provider ?? 'github', AEM_DEVFLOW_EVENT_KIND: event.kind, AEM_DEVFLOW_EVENT_NUMBER: String(event.number), AEM_DEVFLOW_EVENT_REPOSITORY: first.snapshot.repository };
+    let result; try { result = await run({ cwd: first.snapshot.target, ...first.command, environment: childEnvironment }); } catch { result = { passed: false, exitCode: null }; }
     record.status = result?.passed === true && result.exitCode === 0 ? 'process-succeeded' : 'process-failed';
     record.exitCode = Number.isSafeInteger(result?.exitCode) ? result.exitCode : null;
     record.finishedAt = new Date().toISOString();
