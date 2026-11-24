@@ -4,7 +4,7 @@
 
 - Added offline inspection of saved Azure DevOps PR-created service-hook payloads with Basic credential comparison and repository/author allowlists. Added separate local claims and an explicit loopback receiver; these records can be explicitly enqueued under a configured Azure allowlist, used for PR context, and passed to an explicitly selected local command after a repository GUID check. Azure API behavior remains simulated only. Basic credentials do not sign payloads or prevent replay, and only synthetic local payloads were checked.
 
-- Added non-overwriting local export of a selected automation job context for an explicitly chosen command to consume. Optional per-job context files, including in batches, are checked against each selected job and bound to the execution preview by digest; it remains untrusted and editable after the check.
+- Added non-overwriting local export of a selected automation job context for an explicitly chosen command to consume. Optional per-job context files, including in batches, are checked against each selected job and bound to the execution preview by digest; a post-run observation reports changes or unavailability without proving what the process read.
 
 - Added ordered batch context collection for explicitly selected automation jobs, retaining partial results. Provider responses remain untrusted and non-atomic; only simulated behavior was checked.
 

@@ -84,7 +84,7 @@ export async function processAutomationJob({ target, claimDigest, command, store
   if (expectedDigest === undefined) return { preview, digest: first.digest, scope: 'Read-only preview. Inspect the complete command file; queue records do not prove event authenticity or authorize execution.' };
   if (first.digest !== expectedDigest) return { started: false, reason: 'preview-changed' };
   const handle = await open(first.path, 'wx', 0o600);
-  const record = { version: 1, claimDigest, previewDigest: first.digest, commandDigest: hash(JSON.stringify(first.command)), target: first.snapshot.target, repository: first.snapshot.repository, startingGit: first.snapshot.git, status: 'reserved', startedAt: new Date().toISOString() };
+  const record = { version: 1, claimDigest, previewDigest: first.digest, commandDigest: hash(JSON.stringify(first.command)), target: first.snapshot.target, repository: first.snapshot.repository, startingGit: first.snapshot.git, context: first.snapshot.context, status: 'reserved', startedAt: new Date().toISOString() };
   try {
     await writeRecord(handle, record);
     let final;
@@ -98,10 +98,14 @@ export async function processAutomationJob({ target, claimDigest, command, store
     let result; try { result = await run({ cwd: first.snapshot.target, ...first.command, environment: childEnvironment }); } catch { result = { passed: false, exitCode: null }; }
     record.status = result?.passed === true && result.exitCode === 0 ? 'process-succeeded' : 'process-failed';
     record.exitCode = Number.isSafeInteger(result?.exitCode) ? result.exitCode : null;
+    if (final.snapshot.context) {
+      try { const after = await readContextSnapshot(first.command.contextFile, first.snapshot.target, claimDigest, first.snapshot.claim.claim); record.contextObservation = after.path === final.snapshot.context.path && after.sha256 === final.snapshot.context.sha256 ? 'unchanged' : 'changed'; }
+      catch { record.contextObservation = 'unavailable-or-invalid'; }
+    }
     record.finishedAt = new Date().toISOString();
     try { const end = await inspect(first.snapshot.target); record.endingGit = typeof end?.head === 'string' && /^[a-f0-9]{40,64}$/i.test(end.commit ?? '') && typeof end.workingTreeClean === 'boolean' ? { head: end.head, commit: end.commit, workingTreeClean: end.workingTreeClean } : null; } catch { record.endingGit = null; }
     await writeRecord(handle, record);
-    return { started: true, status: record.status, exitCode: record.exitCode, executionPath: first.path, endingGit: record.endingGit, scope: 'One explicit local process result. Correctness, external effects, descendant termination and event authenticity are not established.' };
+    return { started: true, status: record.status, exitCode: record.exitCode, executionPath: first.path, endingGit: record.endingGit, contextObservation: record.contextObservation ?? null, scope: 'One explicit local process result. Correctness, external effects, descendant termination and event authenticity are not established.' };
   } finally { await handle.close(); }
 }
 
@@ -126,5 +130,5 @@ export async function inspectAutomationExecution({ target, claimDigest, store },
   let jobAvailable = false, currentGit = null;
   try { await readJob({ target: root, digest: claimDigest }); jobAvailable = true; } catch { /* Job or policy may have changed. */ }
   try { const value = await inspect(root); if (typeof value?.head === 'string' && /^[a-f0-9]{40,64}$/i.test(value.commit ?? '') && typeof value.workingTreeClean === 'boolean') currentGit = { head: value.head, commit: value.commit, workingTreeClean: value.workingTreeClean }; } catch { /* Detached, inaccessible or unavailable. */ }
-  return { path, claimDigest, status: record.status, repository: record.repository, startedAt: record.startedAt, finishedAt: typeof record.finishedAt === 'string' ? record.finishedAt : null, exitCode: Number.isSafeInteger(record.exitCode) ? record.exitCode : null, startingGit: record.startingGit, endingGit: record.endingGit ?? null, currentGit, jobAvailable, scope: 'Editable local execution record and current local observations only. Running status does not establish process liveness, event authenticity, correctness or external effects.' };
+  return { path, claimDigest, status: record.status, repository: record.repository, startedAt: record.startedAt, finishedAt: typeof record.finishedAt === 'string' ? record.finishedAt : null, exitCode: Number.isSafeInteger(record.exitCode) ? record.exitCode : null, startingGit: record.startingGit, endingGit: record.endingGit ?? null, context: record.context ?? null, contextObservation: ['unchanged', 'changed', 'unavailable-or-invalid'].includes(record.contextObservation) ? record.contextObservation : null, currentGit, jobAvailable, scope: 'Editable local execution record and current local observations only. Running status does not establish process liveness, event authenticity, correctness or external effects.' };
 }
