@@ -29,6 +29,7 @@ export async function startGitHubAutomationWorker({ target, command, store, port
   await currentPolicy(root);
   let busy = false;
   const server = createServer(async (req, res) => {
+    if (req.method === 'GET' && req.url === '/health') { response(res, 200, { service: 'aem-dev-flow-max-github-worker', version: 1, busy }); return; }
     if (req.method !== 'POST' || req.url !== '/webhook') { response(res, 404, { accepted: false }); return; }
     if (busy) { response(res, 503, { accepted: false, reason: 'worker-busy' }); req.resume(); return; }
     busy = true;
