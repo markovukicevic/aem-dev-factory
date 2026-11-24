@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added local comparison of supported legacy provider settings with existing Max configuration; target-only and omitted sections remain explicit.
+
 - Added preview-bound conversion of restricted reference-style YAML provider settings into a new Max JSON configuration, with explicit omissions and no credential copying.
 
 - Added signed-trigger preflight using a temporary scoped GitHub App token and best-effort revocation, plus provider credential-presence diagnostics. Live GitHub App behavior remains unverified.

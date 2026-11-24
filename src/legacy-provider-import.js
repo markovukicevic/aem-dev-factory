@@ -13,7 +13,7 @@ function adoOrganization(input) {
   const host = url.hostname.toLowerCase(), parts = url.pathname.split('/').filter(Boolean);
   if (host === 'dev.azure.com' && parts.length === 1 && /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(parts[0])) return parts[0];
   const match = /^([a-z0-9][a-z0-9-]*)\.visualstudio\.com$/i.exec(host);
-  return match && parts.length === 0 ? match[1] : null;
+  return match && (parts.length === 0 || (parts.length === 1 && parts[0].toLowerCase() === 'defaultcollection')) ? match[1] : null;
 }
 function section(provider, raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid provider section');
@@ -83,4 +83,23 @@ export async function saveLegacyProviders({ sourcePath, outputPath, expectedDige
   if (final.digest !== expectedDigest) return { saved: false, reason: 'preview-changed' };
   await writeFile(outputPath, `${JSON.stringify(final.config, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
   return { saved: true, path: outputPath, sections: Object.keys(final.config), derived: final.derived, omitted: final.omitted, scope: 'New provider configuration only; source can change afterward and service identity, access and omitted legacy settings were not verified.' };
+}
+
+/** Compare explicitly specified legacy provider fields with an existing Max configuration. */
+export async function checkLegacyProviders({ sourcePath, configPath }) {
+  const before = await planLegacyProviders({ sourcePath });
+  const bytes = await readLimitedFile(configPath, 262144), config = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  validateProjectConfig(config);
+  const sections = [];
+  for (const name of ['tracker', 'scm', 'ci', 'documentation']) {
+    if (before.issues.some(issue => issue.section === name)) { sections.push({ section: name, status: 'source-unsupported-or-incomplete' }); continue; }
+    const proposed = before.config[name], actual = config[name];
+    if (!proposed) { sections.push({ section: name, status: actual ? 'target-only' : 'not-specified' }); continue; }
+    if (!actual) { sections.push({ section: name, status: 'target-missing' }); continue; }
+    const keys = [...new Set([...Object.keys(proposed), ...Object.keys(actual)])].sort(), changed = keys.filter(key => proposed[key] !== actual[key]);
+    sections.push({ section: name, status: changed.length ? 'different' : 'matches', ...(changed.length ? { fields: changed } : {}) });
+  }
+  const after = await planLegacyProviders({ sourcePath }), current = await readLimitedFile(configPath, 262144);
+  const stable = before.digest === after.digest && bytes.equals(current);
+  return { matches: stable && before.complete && sections.every(item => ['matches', 'not-specified', 'target-only'].includes(item.status)), stable, sections, sourceSha256: before.sourceSha256, configSha256: digest(bytes), scope: 'Specified non-secret provider fields only. Target-only sections, omitted legacy settings, live service access and source authenticity are not verified; files may change afterward.' };
 }
