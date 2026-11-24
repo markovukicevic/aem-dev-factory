@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added local provider/repository/comment reservations before worker execution to suppress repeat runs of the same comment in a shared external store; crashes and recovery still require inspection.
+
 - Preserved available GitHub comment IDs in claims and passed selected comment IDs to local jobs as metadata across supported providers; legacy records remain readable.
 
 - Extended the local fixed-command worker to Bitbucket Cloud PR comments, retaining its unsigned-header and replay limitations; webhook credentials are excluded from child environments. Only synthetic Bitbucket delivery and mocked execution were checked.

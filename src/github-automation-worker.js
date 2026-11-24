@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { lstat, realpath } from 'node:fs/promises';
+import { lstat, realpath, open } from 'node:fs/promises';
 import { join, relative, isAbsolute } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 import { projectAutomationDirectory, validateAutomationPolicy } from './automation-local.js';
@@ -17,6 +17,14 @@ async function currentPolicy(target, provider) {
   const policy = validateAutomationPolicy(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(join(directory, 'policy.json'), 262144))));
   if (provider === 'github' ? !policy.allowedRepositories || !policy.allowedActors : provider === 'gitlab' ? !policy.gitlab : !policy.bitbucket) throw new Error('Provider automation policy is required');
   return { directory, policy };
+}
+async function reserveComment(store, provider, repository, commentId, claimDigest) {
+  if (typeof repository !== 'string' || !repository || !Number.isSafeInteger(commentId) || commentId < 1) throw new Error('Invalid comment identity');
+  const identity = createHash('sha256').update(JSON.stringify([provider, repository.toLowerCase(), commentId])).digest('hex'), path = join(store, `${identity}.comment.json`);
+  let file;
+  try { file = await open(path, 'wx', 0o600); } catch (error) { if (error?.code === 'EEXIST') return false; throw error; }
+  try { await file.writeFile(`${JSON.stringify({ version: 1, provider, repository, commentId, claimDigest, reservedAt: new Date().toISOString() }, null, 2)}\n`); await file.sync(); } finally { await file.close(); }
+  return true;
 }
 function response(res, code, value) { if (!res.headersSent && !res.destroyed) { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(`${JSON.stringify(value)}\n`); } }
 
@@ -79,6 +87,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
         expected = { provider: 'bitbucket-cloud', deliveryId: `body-${bodyDigest}`, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'observed', commentId: inspected.commentId, bodyDigest, eventHeader: inspected.eventHeader };
       }
       if (!claimed.claimed) { response(res, ['duplicate-payload', 'duplicate-claim'].includes(claimed.reason) ? 200 : 403, { accepted: false, reason: claimed.reason }); return; }
+      if (!await reserveComment(stateRoot, provider, expected.repository, expected.commentId, claimDigest)) { response(res, 200, { accepted: false, reason: 'duplicate-comment' }); return; }
       await enqueueAutomationClaim({ target: root, digest: claimDigest });
       const readBoundJob = async args => {
         const job = await readAutomationJob(args), claim = job.claim;
