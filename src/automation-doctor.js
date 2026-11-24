@@ -23,6 +23,9 @@ export async function diagnoseLocalAutomation({ target, env = process.env }) {
       if (provider === 'ado') { for (const variable of ['ADO_WEBHOOK_USERNAME', 'ADO_WEBHOOK_PASSWORD']) checks.push({ name: `ado-${variable.toLowerCase()}`, status: typeof env[variable] === 'string' && !!env[variable].trim() ? 'present' : 'missing', variable }); continue; }
       const variable = provider === 'github' ? 'GITHUB_WEBHOOK_SECRET' : provider === 'gitlab' ? 'GITLAB_WEBHOOK_SIGNING_TOKEN' : 'BITBUCKET_WEBHOOK_SECRET';
       checks.push({ name: `${provider}-webhook-secret`, status: typeof env[variable] === 'string' && !!env[variable].trim() ? 'present' : 'missing', variable });
+      const accessVariable = provider === 'github' ? 'GITHUB_TOKEN' : provider === 'gitlab' ? 'GITLAB_TOKEN' : 'BITBUCKET_TOKEN';
+      const hasAccess = typeof env[accessVariable] === 'string' && !!env[accessVariable].trim(), hasAppKey = provider === 'github' && typeof env.GITHUB_APP_PRIVATE_KEY === 'string' && !!env.GITHUB_APP_PRIVATE_KEY.trim();
+      checks.push({ name: `${provider}-api-access`, status: hasAccess ? 'token-present' : hasAppKey ? 'app-key-present' : 'missing', detail: hasAppKey && !hasAccess ? 'App configuration and permissions were not checked.' : 'Credential presence only.' });
     }
     try { const observed = await inspectAutomationIgnore({ target: targetRoot }); checks.push({ name: 'runtime-ignore', status: observed.claimsIgnored && observed.jobsIgnored ? 'covered' : 'not-covered', claimsIgnored: observed.claimsIgnored, jobsIgnored: observed.jobsIgnored, ignoreFile: observed.ignoreFile, workingTreeClean: observed.workingTreeClean }); }
     catch { checks.push({ name: 'runtime-ignore', status: 'unavailable' }); }
@@ -52,6 +55,6 @@ export async function diagnoseLocalAutomation({ target, env = process.env }) {
     else if (scm.provider === 'bitbucket-cloud') checks.push({ name: 'scm-policy-match', status: 'unknown', detail: 'Repository UUID requires a separate provider lookup.' });
     else checks.push({ name: 'scm-policy-match', status: 'not-supported' });
   }
-  const needsInspection = checks.some(item => ['missing-or-invalid', 'invalid-or-unreadable', 'incomplete', 'unavailable', 'needs-inspection', 'not-allowlisted', 'not-covered'].includes(item.status) || ((item.name.endsWith('-webhook-secret') || item.name.startsWith('ado-ado_webhook_')) && item.status === 'missing') || (item.name === 'runtime-ignore' && item.workingTreeClean === false));
+  const needsInspection = checks.some(item => ['missing-or-invalid', 'invalid-or-unreadable', 'incomplete', 'unavailable', 'needs-inspection', 'not-allowlisted', 'not-covered'].includes(item.status) || ((item.name.endsWith('-webhook-secret') || item.name.endsWith('-api-access') || item.name.startsWith('ado-ado_webhook_')) && item.status === 'missing') || (item.name === 'runtime-ignore' && item.workingTreeClean === false));
   return { checks, needsInspection, scope: 'Local configuration, environment presence and editable records only; no listener status, provider access, secret validity, cloud health, agent execution or readiness was verified. Files may change afterward.' };
 }

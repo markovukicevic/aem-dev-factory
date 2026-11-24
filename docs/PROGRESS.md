@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added signed-trigger preflight using a temporary scoped GitHub App token and best-effort revocation, plus provider credential-presence diagnostics. Live GitHub App behavior remains unverified.
+
 - Connected the local GitHub worker to scoped per-event GitHub App tokens with best-effort revocation. Actual GitHub App and webhook delivery behavior remains unverified.
 
 - Added non-overwriting persistent ticket run state with digest-bound phase updates and reference-style state reading. Declared phases are not proof of work or a live process.
