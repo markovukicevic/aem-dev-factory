@@ -9,6 +9,7 @@ import { enqueueAutomationClaim, readAutomationJob } from './automation-queue.js
 import { processAutomationJob, normalizeAutomationCommand } from './automation-job-run.js';
 import { workerCommentKey } from './worker-comment.js';
 import { verifyWorkerTriggerComment } from './worker-comment-fresh.js';
+import { inspectGitHubAppAuth, issueGitHubAppToken, revokeInstallationToken } from './github-app-exec.js';
 const limit = 1024 * 1024;
 async function reserveComment(store, provider, repository, commentId, claimDigest) {
   if (typeof repository !== 'string' || !repository || !Number.isSafeInteger(commentId) || commentId < 1) throw new Error('Invalid comment identity');
@@ -21,18 +22,26 @@ async function reserveComment(store, provider, repository, commentId, claimDiges
 function response(res, code, value) { if (!res.headersSent && !res.destroyed) { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(`${JSON.stringify(value)}\n`); } }
 
 /** Explicit loopback worker for one fixed command and signed comment events. */
-export async function startAutomationWorker({ provider, target, command, store, port, secret, environment = process.env }, { runJob = processAutomationJob, verifyComment = verifyWorkerTriggerComment } = {}) {
+export async function startAutomationWorker({ provider, target, command, store, port, secret, environment = process.env, appAuth }, { runJob = processAutomationJob, verifyComment = verifyWorkerTriggerComment, issueToken = issueGitHubAppToken, revokeToken = revokeInstallationToken } = {}) {
   if (!['github', 'gitlab', 'bitbucket-cloud'].includes(provider) || typeof target !== 'string' || !target.trim() || typeof store !== 'string' || !store.trim() || !Number.isSafeInteger(port) || port < 0 || port > 65535 || typeof secret !== 'string' || !secret || secret.length > 4096 || !environment || typeof environment !== 'object' || Array.isArray(environment)) throw new TypeError('Invalid worker options');
   const task = normalizeAutomationCommand(command);
   const tokenName = provider === 'github' ? 'GITHUB_TOKEN' : provider === 'gitlab' ? 'GITLAB_TOKEN' : 'BITBUCKET_TOKEN';
-  if (typeof environment[tokenName] !== 'string' || !environment[tokenName].trim()) throw new TypeError('Provider API token is required');
+  if (appAuth !== undefined && provider !== 'github') throw new TypeError('GitHub App authentication requires GitHub');
+  if (appAuth === undefined && (typeof environment[tokenName] !== 'string' || !environment[tokenName].trim())) throw new TypeError('Provider API token is required');
   const childEnvironment = { ...environment };
-  for (const key of ['GITHUB_WEBHOOK_SECRET', 'GITLAB_WEBHOOK_SIGNING_TOKEN', 'BITBUCKET_WEBHOOK_SECRET', 'ADO_WEBHOOK_PASSWORD', 'ADO_WEBHOOK_AUTHORIZATION']) delete childEnvironment[key];
+  for (const key of ['GITHUB_APP_PRIVATE_KEY', 'GITHUB_WEBHOOK_SECRET', 'GITLAB_WEBHOOK_SIGNING_TOKEN', 'BITBUCKET_WEBHOOK_SECRET', 'ADO_WEBHOOK_PASSWORD', 'ADO_WEBHOOK_AUTHORIZATION']) delete childEnvironment[key];
   if (task.contextFile !== undefined) throw new TypeError('Event-specific context is not supported by this worker');
   const root = await realpath(target), storeInfo = await lstat(store);
   if (!storeInfo.isDirectory() || storeInfo.isSymbolicLink()) throw new Error('Invalid execution store');
   const stateRoot = await realpath(store), rel = relative(root, stateRoot);
   if (!rel || (!rel.startsWith('../') && rel !== '..' && !isAbsolute(rel))) throw new Error('Execution store must be outside the project');
+  let app = null, fixedAppAuth = null;
+  if (appAuth !== undefined) {
+    app = inspectGitHubAppAuth(appAuth).app;
+    fixedAppAuth = { config: { ...app, permissions: { ...app.permissions } }, privateKey: appAuth.privateKey };
+    const appTarget = await lstat(app.target);
+    if (!appTarget.isDirectory() || appTarget.isSymbolicLink() || await realpath(app.target) !== root) throw new Error('GitHub App target does not match worker');
+  }
   await loadWorkerPolicy(root, provider);
   if (provider === 'gitlab') verifyGitLabWebhookSignature({ body: Buffer.from('{}'), signingToken: secret, id: 'startup', timestamp: String(Math.floor(Date.now() / 1000)), signature: '' });
   let busy = false;
@@ -52,6 +61,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
       const checked = inspectWorkerDelivery({ provider, body, headers, policy, secret });
       if (!checked.accepted) { response(res, ['invalid-signature', 'timestamp-outside-window'].includes(checked.reason) ? 401 : 403, checked); return; }
       const { claimDigest, expected } = checked;
+      if (app && `${app.owner}/${app.repository}`.toLowerCase() !== expected.repository.toLowerCase()) { response(res, 403, { accepted: false, reason: 'app-repository-mismatch' }); return; }
       const claimed = provider === 'github' ? await claimGitHubWebhook({ body, signature: headers.signature, secret, event: headers.event, deliveryId: headers.deliveryId, allowedRepositories: policy.allowedRepositories, allowedActors: policy.allowedActors }, { directory: join(directory, 'claims') }) : await claimExternalWebhook({ provider, body, headers, policy: provider === 'gitlab' ? policy.gitlab : policy.bitbucket, secret, directory: join(directory, 'claims') });
       if (!claimed.claimed) { response(res, ['duplicate-payload', 'duplicate-claim'].includes(claimed.reason) ? 200 : 403, { accepted: false, reason: claimed.reason }); return; }
       if (provider !== 'github' && claimed.digest !== claimDigest) throw new Error('Claim identity changed');
@@ -65,19 +75,31 @@ export async function startAutomationWorker({ provider, target, command, store, 
       launched = true;
       response(res, 202, { accepted: true, queued: true, claimDigest, scope: 'Accepted locally; execution result is reported separately.' });
       void (async () => {
-        let result;
+        let outcome = { started: false, status: 'unavailable-or-failed' }, lease = null, tokenRevocation = null, appAttempted = false;
         try {
           const input = { target: root, claimDigest, command: task, store: stateRoot, ...(provider === 'bitbucket-cloud' ? { bitbucketToken: environment.BITBUCKET_TOKEN } : {}) };
-          const dependencies = { readJob: readBoundJob, environment: childEnvironment };
-          const plan = await runJob(input, dependencies);
+          const provisional = { readJob: readBoundJob, environment: childEnvironment };
+          const plan = await runJob(input, provisional);
           if (!plan?.preview || !/^[a-f0-9]{64}$/.test(plan.digest ?? '')) throw new Error('Job preview unavailable');
+          if (fixedAppAuth) {
+            appAttempted = true;
+            const issued = await issueToken(fixedAppAuth);
+            if (!issued?.issued) { outcome = { started: false, status: 'app-token-unavailable', tokenRevocation: issued?.tokenRevocation ?? 'unknown', tokenExpiresAt: issued?.expiresAt ?? null }; return; }
+            lease = issued;
+          }
+          const workerEnvironment = lease ? { ...childEnvironment, GITHUB_TOKEN: lease.token } : childEnvironment;
           let comment;
-          try { comment = await verifyComment({ target: root, claim: expected, environment }); } catch { comment = null; }
-          if (comment?.matches !== true) { server.emit('automation-result', { claimDigest, started: false, status: 'comment-changed-or-unavailable' }); return; }
-          result = await runJob({ ...input, expectedDigest: plan.digest }, dependencies);
-          server.emit('automation-result', { claimDigest, started: result.started === true, status: typeof result.status === 'string' ? result.status : result.reason ?? 'not-started' });
-        } catch { server.emit('automation-result', { claimDigest, started: false, status: 'unavailable-or-failed' }); }
-        finally { busy = false; }
+          try { comment = await verifyComment({ target: root, claim: expected, environment: workerEnvironment }); } catch { comment = null; }
+          if (comment?.matches !== true) { outcome = { started: false, status: 'comment-changed-or-unavailable' }; return; }
+          const result = await runJob({ ...input, expectedDigest: plan.digest }, { readJob: readBoundJob, environment: workerEnvironment });
+          outcome = { started: result.started === true, status: typeof result.status === 'string' ? result.status : result.reason ?? 'not-started' };
+        } catch { outcome = { started: false, status: 'unavailable-or-failed' }; }
+        finally {
+          if (lease) { try { tokenRevocation = await revokeToken(lease.token); } catch { tokenRevocation = 'unconfirmed'; } }
+          if (appAttempted && !lease && outcome.tokenRevocation === undefined) outcome.tokenRevocation = 'unknown';
+          try { server.emit('automation-result', { claimDigest, ...outcome, ...(lease ? { tokenRevocation, tokenExpiresAt: lease.expiresAt } : {}) }); } catch { /* Reporting must not leave the worker busy. */ }
+          busy = false;
+        }
       })();
     } catch { response(res, 400, { accepted: false, reason: 'invalid-or-unavailable' }); }
     finally { if (!launched) busy = false; }
@@ -90,3 +112,4 @@ export async function startAutomationWorker({ provider, target, command, store, 
 export async function startGitHubAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'github' }, dependencies); }
 export async function startGitLabAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'gitlab' }, dependencies); }
 export async function startBitbucketAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'bitbucket-cloud' }, dependencies); }
+export async function startGitHubAppAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'github' }, dependencies); }

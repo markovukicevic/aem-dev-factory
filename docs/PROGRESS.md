@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Connected the local GitHub worker to scoped per-event GitHub App tokens with best-effort revocation. Actual GitHub App and webhook delivery behavior remains unverified.
+
 - Added non-overwriting persistent ticket run state with digest-bound phase updates and reference-style state reading. Declared phases are not proof of work or a live process.
 
 - Added a read-only preflight for selected signed worker events, current comments, reservations and Git state, sharing event validation with the workers. It does not run or queue jobs.
