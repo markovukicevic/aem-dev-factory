@@ -17,7 +17,7 @@ async function readLocalJson(path, max = 262144) {
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data.subarray(0, used)));
   } finally { await handle.close(); }
 }
-const fields = ['digest', 'deliveryId', 'claimedAt', 'repository', 'actor', 'kind', 'number', 'action', 'provider', 'eventHeader', 'bodyDigest', 'commentId'];
+const fields = ['digest', 'deliveryId', 'claimedAt', 'repository', 'actor', 'kind', 'number', 'action', 'provider', 'eventHeader', 'bodyDigest', 'commentId', 'commentBodyDigest'];
 const allowed = (claim, policy) => {
   const selected = claim.provider === 'ado' ? policy.ado && { repositories: policy.ado.allowedRepositories, actors: policy.ado.allowedAuthors } : claim.provider === 'gitlab' ? policy.gitlab && { repositories: policy.gitlab.allowedProjects, actors: policy.gitlab.allowedActors } : claim.provider === 'bitbucket-cloud' ? policy.bitbucket && { repositories: policy.bitbucket.allowedRepositories, actors: policy.bitbucket.allowedActors } : policy.allowedRepositories && { repositories: policy.allowedRepositories, actors: policy.allowedActors };
   return !!selected && selected.repositories.some(value => value.toLowerCase() === claim.repository.toLowerCase()) && selected.actors.some(value => value.toLowerCase() === claim.actor.toLowerCase());

@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 /** Verify the raw request bytes using GitHub's HMAC-SHA256 signature. */
 export function verifyGitHubSignature({ body, signature, secret }) {
@@ -37,5 +37,5 @@ export function inspectGitHubWebhook({ body, signature, secret, event, deliveryI
     if (payload.comment?.id !== undefined) { if (!Number.isSafeInteger(payload.comment.id) || payload.comment.id < 1) return { accepted: false, reason: 'invalid-payload' }; commentId = payload.comment.id; }
   } else return { accepted: false, reason: 'unsupported-event' };
   if (!Number.isSafeInteger(number) || number < 1) return { accepted: false, reason: 'invalid-payload' };
-  return { accepted: true, deliveryId, repository, actor, kind, number, action: payload.action, ...(commentId ? { commentId } : {}) };
+  return { accepted: true, deliveryId, repository, actor, kind, number, action: payload.action, ...(commentId ? { commentId, commentBodyDigest: createHash('sha256').update(payload.comment.body, 'utf8').digest('hex') } : {}) };
 }

@@ -93,8 +93,9 @@ export async function processAutomationJob({ target, claimDigest, command, store
     record.status = 'running'; await writeRecord(handle, record);
     const event = first.snapshot.claim.claim;
     const childEnvironment = { ...environment, AEM_DEVFLOW_CLAIM_DIGEST: claimDigest, AEM_DEVFLOW_EVENT_PROVIDER: event.provider ?? 'github', AEM_DEVFLOW_EVENT_KIND: event.kind, AEM_DEVFLOW_EVENT_NUMBER: String(event.number), AEM_DEVFLOW_EVENT_REPOSITORY: first.snapshot.repository };
-    delete childEnvironment.AEM_DEVFLOW_EVENT_COMMENT_ID;
+    delete childEnvironment.AEM_DEVFLOW_EVENT_COMMENT_ID; delete childEnvironment.AEM_DEVFLOW_EVENT_COMMENT_BODY_SHA256;
     if (Number.isSafeInteger(event.commentId) && event.commentId > 0) childEnvironment.AEM_DEVFLOW_EVENT_COMMENT_ID = String(event.commentId);
+    if (typeof event.commentBodyDigest === 'string' && /^[a-f0-9]{64}$/.test(event.commentBodyDigest)) childEnvironment.AEM_DEVFLOW_EVENT_COMMENT_BODY_SHA256 = event.commentBodyDigest;
     delete childEnvironment.AEM_DEVFLOW_CONTEXT_PATH; delete childEnvironment.AEM_DEVFLOW_CONTEXT_SHA256;
     if (final.snapshot.context) { childEnvironment.AEM_DEVFLOW_CONTEXT_PATH = final.snapshot.context.path; childEnvironment.AEM_DEVFLOW_CONTEXT_SHA256 = final.snapshot.context.sha256; }
     let result; try { result = await run({ cwd: first.snapshot.target, ...first.command, environment: childEnvironment }); } catch { result = { passed: false, exitCode: null }; }

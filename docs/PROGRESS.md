@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added saved comment-body digests and current provider-comment comparisons for supported GitHub, GitLab and Bitbucket jobs; legacy records may be unknown and local metadata is not authentication.
+
 - Added read-only inspection of per-comment worker reservations and their associated claim IDs; local records do not prove execution or liveness.
 
 - Added local provider/repository/comment reservations before worker execution to suppress repeat runs of the same comment in a shared external store; crashes and recovery still require inspection.

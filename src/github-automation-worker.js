@@ -67,7 +67,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
         if (!Number.isSafeInteger(payload.comment?.id) || payload.comment.id < 1 || typeof payload.comment?.user?.login !== 'string' || payload.comment.user.login.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
         claimDigest = bodyDigest;
         claimed = await claimGitHubWebhook(input, { directory: join(directory, 'claims') });
-        expected = { provider: 'github', deliveryId: inspected.deliveryId, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action, commentId: inspected.commentId };
+        expected = { provider: 'github', deliveryId: inspected.deliveryId, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action, commentId: inspected.commentId, commentBodyDigest: inspected.commentBodyDigest };
       } else if (provider === 'gitlab') {
         const headers = { id: req.headers['webhook-id'], timestamp: req.headers['webhook-timestamp'], signature: req.headers['webhook-signature'], event: req.headers['x-gitlab-event'] };
         inspected = inspectGitLabWebhook({ body, signingToken: secret, ...headers, allowedProjects: policy.gitlab.allowedProjects, allowedActors: policy.gitlab.allowedActors });
@@ -76,7 +76,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
         if (!Number.isSafeInteger(payload.user?.id) || payload.user.id < 1 || payload.object_attributes?.author_id !== payload.user.id) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
         claimed = await claimExternalWebhook({ provider: 'gitlab', body, headers, policy: policy.gitlab, secret, directory: join(directory, 'claims') });
         claimDigest = claimed.digest;
-        expected = { provider: 'gitlab', deliveryId: inspected.id, repository: inspected.project, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'created', commentId: inspected.commentId, bodyDigest };
+        expected = { provider: 'gitlab', deliveryId: inspected.id, repository: inspected.project, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'created', commentId: inspected.commentId, commentBodyDigest: inspected.commentBodyDigest, bodyDigest };
       } else {
         const headers = { signature: req.headers['x-hub-signature'], event: req.headers['x-event-key'] };
         inspected = inspectBitbucketWebhook({ body, secret, ...headers, allowedRepositories: policy.bitbucket.allowedRepositories, allowedActors: policy.bitbucket.allowedActors });
@@ -85,7 +85,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
         if (typeof payload.comment?.user?.uuid !== 'string' || payload.comment.user.uuid.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
         claimed = await claimExternalWebhook({ provider: 'bitbucket-cloud', body, headers, policy: policy.bitbucket, secret, directory: join(directory, 'claims') });
         claimDigest = claimed.digest;
-        expected = { provider: 'bitbucket-cloud', deliveryId: `body-${bodyDigest}`, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'observed', commentId: inspected.commentId, bodyDigest, eventHeader: inspected.eventHeader };
+        expected = { provider: 'bitbucket-cloud', deliveryId: `body-${bodyDigest}`, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'observed', commentId: inspected.commentId, commentBodyDigest: inspected.commentBodyDigest, bodyDigest, eventHeader: inspected.eventHeader };
       }
       if (!claimed.claimed) { response(res, ['duplicate-payload', 'duplicate-claim'].includes(claimed.reason) ? 200 : 403, { accepted: false, reason: claimed.reason }); return; }
       if (!await reserveComment(stateRoot, provider, expected.repository, expected.commentId, claimDigest)) { response(res, 200, { accepted: false, reason: 'duplicate-comment' }); return; }

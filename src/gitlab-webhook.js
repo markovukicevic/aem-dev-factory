@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 /** Check GitLab Standard Webhooks signatures over the exact body, ID and timestamp. */
 export function verifyGitLabWebhookSignature({ body, signingToken, id, timestamp, signature, now = Date.now(), toleranceSeconds = 300 }) {
@@ -38,5 +38,5 @@ export function inspectGitLabWebhook({ body, signingToken, id, timestamp, signat
     number = target.iid; commentId = note.id; kind = note.noteable_type === 'Issue' ? 'issue-comment' : 'pull-request-comment'; action = 'create';
   } else if (!((event === 'Issue Hook' && kind === 'issue' && ['open', 'reopen'].includes(action)) || (event === 'Merge Request Hook' && kind === 'merge_request' && ['open', 'reopen', 'update'].includes(action)))) return { accepted: false, reason: 'unsupported-event' };
   if (!Number.isSafeInteger(number) || number < 1) return { accepted: false, reason: 'invalid-payload' };
-  return { accepted: true, provider: 'gitlab', id, project, actor, kind, number, action, ...(commentId ? { commentId } : {}), scope: 'Offline signed payload classification only; event header is not signed, freshness window does not prevent replay, and no task was queued or executed.' };
+  return { accepted: true, provider: 'gitlab', id, project, actor, kind, number, action, ...(commentId ? { commentId, commentBodyDigest: createHash('sha256').update(payload.object_attributes.note, 'utf8').digest('hex') } : {}), scope: 'Offline signed payload classification only; event header is not signed, freshness window does not prevent replay, and no task was queued or executed.' };
 }

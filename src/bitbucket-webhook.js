@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { verifyGitHubSignature } from './github-webhook.js';
 const uuidPattern = /^\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}$/i;
 
@@ -19,5 +20,5 @@ export function inspectBitbucketWebhook({ body, secret, signature, event, allowe
     kind = 'pull-request-comment'; commentId = comment.id;
   } else if (payload?.comment !== undefined) return { accepted: false, reason: 'invalid-payload' };
   if (!Number.isSafeInteger(number) || number < 1) return { accepted: false, reason: 'invalid-payload' };
-  return { accepted: true, provider: 'bitbucket-cloud', repository, actor, kind, number, ...(commentId ? { commentId } : {}), eventHeader: event, scope: 'Offline signed payload classification only; event header is not signed, there is no timestamp or replay protection, and no task was queued or executed.' };
+  return { accepted: true, provider: 'bitbucket-cloud', repository, actor, kind, number, ...(commentId ? { commentId, commentBodyDigest: createHash('sha256').update(payload.comment.content.raw, 'utf8').digest('hex') } : {}), eventHeader: event, scope: 'Offline signed payload classification only; event header is not signed, there is no timestamp or replay protection, and no task was queued or executed.' };
 }

@@ -6,6 +6,23 @@ import { validateProjectConfig } from './project-init.js';
 import { createTrackerProvider, createScmProvider, createCiProvider } from './providers.js';
 import { readScmReviewContext } from './scm-review-context.js';
 
+function observeTriggerComment(claim, provider, context, issue) {
+  if (!['issue-comment', 'pull-request-comment'].includes(claim.kind)) return null;
+  if (!Number.isSafeInteger(claim.commentId) || claim.commentId < 1) return { status: 'legacy-no-comment-id' };
+  const comments = issue ? context?.comments : context?.discussion?.comments;
+  if (!Array.isArray(comments)) return { commentId: claim.commentId, status: 'unavailable' };
+  const matches = comments.filter(item => item?.id === claim.commentId);
+  if (!matches.length) return { commentId: claim.commentId, status: 'not-observed' };
+  if (matches.length !== 1) return { commentId: claim.commentId, status: 'ambiguous' };
+  const comment = matches[0], body = issue ? comment.body : provider === 'bitbucket-cloud' ? comment.content?.raw : comment.body;
+  const author = issue ? comment.author : provider === 'github' ? comment.user?.login : provider === 'gitlab' ? comment.author?.username : comment.user?.uuid;
+  const observedDigest = typeof body === 'string' ? createHash('sha256').update(body, 'utf8').digest('hex') : null;
+  const authorMatches = typeof author === 'string' && typeof claim.actor === 'string' ? author.toLowerCase() === claim.actor.toLowerCase() : null;
+  const recordedDigest = typeof claim.commentBodyDigest === 'string' && /^[a-f0-9]{64}$/.test(claim.commentBodyDigest) ? claim.commentBodyDigest : null;
+  const status = authorMatches === false || (recordedDigest && observedDigest && recordedDigest !== observedDigest) ? 'changed' : authorMatches === true && recordedDigest && observedDigest ? 'matches-recorded' : 'unknown';
+  return { commentId: claim.commentId, status, authorMatches, recordedDigest, observedDigest, scope: 'Current provider comment compared with editable local metadata; not proof of event authenticity, authorization or future freshness.' };
+}
+
 /** Fetch explicitly selected queued event context without running an agent or writing remotely. */
 export async function readAutomationJobContext({ target, digest, config, env = process.env }, { readJob = readAutomationJob, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, readReview = readScmReviewContext } = {}) {
   validateProjectConfig(config);
@@ -46,7 +63,8 @@ export async function readAutomationJobContext({ target, digest, config, env = p
   }
   const after = await readJob({ target, digest });
   if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error('Job changed while context was fetched');
-  return { provider, digest, kind: claim.kind, number: claim.number, context, scope: 'Read-only current provider context for an editable local job. No signature was reverified, no agent ran and no remote writes occurred; provider context can change and may be incomplete.' };
+  const triggerComment = observeTriggerComment(claim, provider, context, issue);
+  return { provider, digest, kind: claim.kind, number: claim.number, triggerComment, context, scope: 'Read-only current provider context for an editable local job. No signature was reverified, no agent ran and no remote writes occurred; provider context can change and may be incomplete.' };
 }
 
 /** Read context for explicitly selected jobs in order, retaining partial results. */
