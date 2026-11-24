@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added preview-bound conversion of restricted reference-style YAML provider settings into a new Max JSON configuration, with explicit omissions and no credential copying.
+
 - Added signed-trigger preflight using a temporary scoped GitHub App token and best-effort revocation, plus provider credential-presence diagnostics. Live GitHub App behavior remains unverified.
 
 - Connected the local GitHub worker to scoped per-event GitHub App tokens with best-effort revocation. Actual GitHub App and webhook delivery behavior remains unverified.
