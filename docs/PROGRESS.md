@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added preview-bound execution of an explicit local command using a repository- and permission-scoped GitHub App installation token. Only synthetic API responses were checked; real installation behavior remains unverified.
+
 - Added non-overwriting Git ignore setup and diagnostics for automation runtime records and worktree cleanliness; tracked files remain tracked and no commits are made by setup.
 
 - Added provider comment and author rechecks before automatic local worker execution. Changed or unavailable comments block the run; real provider API behavior remains unverified.

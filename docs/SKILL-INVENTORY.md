@@ -1,6 +1,6 @@
 # Skill inventory
 
-Compared against the local reference checkout at `7ecd2a0` (1.1.0). A matching name indicates an initial Max skill exists; it does not establish equivalent behavior. Max also contains `auto-webhook-inspect`, which has no same-named reference skill.
+Compared against the local reference checkout at `7ecd2a0` (1.1.0). A matching name indicates an initial Max skill exists; it does not establish equivalent behavior. Max also contains `auto-webhook-inspect`, `auto-notify` and `auto-github-app`, which have no same-named reference skill.
 
 ## agent-core
 
