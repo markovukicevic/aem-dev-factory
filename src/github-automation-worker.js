@@ -1,12 +1,8 @@
 import { createServer } from 'node:http';
-import { createHash } from 'node:crypto';
 import { lstat, realpath, open } from 'node:fs/promises';
 import { join, relative, isAbsolute } from 'node:path';
-import { readLimitedFile } from './read-limited.js';
-import { projectAutomationDirectory, validateAutomationPolicy } from './automation-local.js';
-import { inspectGitHubWebhook } from './github-webhook.js';
-import { inspectGitLabWebhook, verifyGitLabWebhookSignature } from './gitlab-webhook.js';
-import { inspectBitbucketWebhook } from './bitbucket-webhook.js';
+import { verifyGitLabWebhookSignature } from './gitlab-webhook.js';
+import { inspectWorkerDelivery, loadWorkerPolicy } from './worker-delivery.js';
 import { claimExternalWebhook } from './external-webhook-claim.js';
 import { claimGitHubWebhook } from './webhook-claim.js';
 import { enqueueAutomationClaim, readAutomationJob } from './automation-queue.js';
@@ -14,12 +10,6 @@ import { processAutomationJob, normalizeAutomationCommand } from './automation-j
 import { workerCommentKey } from './worker-comment.js';
 import { verifyWorkerTriggerComment } from './worker-comment-fresh.js';
 const limit = 1024 * 1024;
-async function currentPolicy(target, provider) {
-  const directory = await projectAutomationDirectory(target, false);
-  const policy = validateAutomationPolicy(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(join(directory, 'policy.json'), 262144))));
-  if (provider === 'github' ? !policy.allowedRepositories || !policy.allowedActors : provider === 'gitlab' ? !policy.gitlab : !policy.bitbucket) throw new Error('Provider automation policy is required');
-  return { directory, policy };
-}
 async function reserveComment(store, provider, repository, commentId, claimDigest) {
   if (typeof repository !== 'string' || !repository || !Number.isSafeInteger(commentId) || commentId < 1) throw new Error('Invalid comment identity');
   const identity = workerCommentKey({ provider, repository, commentId }), path = join(store, `${identity}.comment.json`);
@@ -43,7 +33,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
   if (!storeInfo.isDirectory() || storeInfo.isSymbolicLink()) throw new Error('Invalid execution store');
   const stateRoot = await realpath(store), rel = relative(root, stateRoot);
   if (!rel || (!rel.startsWith('../') && rel !== '..' && !isAbsolute(rel))) throw new Error('Execution store must be outside the project');
-  await currentPolicy(root, provider);
+  await loadWorkerPolicy(root, provider);
   if (provider === 'gitlab') verifyGitLabWebhookSignature({ body: Buffer.from('{}'), signingToken: secret, id: 'startup', timestamp: String(Math.floor(Date.now() / 1000)), signature: '' });
   let busy = false;
   const server = createServer(async (req, res) => {
@@ -57,39 +47,14 @@ export async function startAutomationWorker({ provider, target, command, store, 
       if (length !== undefined && (!/^\d+$/.test(length) || Number(length) > limit)) { response(res, 413, { accepted: false }); req.resume(); return; }
       const chunks = []; let size = 0;
       for await (const chunk of req) { size += chunk.length; if (size > limit) { response(res, 413, { accepted: false }); req.resume(); return; } chunks.push(chunk); }
-      const body = Buffer.concat(chunks, size), { directory, policy } = await currentPolicy(root, provider);
-      let payload;
-      const bodyDigest = createHash('sha256').update(body).digest('hex');
-      let inspected, claimed, claimDigest, expected;
-      if (provider === 'github') {
-        const input = { body, signature: req.headers['x-hub-signature-256'], secret, event: req.headers['x-github-event'], deliveryId: req.headers['x-github-delivery'], allowedRepositories: policy.allowedRepositories, allowedActors: policy.allowedActors };
-        inspected = inspectGitHubWebhook(input);
-        if (!inspected.accepted || input.event !== 'issue_comment' || !['issue-comment', 'pull-request-comment'].includes(inspected.kind)) { response(res, inspected.reason === 'invalid-signature' ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
-        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
-        if (!Number.isSafeInteger(payload.comment?.id) || payload.comment.id < 1 || typeof payload.comment?.user?.login !== 'string' || payload.comment.user.login.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
-        claimDigest = bodyDigest;
-        claimed = await claimGitHubWebhook(input, { directory: join(directory, 'claims') });
-        expected = { provider: 'github', deliveryId: inspected.deliveryId, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action, commentId: inspected.commentId, commentBodyDigest: inspected.commentBodyDigest };
-      } else if (provider === 'gitlab') {
-        const headers = { id: req.headers['webhook-id'], timestamp: req.headers['webhook-timestamp'], signature: req.headers['webhook-signature'], event: req.headers['x-gitlab-event'] };
-        inspected = inspectGitLabWebhook({ body, signingToken: secret, ...headers, allowedProjects: policy.gitlab.allowedProjects, allowedActors: policy.gitlab.allowedActors });
-        if (!inspected.accepted || headers.event !== 'Note Hook' || !['issue-comment', 'pull-request-comment'].includes(inspected.kind)) { response(res, ['invalid-signature', 'timestamp-outside-window'].includes(inspected.reason) ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
-        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
-        if (!Number.isSafeInteger(payload.user?.id) || payload.user.id < 1 || payload.object_attributes?.author_id !== payload.user.id) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
-        claimed = await claimExternalWebhook({ provider: 'gitlab', body, headers, policy: policy.gitlab, secret, directory: join(directory, 'claims') });
-        claimDigest = claimed.digest;
-        expected = { provider: 'gitlab', deliveryId: inspected.id, repository: inspected.project, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'created', commentId: inspected.commentId, commentBodyDigest: inspected.commentBodyDigest, bodyDigest };
-      } else {
-        const headers = { signature: req.headers['x-hub-signature'], event: req.headers['x-event-key'] };
-        inspected = inspectBitbucketWebhook({ body, secret, ...headers, allowedRepositories: policy.bitbucket.allowedRepositories, allowedActors: policy.bitbucket.allowedActors });
-        if (!inspected.accepted || headers.event !== 'pullrequest:comment_created' || inspected.kind !== 'pull-request-comment') { response(res, inspected.reason === 'invalid-signature' ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
-        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
-        if (typeof payload.comment?.user?.uuid !== 'string' || payload.comment.user.uuid.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
-        claimed = await claimExternalWebhook({ provider: 'bitbucket-cloud', body, headers, policy: policy.bitbucket, secret, directory: join(directory, 'claims') });
-        claimDigest = claimed.digest;
-        expected = { provider: 'bitbucket-cloud', deliveryId: `body-${bodyDigest}`, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'observed', commentId: inspected.commentId, commentBodyDigest: inspected.commentBodyDigest, bodyDigest, eventHeader: inspected.eventHeader };
-      }
+      const body = Buffer.concat(chunks, size), { directory, policy } = await loadWorkerPolicy(root, provider);
+      const headers = provider === 'github' ? { signature: req.headers['x-hub-signature-256'], event: req.headers['x-github-event'], deliveryId: req.headers['x-github-delivery'] } : provider === 'gitlab' ? { id: req.headers['webhook-id'], timestamp: req.headers['webhook-timestamp'], signature: req.headers['webhook-signature'], event: req.headers['x-gitlab-event'] } : { signature: req.headers['x-hub-signature'], event: req.headers['x-event-key'] };
+      const checked = inspectWorkerDelivery({ provider, body, headers, policy, secret });
+      if (!checked.accepted) { response(res, ['invalid-signature', 'timestamp-outside-window'].includes(checked.reason) ? 401 : 403, checked); return; }
+      const { claimDigest, expected } = checked;
+      const claimed = provider === 'github' ? await claimGitHubWebhook({ body, signature: headers.signature, secret, event: headers.event, deliveryId: headers.deliveryId, allowedRepositories: policy.allowedRepositories, allowedActors: policy.allowedActors }, { directory: join(directory, 'claims') }) : await claimExternalWebhook({ provider, body, headers, policy: provider === 'gitlab' ? policy.gitlab : policy.bitbucket, secret, directory: join(directory, 'claims') });
       if (!claimed.claimed) { response(res, ['duplicate-payload', 'duplicate-claim'].includes(claimed.reason) ? 200 : 403, { accepted: false, reason: claimed.reason }); return; }
+      if (provider !== 'github' && claimed.digest !== claimDigest) throw new Error('Claim identity changed');
       if (!await reserveComment(stateRoot, provider, expected.repository, expected.commentId, claimDigest)) { response(res, 200, { accepted: false, reason: 'duplicate-comment' }); return; }
       await enqueueAutomationClaim({ target: root, digest: claimDigest });
       const readBoundJob = async args => {

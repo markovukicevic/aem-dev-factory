@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added a read-only preflight for selected signed worker events, current comments, reservations and Git state, sharing event validation with the workers. It does not run or queue jobs.
+
 - Added a best-effort GitHub App installation-token revocation after command execution or rejected scope, with unconfirmed revocation reported explicitly.
 
 - Added preview-bound execution of an explicit local command using a repository- and permission-scoped GitHub App installation token. Only synthetic API responses were checked; real installation behavior remains unverified.
