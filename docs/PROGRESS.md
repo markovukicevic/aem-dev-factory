@@ -2,13 +2,15 @@
 
 ## 2026-11-24
 
+- Added read-only inspection of per-comment worker reservations and their associated claim IDs; local records do not prove execution or liveness.
+
 - Added local provider/repository/comment reservations before worker execution to suppress repeat runs of the same comment in a shared external store; crashes and recovery still require inspection.
 
 - Preserved available GitHub comment IDs in claims and passed selected comment IDs to local jobs as metadata across supported providers; legacy records remain readable.
 
 - Extended the local fixed-command worker to Bitbucket Cloud PR comments, retaining its unsigned-header and replay limitations; webhook credentials are excluded from child environments. Only synthetic Bitbucket delivery and mocked execution were checked.
 
-- Extended the explicitly started local worker to signed GitLab issue and merge-request comments with author and allowlist checks. Only synthetic deliveries and mocked execution were checked.
+- Extended the explicitly started local worker to signed GitLab issue and merge-request comments with author and allowlist checks. A synthetic GitLab delivery ran a harmless local command in a temporary repository; real delivery remains unverified.
 
 - Added an explicitly started loopback GitHub worker for a fixed local command on selected signed comment events. It is experimental, single-delivery, not a public service, and a synthetic delivery ran a harmless command in a temporary Git repository. Real delivery and agent behavior remain unverified. A local status command reports the busy flag without claiming readiness.
 

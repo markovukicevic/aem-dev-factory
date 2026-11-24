@@ -11,6 +11,7 @@ import { claimExternalWebhook } from './external-webhook-claim.js';
 import { claimGitHubWebhook } from './webhook-claim.js';
 import { enqueueAutomationClaim, readAutomationJob } from './automation-queue.js';
 import { processAutomationJob, normalizeAutomationCommand } from './automation-job-run.js';
+import { workerCommentKey } from './worker-comment.js';
 const limit = 1024 * 1024;
 async function currentPolicy(target, provider) {
   const directory = await projectAutomationDirectory(target, false);
@@ -20,7 +21,7 @@ async function currentPolicy(target, provider) {
 }
 async function reserveComment(store, provider, repository, commentId, claimDigest) {
   if (typeof repository !== 'string' || !repository || !Number.isSafeInteger(commentId) || commentId < 1) throw new Error('Invalid comment identity');
-  const identity = createHash('sha256').update(JSON.stringify([provider, repository.toLowerCase(), commentId])).digest('hex'), path = join(store, `${identity}.comment.json`);
+  const identity = workerCommentKey({ provider, repository, commentId }), path = join(store, `${identity}.comment.json`);
   let file;
   try { file = await open(path, 'wx', 0o600); } catch (error) { if (error?.code === 'EEXIST') return false; throw error; }
   try { await file.writeFile(`${JSON.stringify({ version: 1, provider, repository, commentId, claimDigest, reservedAt: new Date().toISOString() }, null, 2)}\n`); await file.sync(); } finally { await file.close(); }
