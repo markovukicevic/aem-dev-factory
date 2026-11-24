@@ -27,6 +27,10 @@ export function createAdoScm({ organization, project, repository, token, fetchIm
       if (!Array.isArray(result.data?.value)) throw new Error('Invalid Azure commits response');
       return { values: result.data.value, continuationToken: result.headers?.get?.('x-ms-continuationtoken') || null };
     },
+    getPullRequestIterations(number) {
+      validId(number);
+      return request(`${root}/${number}/iterations?api-version=7.1`);
+    },
     async getIterationChanges(number, iteration, { maxPages = 10 } = {}) {
       validId(number);
       validId(iteration);
