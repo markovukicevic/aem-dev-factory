@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added an explicitly started loopback GitHub worker for a fixed local command on selected signed comment events. It is experimental, single-delivery, not a public service, and only synthetic deliveries with mocked execution were checked.
+
 - Added a local Figma-versus-page screenshot comparison report with input digests and explicit non-comparable results; visual correctness and real browser behavior remain unverified.
 
 - Added preview-bound Figma PNG render download restricted to one Figma image host, without forwarding the API token. Only simulated responses were checked; real render hosts and live output remain unverified.

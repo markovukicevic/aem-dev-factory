@@ -16,7 +16,7 @@ import { runTestCommand } from './command-runner.js';
 const exec = promisify(execFile);
 const hash = value => createHash('sha256').update(value, 'utf8').digest('hex');
 async function readOrigin(cwd) { return (await exec('git', ['remote', 'get-url', 'origin'], { cwd, encoding: 'utf8', timeout: 10000, maxBuffer: 8192 })).stdout.trim(); }
-function commandFields(command) {
+export function normalizeAutomationCommand(command) {
   if (!command || typeof command !== 'object' || Array.isArray(command) || Object.keys(command).some(key => !['executable', 'args', 'timeoutMs', 'contextFile'].includes(key)) || typeof command.executable !== 'string' || !isAbsolute(command.executable) || command.executable.length > 4096 || /[\u0000-\u001f\u007f]/.test(command.executable) || !Array.isArray(command.args) || command.args.length > 100 || command.args.some(arg => typeof arg !== 'string' || arg.length > 8192 || /[\u0000-\u001f\u007f]/.test(arg)) || command.args.reduce((sum, arg) => sum + Buffer.byteLength(arg, 'utf8'), 0) > 65536 || (command.contextFile !== undefined && (typeof command.contextFile !== 'string' || !isAbsolute(command.contextFile) || command.contextFile.length > 4096 || /[\u0000-\u001f\u007f]/.test(command.contextFile))) || !Number.isSafeInteger(command.timeoutMs) || command.timeoutMs < 1000 || command.timeoutMs > 600000) throw new TypeError('Invalid local automation command');
   return { executable: command.executable, args: [...command.args], timeoutMs: command.timeoutMs, ...(command.contextFile === undefined ? {} : { contextFile: command.contextFile }) };
 }
@@ -45,7 +45,7 @@ async function readContextSnapshot(path, root, claimDigest, claim) {
 }
 async function prepare({ target, claimDigest, command, store, bitbucketToken, adoToken }, { readJob, inspect, origin, makeBitbucket, makeAdo }, { existing = false } = {}) {
   if (typeof claimDigest !== 'string' || !/^[a-f0-9]{64}$/.test(claimDigest)) throw new TypeError('Invalid claim digest');
-  const normalized = commandFields(command), root = await checkedDirectory(target), stateRoot = await checkedDirectory(store);
+  const normalized = normalizeAutomationCommand(command), root = await checkedDirectory(target), stateRoot = await checkedDirectory(store);
   const rel = relative(root, stateRoot);
   if (!rel || (!rel.startsWith('../') && rel !== '..' && !isAbsolute(rel))) throw new Error('Execution store must be outside the project');
   const job = await readJob({ target: root, digest: claimDigest }), claim = job.claim, provider = claim.provider ?? 'github';
