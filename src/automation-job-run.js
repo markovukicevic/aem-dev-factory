@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { lstat, open, realpath } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
 import { readAutomationJob } from './automation-queue.js';
 import { readGitState } from './git-state.js';
@@ -14,13 +15,31 @@ const exec = promisify(execFile);
 const hash = value => createHash('sha256').update(value, 'utf8').digest('hex');
 async function readOrigin(cwd) { return (await exec('git', ['remote', 'get-url', 'origin'], { cwd, encoding: 'utf8', timeout: 10000, maxBuffer: 8192 })).stdout.trim(); }
 function commandFields(command) {
-  if (!command || typeof command !== 'object' || Array.isArray(command) || Object.keys(command).some(key => !['executable', 'args', 'timeoutMs'].includes(key)) || typeof command.executable !== 'string' || !isAbsolute(command.executable) || command.executable.length > 4096 || /[\u0000-\u001f\u007f]/.test(command.executable) || !Array.isArray(command.args) || command.args.length > 100 || command.args.some(arg => typeof arg !== 'string' || arg.length > 8192 || /[\u0000-\u001f\u007f]/.test(arg)) || command.args.reduce((sum, arg) => sum + Buffer.byteLength(arg, 'utf8'), 0) > 65536 || !Number.isSafeInteger(command.timeoutMs) || command.timeoutMs < 1000 || command.timeoutMs > 600000) throw new TypeError('Invalid local automation command');
-  return { executable: command.executable, args: [...command.args], timeoutMs: command.timeoutMs };
+  if (!command || typeof command !== 'object' || Array.isArray(command) || Object.keys(command).some(key => !['executable', 'args', 'timeoutMs', 'contextFile'].includes(key)) || typeof command.executable !== 'string' || !isAbsolute(command.executable) || command.executable.length > 4096 || /[\u0000-\u001f\u007f]/.test(command.executable) || !Array.isArray(command.args) || command.args.length > 100 || command.args.some(arg => typeof arg !== 'string' || arg.length > 8192 || /[\u0000-\u001f\u007f]/.test(arg)) || command.args.reduce((sum, arg) => sum + Buffer.byteLength(arg, 'utf8'), 0) > 65536 || (command.contextFile !== undefined && (typeof command.contextFile !== 'string' || !isAbsolute(command.contextFile) || command.contextFile.length > 4096 || /[\u0000-\u001f\u007f]/.test(command.contextFile))) || !Number.isSafeInteger(command.timeoutMs) || command.timeoutMs < 1000 || command.timeoutMs > 600000) throw new TypeError('Invalid local automation command');
+  return { executable: command.executable, args: [...command.args], timeoutMs: command.timeoutMs, ...(command.contextFile === undefined ? {} : { contextFile: command.contextFile }) };
 }
 async function checkedDirectory(path) {
   if (typeof path !== 'string' || !path.trim()) throw new TypeError('Directory required');
   const info = await lstat(path); if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Directory unavailable or unsafe');
   return realpath(path);
+}
+async function readContextSnapshot(path, root, claimDigest, claim) {
+  const info = await lstat(path);
+  if (!info.isFile() || info.isSymbolicLink()) throw new Error('Unsafe context file');
+  const resolved = await realpath(path), rel = relative(root, resolved);
+  if (!rel || (!rel.startsWith('../') && rel !== '..' && !isAbsolute(rel))) throw new Error('Context must be outside the project');
+  const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const before = await handle.stat();
+    if (!before.isFile() || before.size > 4 * 1024 * 1024 || before.dev !== info.dev || before.ino !== info.ino) throw new Error('Invalid context file');
+    const bytes = Buffer.alloc(before.size + 1); let used = 0;
+    while (used < bytes.length) { const next = await handle.read(bytes, used, bytes.length - used, null); if (!next.bytesRead) break; used += next.bytesRead; }
+    const after = await handle.stat();
+    if (used !== before.size || before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) throw new Error('Context changed while reading');
+    const data = bytes.subarray(0, used), parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data));
+    if (parsed?.version !== 1 || parsed.digest !== claimDigest || parsed.provider !== (claim.provider ?? 'github') || parsed.kind !== claim.kind || parsed.number !== claim.number || !parsed.context || typeof parsed.context !== 'object' || Array.isArray(parsed.context)) throw new Error('Context does not match job');
+    return { path: resolved, sha256: createHash('sha256').update(data).digest('hex') };
+  } finally { await handle.close(); }
 }
 async function prepare({ target, claimDigest, command, store, bitbucketToken }, { readJob, inspect, origin, makeBitbucket }, { existing = false } = {}) {
   if (typeof claimDigest !== 'string' || !/^[a-f0-9]{64}$/.test(claimDigest)) throw new TypeError('Invalid claim digest');
@@ -43,7 +62,8 @@ async function prepare({ target, claimDigest, command, store, bitbucketToken }, 
   if (!git?.workingTreeClean || typeof git.head !== 'string' || !git.head || !/^[a-f0-9]{40,64}$/i.test(git.commit ?? '')) throw new Error('A clean branch and commit are required');
   const path = join(stateRoot, `${claimDigest}.json`);
   if (!existing) { try { await lstat(path); throw new Error('Execution already exists'); } catch (error) { if (error?.code !== 'ENOENT') throw error; } }
-  const snapshot = { target: root, store: stateRoot, claim: job, repository, git: { head: git.head, commit: git.commit }, command: normalized };
+  const context = normalized.contextFile === undefined ? null : await readContextSnapshot(normalized.contextFile, root, claimDigest, claim);
+  const snapshot = { target: root, store: stateRoot, claim: job, repository, git: { head: git.head, commit: git.commit }, command: normalized, context };
   return { snapshot, command: normalized, path, digest: hash(JSON.stringify(snapshot)) };
 }
 async function writeRecord(handle, value) {
@@ -53,7 +73,7 @@ async function writeRecord(handle, value) {
 export async function processAutomationJob({ target, claimDigest, command, store, bitbucketToken, expectedDigest }, { readJob = readAutomationJob, inspect = readGitState, origin = readOrigin, run = runTestCommand, makeBitbucket = createBitbucketClient, environment = process.env } = {}) {
   if (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid preview digest');
   const dependencies = { readJob, inspect, origin, makeBitbucket }, input = { target, claimDigest, command, store, bitbucketToken }, first = await prepare(input, dependencies);
-  const preview = { target: first.snapshot.target, store: first.snapshot.store, claimDigest, provider: first.snapshot.claim.claim.provider ?? 'github', kind: first.snapshot.claim.claim.kind, number: first.snapshot.claim.claim.number, repository: first.snapshot.repository, git: first.snapshot.git, executable: first.command.executable, argumentCount: first.command.args.length, timeoutMs: first.command.timeoutMs };
+  const preview = { target: first.snapshot.target, store: first.snapshot.store, claimDigest, provider: first.snapshot.claim.claim.provider ?? 'github', kind: first.snapshot.claim.claim.kind, number: first.snapshot.claim.claim.number, repository: first.snapshot.repository, git: first.snapshot.git, executable: first.command.executable, argumentCount: first.command.args.length, timeoutMs: first.command.timeoutMs, context: first.snapshot.context };
   if (expectedDigest === undefined) return { preview, digest: first.digest, scope: 'Read-only preview. Inspect the complete command file; queue records do not prove event authenticity or authorize execution.' };
   if (first.digest !== expectedDigest) return { started: false, reason: 'preview-changed' };
   const handle = await open(first.path, 'wx', 0o600);
@@ -66,6 +86,8 @@ export async function processAutomationJob({ target, claimDigest, command, store
     record.status = 'running'; await writeRecord(handle, record);
     const event = first.snapshot.claim.claim;
     const childEnvironment = { ...environment, AEM_DEVFLOW_CLAIM_DIGEST: claimDigest, AEM_DEVFLOW_EVENT_PROVIDER: event.provider ?? 'github', AEM_DEVFLOW_EVENT_KIND: event.kind, AEM_DEVFLOW_EVENT_NUMBER: String(event.number), AEM_DEVFLOW_EVENT_REPOSITORY: first.snapshot.repository };
+    delete childEnvironment.AEM_DEVFLOW_CONTEXT_PATH; delete childEnvironment.AEM_DEVFLOW_CONTEXT_SHA256;
+    if (final.snapshot.context) { childEnvironment.AEM_DEVFLOW_CONTEXT_PATH = final.snapshot.context.path; childEnvironment.AEM_DEVFLOW_CONTEXT_SHA256 = final.snapshot.context.sha256; }
     let result; try { result = await run({ cwd: first.snapshot.target, ...first.command, environment: childEnvironment }); } catch { result = { passed: false, exitCode: null }; }
     record.status = result?.passed === true && result.exitCode === 0 ? 'process-succeeded' : 'process-failed';
     record.exitCode = Number.isSafeInteger(result?.exitCode) ? result.exitCode : null;

@@ -2,7 +2,7 @@
 
 ## 2026-11-24
 
-- Added non-overwriting local export of a selected automation job context for an explicitly chosen command to consume. Exported content is untrusted, editable and not bound to execution.
+- Added non-overwriting local export of a selected automation job context for an explicitly chosen command to consume. An optional context file is checked against the selected job and bound to the execution preview by digest; it remains untrusted and editable after the check.
 
 - Added ordered batch context collection for explicitly selected automation jobs, retaining partial results. Provider responses remain untrusted and non-atomic; only simulated behavior was checked.
 
