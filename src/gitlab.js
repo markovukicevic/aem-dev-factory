@@ -107,6 +107,14 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       }
       throw new Error('GitLab page limit reached; discussions are incomplete');
     },
+    async getMergeRequestApprovals(number) { iid(number); return (await get(`/merge_requests/${number}/approvals`)).data; },
+    async approveMergeRequest({ number, sha }) {
+      iid(number);
+      if (typeof sha !== 'string' || !/^[a-f0-9]{40,64}$/i.test(sha)) throw new TypeError('Invalid reviewed commit');
+      const result = (await request(`/merge_requests/${number}/approve`, { method: 'POST', body: { sha } })).data;
+      if (!result || typeof result.user_has_approved !== 'boolean') throw new Error('Approval response unclear; inspect GitLab before retrying');
+      return { accepted: true, userHasApproved: result.user_has_approved };
+    },
     async getMergeRequestDiscussion(number, discussionId) {
       iid(number);
       if (typeof discussionId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(discussionId)) throw new TypeError('Invalid GitLab discussion ID');
