@@ -43,6 +43,12 @@ export function createBitbucketClient({ workspace, repository, token, fetchImpl 
   }
   return {
     getRepository: () => get(endpoint('')),
+    async approvePullRequest(id) {
+      number(id);
+      const result = await request(endpoint(`/pullrequests/${id}/approve`), { method: 'POST' });
+      if (result?.approved !== true) throw new Error('Approval response unclear; inspect Bitbucket before retrying');
+      return { accepted: true, approved: true };
+    },
     getPullRequest(id) { number(id); return get(endpoint(`/pullrequests/${id}`)); },
     async getPullRequestDiffstat(id) {
       number(id);
