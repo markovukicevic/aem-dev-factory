@@ -399,7 +399,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
   if (args[0] === 'automation-job-plan' || args[0] === 'automation-job-run') {
     const running = args[0].endsWith('-run');
     if (args.length !== (running ? 6 : 5) || !args[1]?.trim() || !/^[a-f0-9]{64}$/.test(args[2]) || !args[3]?.trim() || !args[4]?.trim() || (running && !/^[a-f0-9]{64}$/.test(args[5]))) { output.error(usage); return 2; }
-    try { const command = JSON.parse((await readLimitedFile(args[3], 262144)).toString('utf8')); const result = await processAutomationJob({ target: args[1], claimDigest: args[2], command, store: args[4], ...(running ? { expectedDigest: args[5] } : {}) }); output.log(JSON.stringify(result, null, 2)); return running && (!result.started || result.status !== 'process-succeeded') ? 1 : 0; }
+    try { const command = JSON.parse((await readLimitedFile(args[3], 262144)).toString('utf8')); const result = await processAutomationJob({ target: args[1], claimDigest: args[2], command, store: args[4], bitbucketToken: env.BITBUCKET_TOKEN, ...(running ? { expectedDigest: args[5] } : {}) }); output.log(JSON.stringify(result, null, 2)); return running && (!result.started || result.status !== 'process-succeeded') ? 1 : 0; }
     catch { output.error('Unable to prepare or run the local job. Check the event, command, origin, clean state and execution record before retrying.'); return 1; }
   }
   if (args[0] === 'automation-job-context') {

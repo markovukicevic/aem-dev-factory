@@ -7,6 +7,8 @@ import { readAutomationJob } from './automation-queue.js';
 import { readGitState } from './git-state.js';
 import { parseGitHubOrigin } from './github-origin.js';
 import { parseGitLabOrigin } from './gitlab-origin.js';
+import { parseBitbucketOrigin } from './bitbucket-origin.js';
+import { createBitbucketClient } from './bitbucket.js';
 import { runTestCommand } from './command-runner.js';
 const exec = promisify(execFile);
 const hash = value => createHash('sha256').update(value, 'utf8').digest('hex');
@@ -20,7 +22,7 @@ async function checkedDirectory(path) {
   const info = await lstat(path); if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Directory unavailable or unsafe');
   return realpath(path);
 }
-async function prepare({ target, claimDigest, command, store }, { readJob, inspect, origin }, { existing = false } = {}) {
+async function prepare({ target, claimDigest, command, store, bitbucketToken }, { readJob, inspect, origin, makeBitbucket }, { existing = false } = {}) {
   if (typeof claimDigest !== 'string' || !/^[a-f0-9]{64}$/.test(claimDigest)) throw new TypeError('Invalid claim digest');
   const normalized = commandFields(command), root = await checkedDirectory(target), stateRoot = await checkedDirectory(store);
   const rel = relative(root, stateRoot);
@@ -29,8 +31,14 @@ async function prepare({ target, claimDigest, command, store }, { readJob, inspe
   const remote = await origin(root); let repository;
   if (provider === 'github') { const value = parseGitHubOrigin(remote); repository = `${value.owner}/${value.repository}`; }
   else if (provider === 'gitlab') repository = parseGitLabOrigin(remote).project;
-  else throw new Error('Only GitHub and GitLab local origins can be matched to this job');
-  if (provider === 'github' ? repository.toLowerCase() !== claim.repository?.toLowerCase() : repository !== claim.repository) throw new Error('Local origin does not match queued event');
+  else if (provider === 'bitbucket-cloud') {
+    const value = parseBitbucketOrigin(remote);
+    const client = makeBitbucket({ ...value, token: bitbucketToken });
+    const current = await client.getRepository();
+    if (typeof current?.uuid !== 'string' || typeof claim.repository !== 'string' || current.uuid.toLowerCase() !== claim.repository.toLowerCase()) throw new Error('Bitbucket repository UUID does not match queued event');
+    repository = `${value.workspace}/${value.repository}`;
+  } else throw new Error('Unsupported local event provider');
+  if (provider === 'github' ? repository.toLowerCase() !== claim.repository?.toLowerCase() : provider === 'gitlab' ? repository !== claim.repository : false) throw new Error('Local origin does not match queued event');
   const git = await inspect(root);
   if (!git?.workingTreeClean || typeof git.head !== 'string' || !git.head || !/^[a-f0-9]{40,64}$/i.test(git.commit ?? '')) throw new Error('A clean branch and commit are required');
   const path = join(stateRoot, `${claimDigest}.json`);
@@ -42,9 +50,9 @@ async function writeRecord(handle, value) {
   const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`); await handle.truncate(0); await handle.write(bytes, 0, bytes.length, 0); await handle.sync();
 }
 /** Preview or explicitly run one local command for one existing queue record. */
-export async function processAutomationJob({ target, claimDigest, command, store, expectedDigest }, { readJob = readAutomationJob, inspect = readGitState, origin = readOrigin, run = runTestCommand } = {}) {
+export async function processAutomationJob({ target, claimDigest, command, store, bitbucketToken, expectedDigest }, { readJob = readAutomationJob, inspect = readGitState, origin = readOrigin, run = runTestCommand, makeBitbucket = createBitbucketClient } = {}) {
   if (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid preview digest');
-  const dependencies = { readJob, inspect, origin }, input = { target, claimDigest, command, store }, first = await prepare(input, dependencies);
+  const dependencies = { readJob, inspect, origin, makeBitbucket }, input = { target, claimDigest, command, store, bitbucketToken }, first = await prepare(input, dependencies);
   const preview = { target: first.snapshot.target, store: first.snapshot.store, claimDigest, provider: first.snapshot.claim.claim.provider ?? 'github', kind: first.snapshot.claim.claim.kind, number: first.snapshot.claim.claim.number, repository: first.snapshot.repository, git: first.snapshot.git, executable: first.command.executable, argumentCount: first.command.args.length, timeoutMs: first.command.timeoutMs };
   if (expectedDigest === undefined) return { preview, digest: first.digest, scope: 'Read-only preview. Inspect the complete command file; queue records do not prove event authenticity or authorize execution.' };
   if (first.digest !== expectedDigest) return { started: false, reason: 'preview-changed' };
