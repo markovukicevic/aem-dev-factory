@@ -19,7 +19,7 @@ export async function inspectAutomationQueueStatus({ target, store, offset = 0 }
     if (entry) {
       try {
         if (!entry.isFile() || entry.isSymbolicLink()) throw new Error('Invalid execution entry');
-        const observed = await inspectExecution({ target: root, claimDigest: job.digest, store: stateRoot });
+        const observed = await inspectExecution({ target: root, claimDigest: job.digest, store: stateRoot, includeCurrentObservations: false });
         execution = { status: observed.status, startedAt: observed.startedAt, finishedAt: observed.finishedAt, exitCode: observed.exitCode, contextObservation: observed.contextObservation };
       } catch { execution = { status: 'unavailable-or-invalid' }; }
     }
