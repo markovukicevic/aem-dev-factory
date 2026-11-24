@@ -1,5 +1,9 @@
 # Progress
 
+## 2026-11-24
+
+- Added ordered batch context collection for explicitly selected automation jobs, retaining partial results. Provider responses remain untrusted and non-atomic; only simulated behavior was checked.
+
 ## 2026-11-23
 
 - Extended AEM workflows with bounded live usage and node reads, local/live snapshots, screenshot capture and pixel comparison. Network and browser paths have simulated validation only; real AEM and Playwright remain unverified.

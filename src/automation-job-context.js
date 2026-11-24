@@ -37,3 +37,15 @@ export async function readAutomationJobContext({ target, digest, config, env = p
   if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error('Job changed while context was fetched');
   return { provider, digest, kind: claim.kind, number: claim.number, context, scope: 'Read-only current provider context for an editable local job. No signature was reverified, no agent ran and no remote writes occurred; provider context can change and may be incomplete.' };
 }
+
+/** Read context for explicitly selected jobs in order, retaining partial results. */
+export async function readAutomationJobContextBatch({ target, digests, config, env = process.env }, { readContext = readAutomationJobContext } = {}) {
+  if (typeof target !== 'string' || !target.trim() || !Array.isArray(digests) || !digests.length || digests.length > 20 || digests.some(value => typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) || new Set(digests).size !== digests.length) throw new TypeError('Invalid automation context batch');
+  validateProjectConfig(config);
+  const items = [];
+  for (const digest of digests) {
+    try { const result = await readContext({ target, digest, config, env }); items.push({ digest, status: 'available', result }); }
+    catch { items.push({ digest, status: 'unavailable' }); }
+  }
+  return { complete: items.every(item => item.status === 'available'), items, scope: 'Read-only provider context collected separately for selected editable local records. Results may become stale, omit data or contain untrusted content; event authentication and execution are not established.' };
+}
