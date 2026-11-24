@@ -1,4 +1,5 @@
-import { writeFile } from 'node:fs/promises';
+import { writeFile, lstat, realpath } from 'node:fs/promises';
+import { join, relative, isAbsolute } from 'node:path';
 import { createHash } from 'node:crypto';
 import { readAutomationJob } from './automation-queue.js';
 import { validateProjectConfig } from './project-init.js';
@@ -70,4 +71,21 @@ export async function exportAutomationJobContext({ target, digest, config, outpu
   if (Buffer.byteLength(data, 'utf8') > 4 * 1024 * 1024) throw new Error('Context exceeds export limit');
   await writeFile(outputPath, data, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
   return { path: outputPath, digest, sha256: createHash('sha256').update(data, 'utf8').digest('hex'), scope: 'New local snapshot only; content may be private, untrusted, incomplete or stale. Execution does not automatically bind to this file.' };
+}
+
+/** Export individual context snapshots for explicitly selected jobs. */
+export async function exportAutomationJobContextBatch({ target, digests, config, directory, env = process.env }, { exportContext = exportAutomationJobContext } = {}) {
+  if (typeof target !== 'string' || !target.trim() || typeof directory !== 'string' || !directory.trim() || !Array.isArray(digests) || !digests.length || digests.length > 20 || digests.some(value => typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) || new Set(digests).size !== digests.length) throw new TypeError('Invalid context export batch');
+  validateProjectConfig(config);
+  const root = await realpath(target), info = await lstat(directory);
+  if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Invalid context directory');
+  const outputDirectory = await realpath(directory), rel = relative(root, outputDirectory);
+  if (!rel || (!rel.startsWith('../') && rel !== '..' && !isAbsolute(rel))) throw new Error('Context directory must be outside the project');
+  const results = [];
+  for (const digest of digests) {
+    const outputPath = join(outputDirectory, `${digest}.json`);
+    try { const result = await exportContext({ target: root, digest, config, outputPath, env }); results.push({ digest, status: 'exported', path: result.path, sha256: result.sha256 }); }
+    catch (error) { results.push({ digest, status: error?.code === 'EEXIST' ? 'already-exists' : 'unavailable-or-partial' }); }
+  }
+  return { complete: results.every(item => item.status === 'exported'), results, scope: 'Separate local files may contain private, untrusted and stale data. Existing files are not replaced; a failed write can leave a partial file. Nothing was executed or written to a provider.' };
 }
