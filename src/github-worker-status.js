@@ -14,6 +14,6 @@ export async function inspectLocalWorker({ port }, { send = request } = {}) {
     req.on('error', reject); req.on('timeout', () => req.destroy(new Error('Worker status timeout'))); req.end();
   });
   const provider = value?.service === 'aem-dev-flow-max-github-worker' ? 'github' : value?.service === 'aem-dev-flow-max-automation-worker' ? value.provider : null;
-  if (value?.version !== 1 || !['github', 'gitlab'].includes(provider) || typeof value.busy !== 'boolean') throw new Error('Unexpected worker status');
+  if (value?.version !== 1 || !['github', 'gitlab', 'bitbucket-cloud'].includes(provider) || typeof value.busy !== 'boolean') throw new Error('Unexpected worker status');
   return { port, responding: true, provider, busy: value.busy, scope: 'Unauthenticated loopback response only; service identity, process liveness, queue health and readiness are not established.' };
 }

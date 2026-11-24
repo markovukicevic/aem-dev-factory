@@ -6,6 +6,7 @@ import { readLimitedFile } from './read-limited.js';
 import { projectAutomationDirectory, validateAutomationPolicy } from './automation-local.js';
 import { inspectGitHubWebhook } from './github-webhook.js';
 import { inspectGitLabWebhook, verifyGitLabWebhookSignature } from './gitlab-webhook.js';
+import { inspectBitbucketWebhook } from './bitbucket-webhook.js';
 import { claimExternalWebhook } from './external-webhook-claim.js';
 import { claimGitHubWebhook } from './webhook-claim.js';
 import { enqueueAutomationClaim, readAutomationJob } from './automation-queue.js';
@@ -14,15 +15,18 @@ const limit = 1024 * 1024;
 async function currentPolicy(target, provider) {
   const directory = await projectAutomationDirectory(target, false);
   const policy = validateAutomationPolicy(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(join(directory, 'policy.json'), 262144))));
-  if (provider === 'github' ? !policy.allowedRepositories || !policy.allowedActors : !policy.gitlab) throw new Error('Provider automation policy is required');
+  if (provider === 'github' ? !policy.allowedRepositories || !policy.allowedActors : provider === 'gitlab' ? !policy.gitlab : !policy.bitbucket) throw new Error('Provider automation policy is required');
   return { directory, policy };
 }
 function response(res, code, value) { if (!res.headersSent && !res.destroyed) { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(`${JSON.stringify(value)}\n`); } }
 
 /** Explicit loopback worker for one fixed command and signed comment events. */
 export async function startAutomationWorker({ provider, target, command, store, port, secret, environment = process.env }, { runJob = processAutomationJob } = {}) {
-  if (!['github', 'gitlab'].includes(provider) || typeof target !== 'string' || !target.trim() || typeof store !== 'string' || !store.trim() || !Number.isSafeInteger(port) || port < 0 || port > 65535 || typeof secret !== 'string' || !secret || secret.length > 4096 || !environment || typeof environment !== 'object' || Array.isArray(environment)) throw new TypeError('Invalid worker options');
+  if (!['github', 'gitlab', 'bitbucket-cloud'].includes(provider) || typeof target !== 'string' || !target.trim() || typeof store !== 'string' || !store.trim() || !Number.isSafeInteger(port) || port < 0 || port > 65535 || typeof secret !== 'string' || !secret || secret.length > 4096 || !environment || typeof environment !== 'object' || Array.isArray(environment)) throw new TypeError('Invalid worker options');
   const task = normalizeAutomationCommand(command);
+  if (provider === 'bitbucket-cloud' && (typeof environment.BITBUCKET_TOKEN !== 'string' || !environment.BITBUCKET_TOKEN.trim())) throw new TypeError('Bitbucket API token is required');
+  const childEnvironment = { ...environment };
+  for (const key of ['GITHUB_WEBHOOK_SECRET', 'GITLAB_WEBHOOK_SIGNING_TOKEN', 'BITBUCKET_WEBHOOK_SECRET', 'ADO_WEBHOOK_PASSWORD', 'ADO_WEBHOOK_AUTHORIZATION']) delete childEnvironment[key];
   if (task.contextFile !== undefined) throw new TypeError('Event-specific context is not supported by this worker');
   const root = await realpath(target), storeInfo = await lstat(store);
   if (!storeInfo.isDirectory() || storeInfo.isSymbolicLink()) throw new Error('Invalid execution store');
@@ -55,7 +59,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
         claimDigest = bodyDigest;
         claimed = await claimGitHubWebhook(input, { directory: join(directory, 'claims') });
         expected = { provider: 'github', deliveryId: inspected.deliveryId, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action };
-      } else {
+      } else if (provider === 'gitlab') {
         const headers = { id: req.headers['webhook-id'], timestamp: req.headers['webhook-timestamp'], signature: req.headers['webhook-signature'], event: req.headers['x-gitlab-event'] };
         inspected = inspectGitLabWebhook({ body, signingToken: secret, ...headers, allowedProjects: policy.gitlab.allowedProjects, allowedActors: policy.gitlab.allowedActors });
         if (!inspected.accepted || headers.event !== 'Note Hook' || !['issue-comment', 'pull-request-comment'].includes(inspected.kind)) { response(res, ['invalid-signature', 'timestamp-outside-window'].includes(inspected.reason) ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
@@ -64,6 +68,15 @@ export async function startAutomationWorker({ provider, target, command, store, 
         claimed = await claimExternalWebhook({ provider: 'gitlab', body, headers, policy: policy.gitlab, secret, directory: join(directory, 'claims') });
         claimDigest = claimed.digest;
         expected = { provider: 'gitlab', deliveryId: inspected.id, repository: inspected.project, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'created', commentId: inspected.commentId, bodyDigest };
+      } else {
+        const headers = { signature: req.headers['x-hub-signature'], event: req.headers['x-event-key'] };
+        inspected = inspectBitbucketWebhook({ body, secret, ...headers, allowedRepositories: policy.bitbucket.allowedRepositories, allowedActors: policy.bitbucket.allowedActors });
+        if (!inspected.accepted || headers.event !== 'pullrequest:comment_created' || inspected.kind !== 'pull-request-comment') { response(res, inspected.reason === 'invalid-signature' ? 401 : 403, { accepted: false, reason: inspected.reason ?? 'unsupported-event' }); return; }
+        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
+        if (typeof payload.comment?.user?.uuid !== 'string' || payload.comment.user.uuid.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
+        claimed = await claimExternalWebhook({ provider: 'bitbucket-cloud', body, headers, policy: policy.bitbucket, secret, directory: join(directory, 'claims') });
+        claimDigest = claimed.digest;
+        expected = { provider: 'bitbucket-cloud', deliveryId: `body-${bodyDigest}`, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: 'observed', commentId: inspected.commentId, bodyDigest, eventHeader: inspected.eventHeader };
       }
       if (!claimed.claimed) { response(res, ['duplicate-payload', 'duplicate-claim'].includes(claimed.reason) ? 200 : 403, { accepted: false, reason: claimed.reason }); return; }
       await enqueueAutomationClaim({ target: root, digest: claimDigest });
@@ -77,8 +90,8 @@ export async function startAutomationWorker({ provider, target, command, store, 
       void (async () => {
         let result;
         try {
-          const input = { target: root, claimDigest, command: task, store: stateRoot };
-          const dependencies = { readJob: readBoundJob, environment };
+          const input = { target: root, claimDigest, command: task, store: stateRoot, ...(provider === 'bitbucket-cloud' ? { bitbucketToken: environment.BITBUCKET_TOKEN } : {}) };
+          const dependencies = { readJob: readBoundJob, environment: childEnvironment };
           const plan = await runJob(input, dependencies);
           if (!plan?.preview || !/^[a-f0-9]{64}$/.test(plan.digest ?? '')) throw new Error('Job preview unavailable');
           result = await runJob({ ...input, expectedDigest: plan.digest }, dependencies);
@@ -96,3 +109,4 @@ export async function startAutomationWorker({ provider, target, command, store, 
 
 export async function startGitHubAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'github' }, dependencies); }
 export async function startGitLabAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'gitlab' }, dependencies); }
+export async function startBitbucketAutomationWorker(options, dependencies) { return startAutomationWorker({ ...options, provider: 'bitbucket-cloud' }, dependencies); }
