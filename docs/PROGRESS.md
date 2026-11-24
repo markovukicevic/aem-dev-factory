@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added preview-bound routing setup for existing hubs without routing metadata, with exact registry matching and preserved YAML comments where supported.
+
 - Added a read-only hub discovery proposal combining tagged comments, simple blocks and scope tables in reference order; malformed selected inputs do not silently fall back.
 
 - Extended new hub setup to write explicitly supplied role, platform and brand routing metadata; partial routing input is rejected.
