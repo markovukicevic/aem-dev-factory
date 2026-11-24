@@ -106,11 +106,20 @@ export async function discoverHubScopeTable({ cwd, path }) {
   return { repos: selected, unknown, complete: unknown.length === 0, scope: 'Explicit names in one untrusted scope table are proposals only; verify repository identity and intent before work.' };
 }
 
-/** Parse a tagged plain-text comment with one inline repos directive. */
+/** Convert a narrowly supported markup subset; reject attributes and hidden content. */
+export function normalizeHubComment(text) {
+  if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > 262144) throw new TypeError('Invalid comment');
+  if (!/[<>]/.test(text)) return text;
+  const withoutTags = text.replace(/<\/?(?:div|p)>|<br\s*\/?>|<\/?span>/gi, tag => /^<\/?span>$/i.test(tag) ? '' : '\n');
+  if (/[<>]/.test(withoutTags)) throw new Error('Unsupported comment markup');
+  return withoutTags.replace(/&nbsp;|&#160;|&#x0*a0;/gi, ' ');
+}
+
+/** Parse a tagged comment with one inline repos directive. */
 export function parseHubCommentDirective(text) {
   if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > 262144 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) throw new TypeError('Invalid comment text');
   let fence = null; const directives = [];
-  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+  for (const line of normalizeHubComment(text).replace(/\r\n/g, '\n').split('\n')) {
     const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line);
     if (marker) { if (!fence) fence = { char: marker[1][0], length: marker[1].length }; else if (marker[1][0] === fence.char && marker[1].length >= fence.length) fence = null; continue; }
     if (fence) continue;

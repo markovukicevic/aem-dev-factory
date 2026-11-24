@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Extended tagged hub comment discovery to a restricted HTML subset for Azure history, rejecting attributes and unsupported markup.
+
 - Added preview-bound routing setup for existing hubs without routing metadata, with exact registry matching and preserved YAML comments where supported.
 
 - Added a read-only hub discovery proposal combining tagged comments, simple blocks and scope tables in reference order; malformed selected inputs do not silently fall back.

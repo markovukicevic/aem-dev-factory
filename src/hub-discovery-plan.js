@@ -1,5 +1,5 @@
 import { readLimitedFile } from './read-limited.js';
-import { discoverHubCommentRepositories, discoverHubScopeTable } from './hub-repos.js';
+import { discoverHubCommentRepositories, discoverHubScopeTable, normalizeHubComment } from './hub-repos.js';
 import { discoverHubSimpleRepositories } from './hub-simple-route.js';
 
 /** Inspect relevant markers outside fenced code; never silently skip a malformed selected tier. */
@@ -22,7 +22,7 @@ async function read(path) { return new TextDecoder('utf-8', { fatal: true }).dec
 export async function planHubDiscovery({ cwd, sourcePath, commentPath }) {
   if (typeof cwd !== 'string' || !cwd.trim() || typeof sourcePath !== 'string' || !sourcePath.trim() || (commentPath !== undefined && (typeof commentPath !== 'string' || !commentPath.trim()))) throw new TypeError('Invalid discovery input');
   const sourceText = await read(sourcePath), commentText = commentPath === undefined ? null : await read(commentPath);
-  const source = markers(sourceText), comment = commentText === null ? null : markers(commentText);
+  const source = markers(sourceText), comment = commentText === null ? null : markers(normalizeHubComment(commentText));
   const verify = async () => { if (await read(sourcePath) !== sourceText || (commentPath !== undefined && await read(commentPath) !== commentText)) throw new Error('Discovery input changed'); };
   if (comment?.taggedDirective) {
     const result = await discoverHubCommentRepositories({ cwd, path: commentPath });
