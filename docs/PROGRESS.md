@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Extended new hub setup to write explicitly supplied role, platform and brand routing metadata; partial routing input is rejected.
+
 - Added local simple-block hub routing from explicit reference-style role, platform and brand metadata; targets remain proposals and are not dispatched.
 
 - Added read-only extraction of a single reference-style simple block from a selected story; declarations do not authorize access or prove page state.
