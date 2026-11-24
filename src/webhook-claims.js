@@ -35,7 +35,8 @@ export async function listWebhookClaims({ directory, maxEntries = 10000 }) {
       const metadata = ['repository', 'actor', 'kind', 'number', 'action'];
       const legacy = metadata.every(key => record[key] === undefined);
       if (!legacy && (typeof record.repository !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(record.repository) || typeof record.actor !== 'string' || !/^[A-Za-z0-9-]+$/.test(record.actor) || !['pull-request', 'issue', 'pull-request-comment', 'issue-comment'].includes(record.kind) || !Number.isSafeInteger(record.number) || record.number < 1 || !['opened', 'reopened', 'synchronize', 'created'].includes(record.action))) throw new Error('Invalid metadata');
-      claims.push({ digest: record.digest, deliveryId: record.deliveryId, claimedAt: record.claimedAt, ...(legacy ? { metadataAvailable: false } : { metadataAvailable: true, repository: record.repository, actor: record.actor, kind: record.kind, number: record.number, action: record.action }) });
+      if (record.commentId !== undefined && (!Number.isSafeInteger(record.commentId) || record.commentId < 1 || !['pull-request-comment', 'issue-comment'].includes(record.kind))) throw new Error('Invalid comment ID');
+      claims.push({ digest: record.digest, deliveryId: record.deliveryId, claimedAt: record.claimedAt, ...(legacy ? { metadataAvailable: false } : { metadataAvailable: true, repository: record.repository, actor: record.actor, kind: record.kind, number: record.number, action: record.action, ...(record.commentId ? { commentId: record.commentId } : {}) }) });
     } catch { errors.push({ file: entry.name, message: 'Claim is invalid or unreadable' }); }
   }
   const seen = new Set();

@@ -58,7 +58,7 @@ export async function startAutomationWorker({ provider, target, command, store, 
         if (!Number.isSafeInteger(payload.comment?.id) || payload.comment.id < 1 || typeof payload.comment?.user?.login !== 'string' || payload.comment.user.login.toLowerCase() !== inspected.actor.toLowerCase()) { response(res, 403, { accepted: false, reason: 'comment-author-mismatch' }); return; }
         claimDigest = bodyDigest;
         claimed = await claimGitHubWebhook(input, { directory: join(directory, 'claims') });
-        expected = { provider: 'github', deliveryId: inspected.deliveryId, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action };
+        expected = { provider: 'github', deliveryId: inspected.deliveryId, repository: inspected.repository, actor: inspected.actor, kind: inspected.kind, number: inspected.number, action: inspected.action, commentId: inspected.commentId };
       } else if (provider === 'gitlab') {
         const headers = { id: req.headers['webhook-id'], timestamp: req.headers['webhook-timestamp'], signature: req.headers['webhook-signature'], event: req.headers['x-gitlab-event'] };
         inspected = inspectGitLabWebhook({ body, signingToken: secret, ...headers, allowedProjects: policy.gitlab.allowedProjects, allowedActors: policy.gitlab.allowedActors });

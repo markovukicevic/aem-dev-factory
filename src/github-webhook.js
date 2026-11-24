@@ -22,6 +22,7 @@ export function inspectGitHubWebhook({ body, signature, secret, event, deliveryI
   if (typeof repository !== 'string' || typeof actor !== 'string' || !allowedRepositories.some(value => value.toLowerCase() === repository.toLowerCase()) || !allowedActors.some(value => value.toLowerCase() === actor.toLowerCase())) return { accepted: false, reason: 'not-allowlisted' };
   let kind;
   let number;
+  let commentId;
   if (event === 'pull_request' && ['opened', 'reopened', 'synchronize'].includes(payload.action)) {
     number = payload.number;
     if (payload.pull_request?.number !== number) return { accepted: false, reason: 'invalid-payload' };
@@ -33,7 +34,8 @@ export function inspectGitHubWebhook({ body, signature, secret, event, deliveryI
     number = payload.issue?.number;
     if (typeof payload.comment?.body !== 'string' || !/^@aem-dev(?:\s|$)/i.test(payload.comment.body.trimStart())) return { accepted: false, reason: 'no-command' };
     kind = payload.issue?.pull_request ? 'pull-request-comment' : 'issue-comment';
+    if (payload.comment?.id !== undefined) { if (!Number.isSafeInteger(payload.comment.id) || payload.comment.id < 1) return { accepted: false, reason: 'invalid-payload' }; commentId = payload.comment.id; }
   } else return { accepted: false, reason: 'unsupported-event' };
   if (!Number.isSafeInteger(number) || number < 1) return { accepted: false, reason: 'invalid-payload' };
-  return { accepted: true, deliveryId, repository, actor, kind, number, action: payload.action };
+  return { accepted: true, deliveryId, repository, actor, kind, number, action: payload.action, ...(commentId ? { commentId } : {}) };
 }

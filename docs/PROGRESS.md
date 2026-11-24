@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Preserved available GitHub comment IDs in claims and passed selected comment IDs to local jobs as metadata across supported providers; legacy records remain readable.
+
 - Extended the local fixed-command worker to Bitbucket Cloud PR comments, retaining its unsigned-header and replay limitations; webhook credentials are excluded from child environments. Only synthetic Bitbucket delivery and mocked execution were checked.
 
 - Extended the explicitly started local worker to signed GitLab issue and merge-request comments with author and allowlist checks. Only synthetic deliveries and mocked execution were checked.
