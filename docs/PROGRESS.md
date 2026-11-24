@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added provider comment and author rechecks before automatic local worker execution. Changed or unavailable comments block the run; real provider API behavior remains unverified.
+
 - Added saved comment-body digests and current provider-comment comparisons for supported GitHub, GitLab and Bitbucket jobs; legacy records may be unknown and local metadata is not authentication.
 
 - Added read-only inspection of per-comment worker reservations and their associated claim IDs; local records do not prove execution or liveness.

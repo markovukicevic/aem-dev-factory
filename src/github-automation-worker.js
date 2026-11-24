@@ -12,6 +12,7 @@ import { claimGitHubWebhook } from './webhook-claim.js';
 import { enqueueAutomationClaim, readAutomationJob } from './automation-queue.js';
 import { processAutomationJob, normalizeAutomationCommand } from './automation-job-run.js';
 import { workerCommentKey } from './worker-comment.js';
+import { verifyWorkerTriggerComment } from './worker-comment-fresh.js';
 const limit = 1024 * 1024;
 async function currentPolicy(target, provider) {
   const directory = await projectAutomationDirectory(target, false);
@@ -30,10 +31,11 @@ async function reserveComment(store, provider, repository, commentId, claimDiges
 function response(res, code, value) { if (!res.headersSent && !res.destroyed) { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(`${JSON.stringify(value)}\n`); } }
 
 /** Explicit loopback worker for one fixed command and signed comment events. */
-export async function startAutomationWorker({ provider, target, command, store, port, secret, environment = process.env }, { runJob = processAutomationJob } = {}) {
+export async function startAutomationWorker({ provider, target, command, store, port, secret, environment = process.env }, { runJob = processAutomationJob, verifyComment = verifyWorkerTriggerComment } = {}) {
   if (!['github', 'gitlab', 'bitbucket-cloud'].includes(provider) || typeof target !== 'string' || !target.trim() || typeof store !== 'string' || !store.trim() || !Number.isSafeInteger(port) || port < 0 || port > 65535 || typeof secret !== 'string' || !secret || secret.length > 4096 || !environment || typeof environment !== 'object' || Array.isArray(environment)) throw new TypeError('Invalid worker options');
   const task = normalizeAutomationCommand(command);
-  if (provider === 'bitbucket-cloud' && (typeof environment.BITBUCKET_TOKEN !== 'string' || !environment.BITBUCKET_TOKEN.trim())) throw new TypeError('Bitbucket API token is required');
+  const tokenName = provider === 'github' ? 'GITHUB_TOKEN' : provider === 'gitlab' ? 'GITLAB_TOKEN' : 'BITBUCKET_TOKEN';
+  if (typeof environment[tokenName] !== 'string' || !environment[tokenName].trim()) throw new TypeError('Provider API token is required');
   const childEnvironment = { ...environment };
   for (const key of ['GITHUB_WEBHOOK_SECRET', 'GITLAB_WEBHOOK_SIGNING_TOKEN', 'BITBUCKET_WEBHOOK_SECRET', 'ADO_WEBHOOK_PASSWORD', 'ADO_WEBHOOK_AUTHORIZATION']) delete childEnvironment[key];
   if (task.contextFile !== undefined) throw new TypeError('Event-specific context is not supported by this worker');
@@ -104,6 +106,9 @@ export async function startAutomationWorker({ provider, target, command, store, 
           const dependencies = { readJob: readBoundJob, environment: childEnvironment };
           const plan = await runJob(input, dependencies);
           if (!plan?.preview || !/^[a-f0-9]{64}$/.test(plan.digest ?? '')) throw new Error('Job preview unavailable');
+          let comment;
+          try { comment = await verifyComment({ target: root, claim: expected, environment }); } catch { comment = null; }
+          if (comment?.matches !== true) { server.emit('automation-result', { claimDigest, started: false, status: 'comment-changed-or-unavailable' }); return; }
           result = await runJob({ ...input, expectedDigest: plan.digest }, dependencies);
           server.emit('automation-result', { claimDigest, started: result.started === true, status: typeof result.status === 'string' ? result.status : result.reason ?? 'not-started' });
         } catch { server.emit('automation-result', { claimDigest, started: false, status: 'unavailable-or-failed' }); }
