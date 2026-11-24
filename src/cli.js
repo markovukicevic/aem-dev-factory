@@ -492,7 +492,7 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     const running = args[0].endsWith('-run');
     if (args.length !== (running ? 4 : 3) || !args[1]?.trim() || !args[2]?.trim() || (running && !/^[a-f0-9]{64}$/.test(args[3]))) { output.error(usage); return 2; }
     if (!env.GITHUB_APP_PRIVATE_KEY) { output.error('Set GITHUB_APP_PRIVATE_KEY in the environment.'); return 2; }
-    try { const config = JSON.parse((await readLimitedFile(args[1], 262144)).toString('utf8')), command = JSON.parse((await readLimitedFile(args[2], 262144)).toString('utf8')); const result = await processGitHubAppCommand({ config, command, privateKey: env.GITHUB_APP_PRIVATE_KEY, ...(running ? { expectedDigest: args[3] } : {}) }, { environment: env }); output.log(JSON.stringify(result, null, 2)); return running && (!result.started || !result.passed) ? 1 : 0; }
+    try { const config = JSON.parse((await readLimitedFile(args[1], 262144)).toString('utf8')), command = JSON.parse((await readLimitedFile(args[2], 262144)).toString('utf8')); const result = await processGitHubAppCommand({ config, command, privateKey: env.GITHUB_APP_PRIVATE_KEY, ...(running ? { expectedDigest: args[3] } : {}) }, { environment: env }); output.log(JSON.stringify(result, null, 2)); return running && (!result.started || !result.passed || result.tokenRevocation !== 'acknowledged') ? 1 : 0; }
     catch { output.error('Unable to prepare or run the GitHub App command. A token may have been issued; inspect access and the target before retrying.'); return 1; }
   }
   if (args[0] === 'automation-ignore-init' || args[0] === 'automation-ignore-check') {

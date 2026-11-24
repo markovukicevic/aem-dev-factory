@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added a best-effort GitHub App installation-token revocation after command execution or rejected scope, with unconfirmed revocation reported explicitly.
+
 - Added preview-bound execution of an explicit local command using a repository- and permission-scoped GitHub App installation token. Only synthetic API responses were checked; real installation behavior remains unverified.
 
 - Added non-overwriting Git ignore setup and diagnostics for automation runtime records and worktree cleanliness; tracked files remain tracked and no commits are made by setup.

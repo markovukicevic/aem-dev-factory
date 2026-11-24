@@ -47,6 +47,13 @@ function jwt(key, appId, now) {
   const value = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({ iat: seconds - 60, exp: seconds + 540, iss: appId })}`;
   return `${value}.${sign('RSA-SHA256', Buffer.from(value), key).toString('base64url')}`;
 }
+async function revokeInstallationToken(value, fetchImpl) {
+  try {
+    const response = await fetchImpl('https://api.github.com/installation/token', { method: 'DELETE', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${value}`, 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'error', signal: AbortSignal.timeout(15000) });
+    return !response.redirected && response.status === 204 ? 'acknowledged' : 'unconfirmed';
+  } catch { return 'unconfirmed'; }
+}
+
 /** Preview or run one explicit command with a scoped, short-lived installation token. */
 export async function processGitHubAppCommand({ config, command, privateKey, expectedDigest }, { inspect = readGitState, readOrigin = origin, fetchImpl = globalThis.fetch, run = runTestCommand, environment = process.env, now = Date.now } = {}) {
   if (expectedDigest !== undefined && (typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid preview digest');
@@ -57,13 +64,22 @@ export async function processGitHubAppCommand({ config, command, privateKey, exp
   if (first.digest !== expectedDigest) return { started: false, reason: 'preview-changed' };
   const response = await fetchImpl(`https://api.github.com/app/installations/${app.installationId}/access_tokens`, { method: 'POST', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${jwt(first.key, app.appId, now())}`, 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' }, body: JSON.stringify({ repositories: [app.repository], permissions: app.permissions }), redirect: 'error', signal: AbortSignal.timeout(15000) });
   const issued = await readJson(response);
-  if (typeof issued?.token !== 'string' || !issued.token.trim() || issued.token !== issued.token.trim() || issued.token.length > 8192 || /[\u0000-\u001f\u007f]/.test(issued.token) || typeof issued.expires_at !== 'string' || !Number.isFinite(Date.parse(issued.expires_at)) || Date.parse(issued.expires_at) <= now() || issued.repository_selection !== 'selected' || !Array.isArray(issued.repositories) || issued.repositories.length !== 1 || typeof issued.repositories[0]?.full_name !== 'string' || issued.repositories[0].full_name.toLowerCase() !== `${app.owner}/${app.repository}`.toLowerCase() || !issued.permissions || typeof issued.permissions !== 'object' || Array.isArray(issued.permissions)) throw new Error('Token scope could not be verified');
-  for (const [key, value] of Object.entries(issued.permissions)) if (app.permissions[key] !== value && !(key === 'metadata' && value === 'read' && app.permissions.metadata === undefined)) throw new Error('Token permission scope differs');
-  if (Object.entries(app.permissions).some(([key, value]) => issued.permissions[key] !== value)) throw new Error('Requested permissions not confirmed');
-  const final = await prepare(input, dependencies);
-  if (final.digest !== expectedDigest) return { started: false, reason: 'preview-changed-after-token', tokenExpiresAt: issued.expires_at, scope: 'A token was issued; the local command was not started. The token expires at the reported time.' };
-  const childEnvironment = { ...environment, GITHUB_TOKEN: issued.token };
-  for (const key of ['GITHUB_APP_PRIVATE_KEY', 'GITHUB_WEBHOOK_SECRET', 'GITLAB_WEBHOOK_SIGNING_TOKEN', 'BITBUCKET_WEBHOOK_SECRET', 'ADO_WEBHOOK_PASSWORD', 'ADO_WEBHOOK_AUTHORIZATION']) delete childEnvironment[key];
-  let result; try { result = await run({ cwd: app.target, ...task, environment: childEnvironment }); } catch { result = { passed: false, exitCode: null }; }
-  return { started: true, passed: result?.passed === true && result.exitCode === 0, exitCode: Number.isSafeInteger(result?.exitCode) ? result.exitCode : null, tokenExpiresAt: issued.expires_at, scope: 'Local process result only. Token is not printed or automatically revoked; command output, descendant termination, correctness and external effects are not established.' };
+  if (typeof issued?.token !== 'string' || !issued.token.trim() || issued.token !== issued.token.trim() || issued.token.length > 8192 || /[\u0000-\u001f\u007f]/.test(issued.token)) throw new Error('Token response invalid; a token may have been issued');
+  const expiresAt = typeof issued.expires_at === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(issued.expires_at) && Number.isFinite(Date.parse(issued.expires_at)) ? issued.expires_at : null;
+  let outcome;
+  try {
+    if (!expiresAt || Date.parse(expiresAt) <= now() || issued.repository_selection !== 'selected' || !Array.isArray(issued.repositories) || issued.repositories.length !== 1 || typeof issued.repositories[0]?.full_name !== 'string' || issued.repositories[0].full_name.toLowerCase() !== `${app.owner}/${app.repository}`.toLowerCase() || !issued.permissions || typeof issued.permissions !== 'object' || Array.isArray(issued.permissions)) throw new Error('Token scope could not be verified');
+    for (const [key, value] of Object.entries(issued.permissions)) if (app.permissions[key] !== value && !(key === 'metadata' && value === 'read' && app.permissions.metadata === undefined)) throw new Error('Token permission scope differs');
+    if (Object.entries(app.permissions).some(([key, value]) => issued.permissions[key] !== value)) throw new Error('Requested permissions not confirmed');
+    const final = await prepare(input, dependencies);
+    if (final.digest !== expectedDigest) outcome = { started: false, reason: 'preview-changed-after-token' };
+    else {
+      const childEnvironment = { ...environment, GITHUB_TOKEN: issued.token };
+      for (const key of ['GITHUB_APP_PRIVATE_KEY', 'GITHUB_WEBHOOK_SECRET', 'GITLAB_WEBHOOK_SIGNING_TOKEN', 'BITBUCKET_WEBHOOK_SECRET', 'ADO_WEBHOOK_PASSWORD', 'ADO_WEBHOOK_AUTHORIZATION']) delete childEnvironment[key];
+      let result; try { result = await run({ cwd: app.target, ...task, environment: childEnvironment }); } catch { result = { passed: false, exitCode: null }; }
+      outcome = { started: true, passed: result?.passed === true && result.exitCode === 0, exitCode: Number.isSafeInteger(result?.exitCode) ? result.exitCode : null };
+    }
+  } catch { outcome = { started: false, reason: 'scope-or-preparation-unavailable' }; }
+  const tokenRevocation = await revokeInstallationToken(issued.token, fetchImpl);
+  return { ...outcome, tokenExpiresAt: expiresAt, tokenRevocation, scope: 'Local process result and revocation response only. Acknowledgment is not independent verification; an unconfirmed or interrupted revocation may leave the token active until expiry. Command output, descendant termination, correctness and external effects are not established.' };
 }
