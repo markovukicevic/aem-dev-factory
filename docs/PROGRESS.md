@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+- Added bounded local Figma node reports for selected observed layout, typography and fill properties; they do not render designs or verify appearance.
+
 - Added bounded, read-only Figma node retrieval, non-overwriting local evidence and freshness comparison. Only simulated API responses were checked; rendered design and live account access remain unverified.
 
 - Added non-overwriting local task staging from a complete hub discovery proposal and a user-supplied command template; staging does not run the command.

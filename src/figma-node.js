@@ -35,12 +35,21 @@ export async function saveFigmaNode({ fileKey, nodeId, depth, token, outputPath 
   return { path: outputPath, fileKey: observed.fileKey, nodeId: observed.nodeId, depth: observed.depth, sha256: observed.sha256, scope: 'New editable local observation, potentially private and untrusted; no design approval or live page behavior established.' };
 }
 
+/** Read an editable saved observation and check its internal content digest. */
+export async function readFigmaEvidence(evidencePath) {
+  const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(evidencePath, 6 * 1024 * 1024)));
+  const prior = saved?.observed, { sha256, scope, ...content } = prior ?? {};
+  if (saved?.version !== 1 || typeof prior?.fileKey !== 'string' || typeof prior?.nodeId !== 'string' || !Number.isSafeInteger(prior?.depth) || typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(sha256) || digest(content) !== sha256 || !prior.node?.document || prior.node.document.id !== prior.nodeId) throw new Error('Invalid Figma evidence');
+  const selected = inputs(prior);
+  if (selected.nodeId !== prior.nodeId) throw new Error('Invalid Figma evidence identity');
+  return prior;
+}
+
 /** Compare an editable saved observation to one fresh provider response. */
 export async function checkFigmaNode({ fileKey, nodeId, depth, token, evidencePath }, dependencies = {}) {
   const selected = inputs({ fileKey, nodeId, depth: depth ?? 2 });
-  const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedFile(evidencePath, 6 * 1024 * 1024)));
-  const prior = saved?.observed, { sha256, scope, ...content } = prior ?? {};
-  if (saved?.version !== 1 || prior?.fileKey !== selected.fileKey || prior?.nodeId !== selected.nodeId || prior?.depth !== selected.depth || typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(sha256) || digest(content) !== sha256) throw new Error('Invalid or mismatched Figma evidence');
+  const prior = await readFigmaEvidence(evidencePath), sha256 = prior.sha256;
+  if (prior.fileKey !== selected.fileKey || prior.nodeId !== selected.nodeId || prior.depth !== selected.depth) throw new Error('Mismatched Figma evidence');
   const current = await readFigmaNode({ ...selected, token }, dependencies);
   return { matches: current.sha256 === sha256, fileKey: selected.fileKey, nodeId: selected.nodeId, depth: selected.depth, savedSha256: sha256, currentSha256: current.sha256, scope: 'Content comparison only; editable evidence is not authenticated, data can change afterward and matching does not establish design approval or rendered behavior.' };
 }
