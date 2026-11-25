@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Brought ticket branch suggestions and protected-branch checks closer to the reference workflow, including ticket-aware feature/bugfix branch matching.
+
 - Added explicit anonymous read-only GitHub access for public issue, PR and PR CI commands. Verified a public Microsoft VS Code issue and PR with real GitHub responses; no authentication or write was used.
 
 - Added duplicate-comment detection and available revision rechecks to GitLab and Azure ticket collection; atomic snapshots and real-service behavior remain unverified.
