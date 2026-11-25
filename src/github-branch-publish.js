@@ -59,7 +59,7 @@ export async function processGitHubBranchPublish({ cwd, spec, configPath, provid
   if (expectedDigest === undefined) return result;
   if (!result.allowed || digest !== expectedDigest) return { ...result, allowed: false, blockers: [...blockers, ...(digest !== expectedDigest ? ['The preview changed.'] : [])] };
   if (result.alreadyPublished) return { ...result, published: true, sent: false };
-  try { await run('git', ['push', 'origin', `${git.commit}:${ref}`], { ...options, timeout: 120000 }); }
+  try { await run('git', ['push', '--no-follow-tags', '--recurse-submodules=no', 'origin', `${git.commit}:${ref}`], { ...options, timeout: 120000 }); }
   catch { throw new Error('Push outcome unclear; inspect the remote before retrying'); }
   try {
     const [after, remoteAfter] = await Promise.all([readGitState(root), readRemote()]);

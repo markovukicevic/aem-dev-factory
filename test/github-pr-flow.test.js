@@ -158,3 +158,35 @@ test('CLI connects a Jira source to the GitHub write and blocks a ticket change'
   assert.equal(await runCli(args, options), 1);
   assert.equal(reads, 2); assert.equal(writes, 1); assert.match(result.blockers.join(' '), /changed/);
 });
+
+test('publishes only the reviewed commit and branch to the selected origin', async t => {
+  const { mkdtemp, mkdir, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const { processGitHubBranchPublish } = await import('../src/github-branch-publish.js');
+  const root = await mkdtemp(join(tmpdir(), 'ticket-publish-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const remote = join(root, 'origin.git'), cwd = join(root, 'repo'), spec = join(root, 'spec');
+  execFileSync('git', ['init', '--bare', '-q', remote]);
+  execFileSync('git', ['init', '-q', '-b', 'main', cwd]);
+  const git = args => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe' }).trim();
+  await writeFile(join(cwd, 'file'), 'base'); git(['add', 'file']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'base']);
+  git(['remote', 'add', 'origin', remote]); git(['push', '-q', 'origin', 'main']); git(['switch', '-q', '-c', 'feature/test']);
+  git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'tag', '-a', 'unrelated', '-m', 'tag']);
+  git(['config', 'push.followTags', 'true']);
+  await mkdir(spec); await writeFile(join(spec, 'source-identity.json'), JSON.stringify({ version: 1, provider: 'jira', source: 'https://example.atlassian.net', id: 'ABC-1' }));
+  const configPath = join(root, 'config.json'), providersPath = join(root, 'providers.json');
+  await writeFile(configPath, JSON.stringify({ scm: { baseBranch: 'main' }, test: { executable: 'node', args: ['--version'] } }));
+  await writeFile(providersPath, JSON.stringify({ scm: { provider: 'github', owner: 'team', repository: 'site' } }));
+  const input = { cwd, spec, configPath, providersPath }, origin = { owner: 'team', repository: 'site' };
+  const deps = { originReader: async () => origin, pushOriginReader: async () => origin };
+  const preview = await processGitHubBranchPublish(input, deps);
+  assert.equal(preview.allowed, true);
+  assert.equal((await processGitHubBranchPublish({ ...input, expectedDigest: 'a'.repeat(64) }, deps)).published, false);
+  const result = await processGitHubBranchPublish({ ...input, expectedDigest: preview.digest }, deps);
+  assert.equal(result.published, true); assert.equal(result.sent, true);
+  assert.equal(git(['ls-remote', '--tags', 'origin']), '');
+  assert.equal((await processGitHubBranchPublish(input, deps)).alreadyPublished, true);
+});
