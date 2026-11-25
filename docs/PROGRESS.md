@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added duplicate-comment detection and available revision rechecks to GitLab and Azure ticket collection; atomic snapshots and real-service behavior remain unverified.
+
 - Added bounded pagination for GitHub classic commit status contexts used by PR CI observations; incomplete or shifting results are not reported as complete.
 
 - Added a bounded local history inspection for retained source and review records; matching hashes do not authenticate the records.

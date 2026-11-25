@@ -184,6 +184,8 @@ The command checks readiness, origin, published branch, locally tracked base and
 
 ### Initial planning, execution and AEM discovery workflows
 
+GitLab and Azure ticket reads reject repeated comment IDs. When GitLab returns an issue update timestamp or Azure returns a work item revision, the issue is reread after comment collection and a changed marker blocks the export. This is not an atomic snapshot and does not establish that every comment edit changes the issue marker. Both paths have simulated validation only.
+
 The early `agent-core` plugin also includes instruction files for `agent-plan`, `agent-step`, `agent-step-verify`, and `agent-pr`. The initial `aem-tools` plugin includes `aem-component` for local component discovery and optional read-only live inspection. These are first implementations, not feature parity with the original plugins. Their instruction files have been structurally validated, but they have not yet been installed or behaviorally tested in AI clients.
 
 ### Plugin packaging

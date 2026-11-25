@@ -153,11 +153,16 @@ export function createGitLabClient({ project, token, fetchImpl = globalThis.fetc
       iid(number);
       const { data: issue } = await get(`/issues/${number}`);
       if (!issue || issue.iid !== number || typeof issue.title !== 'string') throw new Error('Invalid GitLab issue response');
-      const rawNotes = await notes('issues', number);
+      const rawNotes = await notes('issues', number), ids = new Set();
       const comments = rawNotes.filter(note => !note.system).map(note => {
-        if (!Number.isSafeInteger(note.id) || typeof note.body !== 'string') throw new Error('Invalid GitLab note');
+        if (!Number.isSafeInteger(note.id) || note.id < 1 || ids.has(note.id) || typeof note.body !== 'string') throw new Error('Invalid or repeated GitLab note');
+        ids.add(note.id);
         return { id: note.id, author: note.author?.username ?? null, body: note.body, createdAt: note.created_at ?? null, updatedAt: note.updated_at ?? null };
       });
+      if (typeof issue.updated_at === 'string' && issue.updated_at) {
+        const { data: latest } = await get(`/issues/${number}`);
+        if (latest?.iid !== number || latest.updated_at !== issue.updated_at) throw new Error('GitLab issue changed during collection');
+      }
       return { provider: 'gitlab', number, title: issue.title, body: issue.description ?? '', bodyFormat: 'markdown', state: issue.state ?? null, author: issue.author?.username ?? null, labels: Array.isArray(issue.labels) ? issue.labels : [], url: issue.web_url ?? null, comments };
     },
     async getPullRequest(number) { iid(number); return (await get(`/merge_requests/${number}`)).data; },
