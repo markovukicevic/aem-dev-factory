@@ -34,8 +34,8 @@ Provider support varies by operation. In particular, GitLab self-managed, Bitbuc
 Use Node.js 18 or newer. Clone this repository and install its dependencies:
 
 ```sh
-git clone https://github.com/markovukicevic/aem-dev-flow-max.git
-cd aem-dev-flow-max
+git clone https://github.com/markovukicevic/aem-dev-factory.git
+cd aem-dev-factory
 npm ci --ignore-scripts
 ```
 
