@@ -4,14 +4,14 @@ export async function inspectPrContextChecks(input, expected) {
   if (input.ticketCheck) {
     try {
       const ticket = await input.ticketCheck();
-      if (!ticket?.matches || !/^[a-f0-9]{64}$/.test(ticket.localDigest ?? '')) return { allowed: false, blocker: 'The tracker ticket does not match the local source.' };
+      if (!ticket?.matches || !/^[a-f0-9]{64}$/.test(ticket.localDigest ?? '')) return { allowed: false, blocker: expected ? 'The tracker ticket or local source changed during PR preparation.' : 'The tracker ticket does not match the local source.' };
       fingerprints.ticket = ticket.localDigest;
     } catch { return { allowed: false, blocker: 'Unable to verify the tracker ticket against the local source.' }; }
   }
   if (input.reviewCheck) {
     try {
       const review = await input.reviewCheck();
-      if (review?.verdict !== 'ready' || review.planMatches !== true || review.contextMatches !== true || review.identityMatches !== true || !/^[a-f0-9]{64}$/.test(review.reviewDigest ?? '')) return { allowed: false, blocker: 'The structured plan review is missing, stale or not ready.' };
+      if (review?.verdict !== 'ready' || review.planMatches !== true || review.contextMatches !== true || review.identityMatches !== true || !/^[a-f0-9]{64}$/.test(review.reviewDigest ?? '')) return { allowed: false, blocker: expected ? 'The plan review or its context changed during PR preparation.' : 'The structured plan review is missing, stale or not ready.' };
       fingerprints.review = review.reviewDigest;
     } catch { return { allowed: false, blocker: 'Unable to inspect the structured plan review.' }; }
   }

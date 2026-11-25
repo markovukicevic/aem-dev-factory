@@ -1,4 +1,5 @@
 import { checkBeforePullRequestWrite } from './final-pr-check.js';
+import { inspectPrContextChecks } from './pr-context-checks.js';
 import { inspectSavedTestReadiness, recheckSavedTestEvidence } from './reused-test-readiness.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
@@ -17,22 +18,8 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
   const makeClient = dependencies.makeClient ?? createGitHubClient;
   const inspectDiff = dependencies.inspectDiff ?? inspectBranchDiff;
-  let reviewDigest;
-  if (input.reviewCheck) {
-    try {
-      const review = await input.reviewCheck();
-      if (review?.verdict !== 'ready' || review.planMatches !== true || review.contextMatches !== true || review.identityMatches !== true || !/^[a-f0-9]{64}$/.test(review.reviewDigest ?? '')) return { created: false, blockers: ['The structured plan review is missing, stale or not ready.'], warnings: [] };
-      reviewDigest = review.reviewDigest;
-    } catch { return { created: false, blockers: ['Unable to inspect the structured plan review.'], warnings: [] }; }
-  }
-  let ticketDigest;
-  if (input.ticketCheck) {
-    try {
-      const ticket = await input.ticketCheck();
-      if (!ticket?.matches || !/^[a-f0-9]{64}$/.test(ticket.localDigest ?? '')) return { created: false, blockers: ['The tracker ticket does not match the local source.'], warnings: [] };
-      ticketDigest = ticket.localDigest;
-    } catch { return { created: false, blockers: ['Unable to verify the tracker ticket against the local source.'], warnings: [] }; }
-  }
+  const context = await inspectPrContextChecks(input);
+  if (!context.allowed) return { created: false, blockers: [context.blocker], warnings: [] };
   const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, requireTicketBinding: !!input.ticketCheck }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
@@ -56,18 +43,8 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const existing = await client.listOpenPullRequests({ owner: input.owner, head, base: current.readiness.branch.base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitHub pull request response');
   if (existing.length) return { created: false, blockers: ['An open pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.number, url: pr.html_url })), warnings: current.warnings };
-  if (input.ticketCheck) {
-    try {
-      const ticket = await input.ticketCheck();
-      if (!ticket?.matches || ticket.localDigest !== ticketDigest) return { created: false, blockers: ['The tracker ticket or local source changed during PR preparation.'], warnings: current.warnings };
-    } catch { return { created: false, blockers: ['Unable to recheck the tracker ticket before PR creation.'], warnings: current.warnings }; }
-  }
-  if (input.reviewCheck) {
-    try {
-      const review = await input.reviewCheck();
-      if (review?.verdict !== 'ready' || review.planMatches !== true || review.contextMatches !== true || review.identityMatches !== true || review.reviewDigest !== reviewDigest) return { created: false, blockers: ['The plan review or its context changed during PR preparation.'], warnings: current.warnings };
-    } catch { return { created: false, blockers: ['Unable to recheck the plan review before PR creation.'], warnings: current.warnings }; }
-  }
+  const recheckedContext = await inspectPrContextChecks(input, context.fingerprints);
+  if (!recheckedContext.allowed) return { created: false, blockers: [recheckedContext.blocker], warnings: current.warnings };
   if (input.evidencePath) {
     try {
       const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest, requireTicketBinding: !!input.ticketCheck });
