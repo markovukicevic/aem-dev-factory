@@ -10,6 +10,8 @@ Execute this skill and referenced skills sequentially in the current agent conte
 
 The source checkout must be available as `AEM_DEVFLOW_MAX_HOME`. References to this plugin’s `shared/`, `data/`, `templates/`, `assets/`, `rules/`, `agents/` and `hooks/` resolve under `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/`; references to another `plugins/...` path resolve under `$AEM_DEVFLOW_MAX_HOME/`. Skill-local `references/` and `scripts/` resolve relative to this skill directory. For original helper scripts that still require `CLAUDE_PLUGIN_ROOT`, pass it as `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core` for that invocation; do not assume the client set it. When the checkout, required tool or integration is unavailable, report the gap and continue independent authorized work. Do not infer success from an instruction or a local record.
 
+For tracker, SCM and CI operation mapping, consult `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/factory-provider-routing.md`.
+
 ## AEM Dev Factory provider and implementation extension
 
 # Verify completed work

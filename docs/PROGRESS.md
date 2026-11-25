@@ -557,3 +557,5 @@
 - Restored 77 original skill workflows and their available supporting assets; kept Factory provider extensions and configured skill execution to remain inline. Original instructions may still mention tools or features that require adaptation; runtime parity and live services are unverified.
 
 - Aligned restored skills with inline execution and checkout-relative plugin resources, removed inherited client tool restrictions, and updated the inline phase return contract.
+
+- Connected restored ticket, PR, review and verification skills to a shared Factory provider-routing map.
