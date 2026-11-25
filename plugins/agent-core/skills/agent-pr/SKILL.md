@@ -13,4 +13,6 @@ For a Jira or GitHub Issues ticket targeting GitHub, add `--ticket <providers.js
 
 The creation commands run project tests and check the plan, origin, published branch, local tracked base, and existing PRs. They do not push the branch. If the branch is not published, if checks fail, or if an existing PR is found, stop and report the result. If a request fails ambiguously, inspect the provider before retrying; never automatically retry a create. Checks are not atomic and local tracking refs can be stale.
 
+After creation, `github-pr-ci <providers.json> <number>` can read observed checks on the current PR head when SCM and GitHub Actions point to the same repository. Report pending, missing or failed checks accurately; the result does not establish branch protection or merge readiness.
+
 These integrations are experimental and their write paths have not been verified against real provider accounts. Report the actual PR URL or the blocker, test evidence, and remaining uncertainty. Do not merge, deploy, or send messages.

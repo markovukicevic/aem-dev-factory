@@ -26,3 +26,15 @@ test('keeps Azure PR head matching unknown', async () => {
   assert.equal(result.prHeadMatchesSha, null);
   assert.match(result.limitations.join(' '), /not verified against it/);
 });
+
+
+test('GitHub PR CI reads the current head and rejects revisions changing during collection', async () => {
+  const { readGitHubPullRequestCi } = await import('../src/github-pr-ci.js');
+  let count = 0, changed = false, observed;
+  const scm = { provider: 'github', getPullRequest: async () => ({ number: 7, head: { sha: changed && ++count === 2 ? c : a }, base: { sha: b } }) };
+  const githubCi = { provider: 'github-actions', listCheckRuns: async sha => { observed = sha; return { total_count: 1, check_runs: [{ id: 1, name: 'Build', status: 'completed', conclusion: 'success' }] }; }, getCommitStatus: async () => ({ total_count: 0 }) };
+  const result = await readGitHubPullRequestCi({ scm, ci: githubCi, number: 7 });
+  assert.equal(observed, a); assert.equal(result.head, a); assert.equal(result.summary.state, 'success');
+  changed = true; count = 0;
+  await assert.rejects(readGitHubPullRequestCi({ scm, ci: githubCi, number: 7 }), /changed/);
+});
