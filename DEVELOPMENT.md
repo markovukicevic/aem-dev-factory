@@ -421,6 +421,10 @@ For a same-repository GitHub Actions source, `github-pr-ci <providers.json> <num
 
 `github-review-context /path/to/providers.json <number>` gathers GitHub PR discussion, changed-file metadata, bounded commit metadata and a CI summary for the PR head in the configured SCM repository. It stops if the PR head, base, file count or commit count changes during collection. Commit lists are limited to 250 entries. It does not fetch a complete diff or review threads, evaluate branch protection, or guarantee that fork CI results are visible in the base repository. Discussion and checks can also change independently.
 
+### Pipeline progress
+
+`pipeline-progress-init <spec-directory>` creates the reference-style `dev-all-progress.md` phase table. `pipeline-progress-status` reads it and returns a digest. `pipeline-progress-set <spec-directory> <update.json> <digest>` updates one row using `phase`, `status` (`pending`, `in_progress`, `done`, `failed`, `skipped` or `blocked`) and optional `note`. It preserves other rows and refuses a changed digest or existing lock. The editable table records declared progress only; it is not proof of work or checks.
+
 ### Orchestration context
 
 `workflow-context-start <project-directory> <spec-directory>` creates the reference-style `.ai/run-context/orchestrating.flag` for an active declared ticket run. `workflow-context-status <project-directory>` reports its age, and `workflow-context-heartbeat` and `workflow-context-close` accept the project, spec and marker digest to refresh or remove the same marker. A legacy empty marker is recognized but is not automatically adopted or deleted. The marker and its age do not prove that an agent is running, and local races remain possible.

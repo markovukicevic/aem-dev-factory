@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added the reference-style shared pipeline progress table with digest-bound row updates; records are declared progress only.
+
 - Added preview-bound insertion of explicitly supplied review-fix groups (`R1`, `R2`, then `R1b`, `R2b`) with retained prior plans; diagnosis and execution remain separate.
 
 - Added reference-style local orchestration marker lifecycle and compact sub-workflow guidance; markers do not dispatch agents or prove liveness.
