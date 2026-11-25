@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added a bounded local history inspection for retained source and review records; matching hashes do not authenticate the records.
+
 - Extended optional tracker-source and structured-review rechecks to GitLab, Bitbucket Cloud and Azure PR creation. These cross-provider write flows remain simulated.
 
 - Extended explicit saved-test-record reuse to GitLab, Bitbucket Cloud and Azure PR creation. Reuse is opt-in, records are editable, and remote tracker identity is not checked by those creation flows.
