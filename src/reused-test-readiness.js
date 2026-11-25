@@ -9,14 +9,14 @@ import { inspectPlanReadiness } from './inspect-readiness.js';
 const digestFile = async path => createHash('sha256').update(await readLimitedFile(path, 262144)).digest('hex');
 
 /** Compare a user-selected editable test record without executing the test command. */
-export async function inspectSavedTestReadiness({ cwd, configPath, planPath, evidencePath }) {
+export async function inspectSavedTestReadiness({ cwd, configPath, planPath, evidencePath, requireTicketBinding = false }) {
   const digest = await digestFile(evidencePath);
   const first = await checkTestEvidence({ cwd, configPath, planPath, evidencePath });
   const config = await loadReadinessConfig(configPath), configDigest = readinessConfigDigest(config);
   const base = await resolveBaseBranch({ cwd, configuredBase: config.scm.baseBranch });
   const result = await inspectPlanReadiness({ cwd, planPath, testsPassed: first.consistent, base });
   const last = await checkTestEvidence({ cwd, configPath, planPath, evidencePath });
-  const stable = first.consistent && last.consistent && digest === await digestFile(evidencePath) && configDigest === readinessConfigDigest(await loadReadinessConfig(configPath));
+  const stable = first.consistent && last.consistent && (!requireTicketBinding || (first.sourceBinding === 'bound' && last.sourceBinding === 'bound')) && digest === await digestFile(evidencePath) && configDigest === readinessConfigDigest(await loadReadinessConfig(configPath));
   result.readiness.configDigest = configDigest;
   if (!stable) {
     result.readiness.checks.testsPassed = false;
@@ -29,10 +29,10 @@ export async function inspectSavedTestReadiness({ cwd, configPath, planPath, evi
 }
 
 /** Recheck that the same selected record still matches the local plan and Git state. */
-export async function recheckSavedTestEvidence({ cwd, configPath, planPath, evidencePath, expectedDigest }) {
+export async function recheckSavedTestEvidence({ cwd, configPath, planPath, evidencePath, expectedDigest, requireTicketBinding = false }) {
   if (!/^[a-f0-9]{64}$/.test(expectedDigest ?? '')) throw new TypeError('Evidence digest required');
   const before = await digestFile(evidencePath);
   const check = await checkTestEvidence({ cwd, configPath, planPath, evidencePath });
   const after = await digestFile(evidencePath);
-  return before === expectedDigest && after === expectedDigest && check.consistent;
+  return before === expectedDigest && after === expectedDigest && check.consistent && (!requireTicketBinding || check.sourceBinding === 'bound');
 }

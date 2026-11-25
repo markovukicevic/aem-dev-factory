@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Bound newly saved test evidence to the locally observed requirements and ticket identity where available. Ticket-bound GitHub PR reuse now rejects older unbound or changed source context.
+
 - Verified one complete ticket-to-PR-to-CI scenario using a temporary local Git remote and simulated Jira/GitHub APIs; no real provider PR was created. The focused scenario is available as `npm run verify:ticket-flow`.
 
 - Added explicit acceptance of a revised, source-bound structured plan review while preserving the previous report; actual review remains a human or agent responsibility.

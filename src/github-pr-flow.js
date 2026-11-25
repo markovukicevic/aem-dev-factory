@@ -33,7 +33,7 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
       ticketDigest = ticket.localDigest;
     } catch { return { created: false, blockers: ['Unable to verify the tracker ticket against the local source.'], warnings: [] }; }
   }
-  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
+  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, requireTicketBinding: !!input.ticketCheck }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
   if (typeof input.owner !== 'string' || typeof input.repository !== 'string' || origin.owner.toLowerCase() !== input.owner.toLowerCase() || origin.repository.toLowerCase() !== input.repository.toLowerCase()) {
@@ -70,7 +70,7 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   }
   if (input.evidencePath) {
     try {
-      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest });
+      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest, requireTicketBinding: !!input.ticketCheck });
       if (!consistent) return { created: false, blockers: ['Saved test evidence changed or no longer matches the local state.'], warnings: first.warnings };
     } catch { return { created: false, blockers: ['Unable to recheck saved test evidence.'], warnings: first.warnings }; }
   }

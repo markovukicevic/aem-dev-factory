@@ -73,7 +73,7 @@ async function readEvidenceFile(path, maxBytes = 1024 * 1024) {
 }
 
 /** Fingerprint the local requirements context without exposing its contents. */
-async function readContext(planPath) {
+export async function readRequirementsContext(planPath) {
   const directory = dirname(planPath), hash = createHash('sha256');
   for (const name of contextFiles) {
     try {
@@ -85,7 +85,7 @@ async function readContext(planPath) {
 }
 
 /** Track identity presence and bytes, without asserting source authenticity. */
-async function readIdentity(planPath) {
+export async function readTicketIdentitySnapshot(planPath) {
   try {
     const bytes = await readEvidenceFile(join(dirname(planPath), 'source-identity.json'));
     return { status: 'present', digest: createHash('sha256').update(bytes).digest('hex') };
@@ -107,9 +107,9 @@ export async function savePlanReview({ planPath, inputPath, outputPath }) {
   if (typeof outputPath !== 'string' || !outputPath.trim()) throw new TypeError('Output path is required');
   try { await lstat(outputPath); throw Object.assign(new Error('Output exists'), { code: 'EEXIST' }); }
   catch (error) { if (error?.code !== 'ENOENT') throw error; }
-  const digest = await readPlanReviewDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
+  const digest = await readPlanReviewDigest(planPath), context = await readRequirementsContext(planPath), identity = await readTicketIdentitySnapshot(planPath);
   const review = validateReview(JSON.parse((await readLimitedFile(inputPath, 1024 * 1024)).toString('utf8')));
-  const contextAfter = await readContext(planPath), identityAfter = await readIdentity(planPath);
+  const contextAfter = await readRequirementsContext(planPath), identityAfter = await readTicketIdentitySnapshot(planPath);
   if (digest !== await readPlanReviewDigest(planPath) || context.status !== contextAfter.status || context.digest !== contextAfter.digest || identity.status !== identityAfter.status || identity.digest !== identityAfter.digest) throw new Error('Plan, requirements context or source identity changed while recording review');
   const record = { planDigest: digest, contextDigest: context.digest, identityStatus: identity.status, identityDigest: identity.digest, ...review };
   const json = JSON.stringify(record, null, 2);
@@ -133,7 +133,7 @@ export async function checkPlanReview({ planPath, reportPath }) {
   if (saved.contextDigest !== undefined && saved.contextDigest !== null && (typeof saved.contextDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.contextDigest))) throw new Error('Invalid requirements context digest');
   const legacyIdentity = saved.identityStatus === undefined && saved.identityDigest === undefined;
   if (!legacyIdentity && (!['present', 'missing', 'unavailable'].includes(saved.identityStatus) || (saved.identityStatus === 'present' ? typeof saved.identityDigest !== 'string' || !/^[a-f0-9]{64}$/.test(saved.identityDigest) : saved.identityDigest !== null))) throw new Error('Invalid source identity record');
-  const currentDigest = await readPlanReviewDigest(planPath), context = await readContext(planPath), identity = await readIdentity(planPath);
+  const currentDigest = await readPlanReviewDigest(planPath), context = await readRequirementsContext(planPath), identity = await readTicketIdentitySnapshot(planPath);
   const contextMatches = saved.contextDigest == null || context.status === 'unavailable' ? null : context.status === 'missing' ? false : saved.contextDigest === context.digest;
   const identityMatches = legacyIdentity || saved.identityStatus === 'unavailable' || identity.status === 'unavailable' ? null : saved.identityStatus !== identity.status ? false : identity.status === 'missing' ? true : saved.identityDigest === identity.digest;
   return { verdict: review.verdict, planContentDigest: currentDigest, reviewDigest, planMatches: saved.planDigest === currentDigest, contextMatches, contextStatus: context.status, identityMatches, identityStatus: identity.status, findings: review.findings.length, unresolved: review.unresolved.length, scope: 'Editable supplied review record only; matching local files do not establish source authenticity, that the review occurred or that requirements are satisfied. Files may change afterward.' };
