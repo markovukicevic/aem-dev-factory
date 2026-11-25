@@ -103,7 +103,7 @@ The experimental provider adapters keep tracker, source control, and CI choices 
 
 ### Jira Cloud tracker
 
-Set `tracker` to `{"provider":"jira","baseUrl":"https://your-team.atlassian.net"}`, and provide `JIRA_EMAIL` and `JIRA_API_TOKEN` through the environment. Then run `tracker-ticket /path/to/providers.json TEAM-123`. This reads an issue and its comments using Jira Cloud REST API v3. Rich text is returned in Atlassian Document Format (ADF), not converted to Markdown. It includes attachment metadata when available but does not update Jira. Pagination is bounded and fails if incomplete. This adapter has only been tested with simulated Jira responses; it has not been tested against a live Jira account.
+Set `tracker` to `{"provider":"jira","baseUrl":"https://your-team.atlassian.net"}`, and provide `JIRA_EMAIL` and `JIRA_API_TOKEN` through the environment. Then run `tracker-ticket /path/to/providers.json TEAM-123`. This reads an issue and its comments using Jira Cloud REST API v3. Rich text is returned in Atlassian Document Format (ADF), not converted to Markdown. It includes attachment metadata when available but does not update Jira. Pagination is bounded and fails if incomplete, if comment IDs repeat, or if the reported total changes across pages. When an issue update timestamp is returned, collection rereads it after comment pagination and rejects a changed timestamp. This is not an atomic snapshot and cannot establish that every comment edit changes the issue timestamp. This adapter has only been tested with simulated Jira responses; it has not been tested against a live Jira account.
 
 ### Export a tracker issue
 

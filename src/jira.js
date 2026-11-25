@@ -116,17 +116,24 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
         if (typeof item.filename !== 'string' || !Number.isSafeInteger(item.size) || item.size < 0) throw new Error('Invalid Jira attachment metadata');
         return { id, filename: item.filename, size: item.size, mimeType: item.mimeType ?? null };
       });
-      const comments = [];
-      let startAt = 0;
+      const comments = [], commentIds = new Set();
+      let startAt = 0, expectedTotal = null;
       for (let page = 0; page < maxPages; page++) {
         const result = await get(`/rest/api/3/issue/${encoded}/comment?startAt=${startAt}&maxResults=100`);
         if (!Array.isArray(result?.comments) || result.startAt !== startAt || !Number.isSafeInteger(result.total) || result.total < 0 || result.comments.length > 100 || startAt + result.comments.length > result.total) throw new Error('Invalid Jira comments response');
+        if (expectedTotal !== null && result.total !== expectedTotal) throw new Error('Jira comments changed during pagination');
+        expectedTotal = result.total;
         for (const item of result.comments) {
-          if (!item || typeof item.id !== 'string' || (item.body !== null && typeof item.body !== 'object')) throw new Error('Invalid Jira comment');
+          if (!item || typeof item.id !== 'string' || !/^[0-9]+$/.test(item.id) || commentIds.has(item.id) || (item.body !== null && typeof item.body !== 'object')) throw new Error('Invalid or repeated Jira comment');
+          commentIds.add(item.id);
           comments.push({ id: item.id, author: item.author?.displayName ?? null, body: item.body, bodyFormat: 'adf', createdAt: item.created ?? null, updatedAt: item.updated ?? null });
         }
         startAt += result.comments.length;
         if (startAt === result.total) {
+          if (typeof issue.fields.updated === 'string' && issue.fields.updated) {
+            const latest = await get(`/rest/api/3/issue/${encoded}?fields=updated`);
+            if (typeof latest?.key !== 'string' || latest.key.toUpperCase() !== issue.key.toUpperCase() || latest.fields?.updated !== issue.fields.updated) throw new Error('Jira issue changed during collection');
+          }
           return { provider: 'jira', key: issue.key, updatedAt: typeof issue.fields.updated === 'string' ? issue.fields.updated : null, title: issue.fields.summary, body: issue.fields.description ?? null, bodyFormat: 'adf', state: issue.fields.status?.name ?? null, author: issue.fields.reporter?.displayName ?? null, labels: Array.isArray(issue.fields.labels) ? issue.fields.labels : [], url: `${origin}/browse/${encodeURIComponent(issue.key)}`, attachments, comments };
         }
         if (!result.comments.length) throw new Error('Jira comments are incomplete');
