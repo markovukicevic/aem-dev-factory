@@ -22,17 +22,19 @@ function pageQuery(page, perPage) {
 }
 
 /** A minimal GitHub Cloud pull request client with an injectable transport. */
-export function createGitHubClient({ owner, repository, token, fetchImpl = globalThis.fetch }) {
+export function createGitHubClient({ owner, repository, token, publicRead = false, fetchImpl = globalThis.fetch }) {
   const path = githubRepositoryPath(owner, repository);
-  if (typeof token !== 'string' || !token.trim()) throw new TypeError('token is required');
+  if (typeof publicRead !== 'boolean' || (publicRead ? token !== undefined : typeof token !== 'string' || !token.trim())) throw new TypeError('A token or explicit public read is required');
+  const requireToken = () => { if (publicRead) throw new Error('Public GitHub access is read-only'); };
   if (typeof fetchImpl !== 'function') throw new TypeError('fetchImpl must be a function');
 
   async function request(method, suffix, body) {
+    if (method !== 'GET') requireToken();
     const response = await fetchImpl(`https://api.github.com${path}${suffix}`, {
       method,
       headers: {
         Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
+        ...(publicRead ? {} : { Authorization: `Bearer ${token}` }),
         'Content-Type': 'application/json',
         'X-GitHub-Api-Version': '2022-11-28',
       },
@@ -145,19 +147,21 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
     getWorkflowJob(id) { validateNumber(id, 'workflow job ID'); return request('GET', `/actions/jobs/${id}`); },
     async getWorkflowJobLogRedirect(id) {
       validateNumber(id, 'workflow job ID');
-      const response = await fetchImpl(`https://api.github.com${path}/actions/jobs/${id}/logs`, { method: 'GET', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'manual', signal: AbortSignal.timeout(30000) });
+      const response = await fetchImpl(`https://api.github.com${path}/actions/jobs/${id}/logs`, { method: 'GET', headers: { Accept: 'application/vnd.github+json', ...(publicRead ? {} : { Authorization: `Bearer ${token}` }), 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'manual', signal: AbortSignal.timeout(30000) });
       if (response.status !== 302 || response.redirected) throw new Error('Unexpected GitHub log redirect');
       const location = response.headers?.get?.('location');
       if (typeof location !== 'string' || !location || location.length > 8192) throw new Error('GitHub log redirect unavailable');
       return location;
     },
     async cancelWorkflowRun(id) {
+      requireToken();
       validateNumber(id, 'workflow run ID');
       const response = await fetchImpl(`https://api.github.com${path}/actions/runs/${id}/cancel`, { method: 'POST', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'error', signal: AbortSignal.timeout(30000) });
       if (response.status !== 202 || response.redirected) throw new Error('Cancel response unclear; inspect GitHub before retrying');
       return { accepted: true };
     },
     async retryFailedWorkflowJobs(id) {
+      requireToken();
       validateNumber(id, 'workflow run ID');
       const response = await fetchImpl(`https://api.github.com${path}/actions/runs/${id}/rerun-failed-jobs`, { method: 'POST', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'error', signal: AbortSignal.timeout(30000) });
       if (response.status !== 201 || response.redirected) throw new Error('Retry response unclear; inspect GitHub before retrying');

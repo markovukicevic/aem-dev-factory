@@ -46,6 +46,8 @@ node bin/aem-devflow.js --help
 node bin/aem-devflow.js list-skills
 ```
 
+For public GitHub repositories, append `--public` to `github-issue-context`, `github-pr`, or `github-pr-ci` to read without a token. Public requests are read-only and subject to GitHub’s unauthenticated rate limits; private repositories require credentials.
+
 For an example of setting up a target project and working from a tracker ticket to a GitHub PR, follow the [ticket-to-PR guide](docs/TICKET-TO-PR.md). It covers configuration, credentials, local branches, review and the limits of the current implementation.
 
 ## Project documentation

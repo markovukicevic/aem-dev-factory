@@ -123,3 +123,16 @@ test('dispatches a workflow once and accepts a 204 response without claiming com
   await assert.rejects(client.dispatchWorkflow({ workflow: '../secret', ref: 'main' }));
   await assert.rejects(client.dispatchWorkflow({ workflow: 'build.yml', ref: '../bad' }));
 });
+
+test('explicit public access omits credentials and blocks all direct write paths', async () => {
+  let calls = 0;
+  const client = createGitHubClient({ owner: 'team', repository: 'site', publicRead: true, fetchImpl: async (_url, options) => {
+    calls++; assert.equal(options.method, 'GET'); assert.equal(options.headers.Authorization, undefined);
+    return { ok: true, json: async () => ({ number: 1 }) };
+  } });
+  assert.equal((await client.getIssue(1)).number, 1);
+  await assert.rejects(client.createPullRequest({ title: 'Update', head: 'feature', base: 'main' }), /read-only/);
+  await assert.rejects(client.cancelWorkflowRun(1), /read-only/);
+  await assert.rejects(client.retryFailedWorkflowJobs(1), /read-only/);
+  assert.equal(calls, 1);
+});

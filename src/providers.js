@@ -9,7 +9,7 @@ import { createConfluenceClient } from './confluence.js';
 import { fetchGitHubIssueContext } from './issue-context.js';
 
 function githubClient(config, options) {
-  return createGitHubClient({ owner: config.owner, repository: config.repository, token: options.token, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+  return createGitHubClient({ owner: config.owner, repository: config.repository, token: options.token, ...(options.publicRead ? { publicRead: true } : {}), ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
 }
 
 /** Tracker, SCM and CI adapters can be chosen independently. */
