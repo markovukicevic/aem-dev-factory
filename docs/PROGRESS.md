@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added preview-bound insertion of explicitly supplied review-fix groups (`R1`, `R2`, then `R1b`, `R2b`) with retained prior plans; diagnosis and execution remain separate.
+
 - Added reference-style local orchestration marker lifecycle and compact sub-workflow guidance; markers do not dispatch agents or prove liveness.
 
 - Added reviewed, preview-bound promotion of a repeated fix pattern into the reference-style Claude rules directory; client discovery remains unverified.

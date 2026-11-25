@@ -24,16 +24,21 @@ export function isCorrectiveForStep(value, parent) {
   return !!match && match[1] === String(parent);
 }
 
-/** A pending or active repair may address one blocked numeric parent and prior repairs. */
+/** A pending or active repair may address a blocked parent or a grouped review cycle. */
 export function canRunCorrectiveStep(steps, id) {
   if (!Array.isArray(steps) || typeof id !== 'string') return false;
-  const match = /^([1-9][0-9]*)[a-z](?:[1-9][0-9]*)?$/.exec(id);
-  if (!match) return false;
-  const parent = Number(match[1]);
-  if (!Number.isSafeInteger(parent)) return false;
+  const numeric = /^([1-9][0-9]*)[a-z](?:[1-9][0-9]*)?$/.exec(id);
+  const review = /^(R[1-9][0-9]*)[a-z]$/.exec(id);
+  if (!numeric && !review) return false;
+  const parent = numeric ? Number(numeric[1]) : review[1];
+  if (numeric && !Number.isSafeInteger(parent)) return false;
   const index = steps.findIndex(item => item.number === id), parentIndex = steps.findIndex(item => item.number === parent);
-  if (index < 0 || parentIndex < 0 || parentIndex >= index || steps[parentIndex].status !== 'blocked') return false;
+  if (index < 0 || parentIndex < 0 || parentIndex >= index || (numeric ? steps[parentIndex].status !== 'blocked' : !['done', 'blocked'].includes(steps[parentIndex].status))) return false;
   if (steps.some(item => item.status === 'in-progress' && item.number !== id)) return false;
   if (steps.slice(0, index).some(item => item.status === 'pending')) return false;
+  if (review) {
+    const blocked = steps.filter(item => item.status === 'blocked');
+    return blocked.length > 0 && blocked.every(item => typeof item.number === 'string' && /^R[1-9][0-9]*$/.test(item.number) && steps.findIndex(step => step.number === item.number) < index && steps.some(step => step.number === `${item.number}b`));
+  }
   return steps.every((item, i) => item.status !== 'blocked' || (i < index && (item.number === parent || isCorrectiveForStep(item.number, parent))));
 }
