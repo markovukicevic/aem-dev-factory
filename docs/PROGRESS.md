@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added preview-bound local ticket branch creation from the configured tracked base. No fetch, remote branch check or push is performed.
+
 - Connected tracker-source checks, PR preparation observations and GitHub PR CI reading to the experimental ticket-to-PR workflow. Added a supervised walkthrough; real Jira access and GitHub PR creation remain unverified.
 - Hardened Jira and GitHub ticket collection against repeated or shifting comment pages and changed issue timestamps when available.
 
