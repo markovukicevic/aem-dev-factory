@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added compact reference-style plan metadata, including readable corrective labels; execution of those corrective labels remains unsupported.
+
 - Added reference-style local fix observation history and repeated-pattern summaries. Records are supplied, editable and not automatically promoted to rules.
 
 - Brought ticket branch suggestions and protected-branch checks closer to the reference workflow, including ticket-aware feature/bugfix branch matching.
