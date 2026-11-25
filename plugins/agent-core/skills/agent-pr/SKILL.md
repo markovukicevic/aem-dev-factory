@@ -13,6 +13,8 @@ Prepare a title and a reviewed description with summary, changes, and the actual
 
 For a configured tracker ticket targeting GitHub, add `--ticket <providers.json> <ticket-id>` after the optional `--draft` so the creation flow compares the current ticket with the local source before tests and before writing. Resolve a mismatch or inaccessible source before proceeding.
 
+For GitHub with a structured plan review, append `--plan-review <validation-report.md>` after the other options to check the review and bound local context before tests and before the write. A matching editable record does not prove a review occurred; inspect actual evidence.
+
 The creation commands run project tests and check the plan, origin, published branch, local tracked base, and existing PRs. They do not push the branch. If the branch is not published, if checks fail, or if an existing PR is found, stop and report the result. If a request fails ambiguously, inspect the provider before retrying; never automatically retry a create. Checks are not atomic and local tracking refs can be stale.
 
 After creation, `github-pr-ci <providers.json> <number>` can read observed checks on the current PR head when SCM and GitHub Actions point to the same repository. Report pending, missing or failed checks accurately; the result does not establish branch protection or merge readiness.

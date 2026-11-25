@@ -72,9 +72,9 @@ This compares the ticket source, summarizes local workflow and Git observations,
 If explicitly authorized, publish the intended feature branch to the target repository using the project's normal process. Then explicitly request PR creation with a reviewed title and description:
 
 ```sh
-node "$AEM_DEVFLOW_MAX_HOME/bin/aem-devflow.js" github-pr-create your-team your-repo .ai/readiness.json "<spec-directory>/implement.md" "Reviewed PR title" --body-file /path/to/new-pr-description.md --draft --ticket .ai/providers.json TEAM-123
+node "$AEM_DEVFLOW_MAX_HOME/bin/aem-devflow.js" github-pr-create your-team your-repo .ai/readiness.json "<spec-directory>/implement.md" "Reviewed PR title" --body-file /path/to/new-pr-description.md --draft --ticket .ai/providers.json TEAM-123 --plan-review "<spec-directory>/validation-report.md"
 ```
 
-The `--ticket` option fetches and compares the ticket before tests and again before creation. The command runs the configured test command, checks the plan, origin, published branch, local base diff and existing PRs, and makes at most one create request. It does not push. If the result is ambiguous, inspect GitHub before attempting another write. These checks and provider state are not atomic.
+The optional `--plan-review` checks the structured review and its local context before tests and before writing; an editable matching record is not proof that a review occurred. The `--ticket` option fetches and compares the ticket before tests and again before creation. The command runs the configured test command, checks the plan, origin, published branch, local base diff and existing PRs, and makes at most one create request. It does not push. If the result is ambiguous, inspect GitHub before attempting another write. These checks and provider state are not atomic.
 
 After creation, `github-pr-ci .ai/providers.json <pr-number>` observes GitHub checks for the current PR head when SCM and CI identify the same GitHub repository. No results, an incomplete result, and unavailable access are not evidence of passing checks. Branch protection, review approvals and merge readiness remain separate. This command does not start or wait for CI.

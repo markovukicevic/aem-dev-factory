@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added optional structured plan-review consistency checks before GitHub PR tests and immediately before creation; editable records are not proof of review.
+
 - Extended GitHub PR ticket links and source rechecks to GitLab.com issues and Azure DevOps work items; these cross-provider paths have simulated validation only.
 
 - Added preview-bound local ticket branch creation from the configured tracked base. No fetch, remote branch check or push is performed.

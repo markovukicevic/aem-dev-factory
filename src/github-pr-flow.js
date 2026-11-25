@@ -16,6 +16,14 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
   const makeClient = dependencies.makeClient ?? createGitHubClient;
   const inspectDiff = dependencies.inspectDiff ?? inspectBranchDiff;
+  let reviewDigest;
+  if (input.reviewCheck) {
+    try {
+      const review = await input.reviewCheck();
+      if (review?.verdict !== 'ready' || review.planMatches !== true || review.contextMatches !== true || review.identityMatches !== true || !/^[a-f0-9]{64}$/.test(review.reviewDigest ?? '')) return { created: false, blockers: ['The structured plan review is missing, stale or not ready.'], warnings: [] };
+      reviewDigest = review.reviewDigest;
+    } catch { return { created: false, blockers: ['Unable to inspect the structured plan review.'], warnings: [] }; }
+  }
   let ticketDigest;
   if (input.ticketCheck) {
     try {
@@ -52,6 +60,12 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
       const ticket = await input.ticketCheck();
       if (!ticket?.matches || ticket.localDigest !== ticketDigest) return { created: false, blockers: ['The tracker ticket or local source changed during PR preparation.'], warnings: current.warnings };
     } catch { return { created: false, blockers: ['Unable to recheck the tracker ticket before PR creation.'], warnings: current.warnings }; }
+  }
+  if (input.reviewCheck) {
+    try {
+      const review = await input.reviewCheck();
+      if (review?.verdict !== 'ready' || review.planMatches !== true || review.contextMatches !== true || review.identityMatches !== true || review.reviewDigest !== reviewDigest) return { created: false, blockers: ['The plan review or its context changed during PR preparation.'], warnings: current.warnings };
+    } catch { return { created: false, blockers: ['Unable to recheck the plan review before PR creation.'], warnings: current.warnings }; }
   }
   const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, inspectDiff, expectedBaseCommit: diff.baseCommit, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
   if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
