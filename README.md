@@ -65,6 +65,8 @@ The experimental GitHub PR creation command has only been exercised with a simul
 
 The open-PR and commit checks reduce duplicates and empty PRs but are not atomic with PR creation. The commit comparison uses the local tracking reference for the base branch, which can be stale.
 
+Before creating a GitHub PR for a Jira or GitHub ticket, `github-ticket-preflight <providers.json> <ticket-id> <spec-directory> <readiness-config> [--evidence <test-evidence.md>]` collects tracker source comparison, declared workflow phase and review record, Git cleanliness, GitHub origin match, configured base, published branch and local diff observations. The optional evidence path compares a saved `verification-run` record with the current plan, settings, branch and commit without running tests. That editable record is not proof the tests ran. The preflight does not run tests, look for existing PRs or evaluate CI and it does not declare readiness. Unknown observations require investigation; locally tracked base references can be stale. It performs read-only tracker and origin requests and does not push or create a PR.
+
 ## Create a GitHub pull request (experimental)
 
 From the target repository, after publishing the branch, supply a reviewed description file and token with pull request write access:
