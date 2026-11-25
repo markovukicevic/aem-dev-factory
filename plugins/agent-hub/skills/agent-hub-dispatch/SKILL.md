@@ -36,7 +36,7 @@ Read:
 - `hub.terminal-delay` — seconds to wait for Claude to start in terminal (default: `5`)
 - `repos[]` — list of repos with `name`, `path`, `capabilities`
 
-Read `shared/provider-config.md` for provider detection and tool mapping.
+Read `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/provider-config.md` for provider detection and tool mapping.
 
 Read `.ai/config.yaml`:
 - `tracker.provider` (or `scm.provider` for backward compat) — `ado` (default) or `jira`

@@ -145,7 +145,7 @@ Before applying any fix, read the coding standards for the file types being modi
 
 1. Check `.claude/rules/` — read rules matching the file types (e.g., `fe-javascript.md` for `.js`, `fe-styles.md` for `.scss`, `accessibility.md` for a11y fixes)
 2. If `.github/instructions/` exists, read the relevant instruction file for deeper framework patterns (e.g., `fe.javascript.instructions.md` for `.js`, `fe.css-styles.md` for `.scss`)
-3. If the fix involves AEM frontend components and `shared/aem-dom-rules.md` exists (from the aem-tools plugin), read it for DOM traversal constraints — especially for modals, overlays, focus traps, and inert management
+3. If the fix involves AEM frontend components and `$AEM_DEVFLOW_MAX_HOME/plugins/aem-tools/shared/aem-dom-rules.md` exists (from the aem-tools plugin), read it for DOM traversal constraints — especially for modals, overlays, focus traps, and inert management
 
 These conventions constrain how the fix should be written. A fix that solves the error but violates project conventions is not acceptable.
 

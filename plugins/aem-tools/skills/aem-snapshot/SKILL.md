@@ -97,7 +97,7 @@ Look for the most recently modified `.ai/specs/*-*/` directory using Glob. If no
 
 ### 6. Write the baseline
 
-Read `shared/provenance-schema.md`. Write `<spec-dir>/aem-before.md` with provenance frontmatter (use `agent: aem-snapshot`, confidence `high`):
+Read `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/provenance-schema.md`. Write `<spec-dir>/aem-before.md` with provenance frontmatter (use `agent: aem-snapshot`, confidence `high`):
 
 ```markdown
 ---

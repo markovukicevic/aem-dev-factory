@@ -129,7 +129,7 @@ Before writing implement.md, load coding standards for the affected file types
   - Dialog XML → .github/instructions/be.dialog.md
   - Accessibility-related bugs → .github/instructions/accessibility.instructions.md
 - If the bug involves AEM frontend modals, overlays, or focus management,
-  also read shared/aem-dom-rules.md from the aem-tools plugin for DOM constraints.
+  also read `$AEM_DEVFLOW_MAX_HOME/plugins/aem-tools/shared/aem-dom-rules.md` from the aem-tools plugin for DOM constraints.
 These conventions MUST inform the fix approach — do not generate steps that violate them.
 
 Write implement.md to <SPEC_DIR>/implement.md with:

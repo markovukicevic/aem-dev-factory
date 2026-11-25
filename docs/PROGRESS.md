@@ -559,3 +559,5 @@
 - Aligned restored skills with inline execution and checkout-relative plugin resources, removed inherited client tool restrictions, and updated the inline phase return contract.
 
 - Connected restored ticket, PR, review and verification skills to a shared Factory provider-routing map.
+
+- Corrected CI provider routing and cross-plugin references discovered during static alignment review. No live integrations or functional checks were run for this review.

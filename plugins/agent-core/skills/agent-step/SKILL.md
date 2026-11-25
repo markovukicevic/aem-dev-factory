@@ -207,7 +207,7 @@ Implement the changes:
 - Follow the **What** instructions precisely
 - **Before creating any new utility, helper, or abstraction:** search the codebase (`commons/`, `utils/`, `shared/`, `lib/`, `scripts/libs/`, `mixins/`) for existing implementations. If one exists, use it instead of creating new code. If `research.md` exists in the spec directory, check its "Existing Implementation Check" section for reusable code.
 - Use Edit tool for modifications, Write tool for new files
-- Follow project conventions — read `.claude/rules/` for rules matching the file types being modified (e.g., `fe-javascript.md` for JS, `fe-styles.md` for SCSS). If `.github/instructions/` exists, also read the relevant instruction file for framework-specific patterns. For AEM frontend work involving modals, overlays, or focus traps, check if `shared/aem-dom-rules.md` exists (aem-tools plugin) and follow its DOM constraints.
+- Follow project conventions — read `.claude/rules/` for rules matching the file types being modified (e.g., `fe-javascript.md` for JS, `fe-styles.md` for SCSS). If `.github/instructions/` exists, also read the relevant instruction file for framework-specific patterns. For AEM frontend work involving modals, overlays, or focus traps, check if `$AEM_DEVFLOW_MAX_HOME/plugins/aem-tools/shared/aem-dom-rules.md` exists (aem-tools plugin) and follow its DOM constraints.
 
 **Test-first approach:**
 
@@ -457,7 +457,7 @@ Common excuses for cutting corners during step execution — and why they're wro
 
 - **One step at a time** — execute exactly one step, then stop. Let the coordinator or user decide what's next.
 - **Read before writing** — always read a file before editing it. Never blindly edit.
-- **Follow conventions** — read `.claude/rules/` and `.github/instructions/` (if it exists) for the relevant file types before writing code. For AEM modal/overlay work, also check `shared/aem-dom-rules.md`.
+- **Follow conventions** — read `.claude/rules/` and `.github/instructions/` (if it exists) for the relevant file types before writing code. For AEM modal/overlay work, also check `$AEM_DEVFLOW_MAX_HOME/plugins/aem-tools/shared/aem-dom-rules.md`.
 - **Don't improvise** — implement exactly what the step says. If instructions are unclear, mark the step blocked with a note rather than guessing.
 - **Update status immediately** — mark in-progress before starting, done/blocked when finished. This is the state machine that coordinators rely on.
 - **Compile check is mandatory** — never mark a step done without verifying compilation passes.
