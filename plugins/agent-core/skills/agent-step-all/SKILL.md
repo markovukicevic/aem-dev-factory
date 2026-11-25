@@ -24,3 +24,5 @@ Respect the user's instructions on commit size and timing. Only commit when auth
 When called as a sub-workflow, inspect `workflow-context-status <project-directory>`. A fresh marker can be used to keep the returned summary compact, as in the reference workflow; marker freshness alone does not prove a live orchestrator or authorize actions. Preserve detailed local evidence regardless of summary length.
 
 Maintain the reference-style `dev-all-progress.md` during the workflow. `pipeline-progress-init <spec-directory>` creates it if absent; `pipeline-progress-status` reads existing rows and provides the current digest; `pipeline-progress-set <spec-directory> <update.json> <digest>` records a phase or step transition using `phase`, `status` (`pending`, `in_progress`, `done`, `failed`, `skipped`, `blocked`) and an optional `note`. Preserve existing rows and report actual results; the editable table is not proof of completed work.
+
+For observed failures, follow the classification and recovery limits in `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/error-handling.md`. Respect the user’s instructions about running checks and report unverified work honestly.

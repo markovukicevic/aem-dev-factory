@@ -543,3 +543,5 @@
 4. Continue AEM development workflows, including live-instance and rendered-page checks when a suitable test instance is available.
 5. Improve CI status coverage and webhook handling; the local listener and claims do not provide a public service, durable distributed replay protection or agent dispatch.
 6. Extend plan formats and legacy YAML compatibility where the reference workflow requires them. Preserve existing behavior and document unsupported cases.
+
+- Added shared reference-style error classification and bounded recovery guidance for implementation workflows.
