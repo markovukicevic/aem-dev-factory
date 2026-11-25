@@ -17,7 +17,7 @@ For a configured tracker ticket targeting GitHub, add `--ticket <providers.json>
 
 For GitHub with a structured plan review, append `--plan-review <validation-report.md>` after the other options to check the review and bound local context before tests and before the write. A matching editable record does not prove a review occurred; inspect actual evidence.
 
-The GitHub command runs configured tests by default. Only when the user explicitly chooses to reuse a saved test record, append `--test-evidence <evidence.md>` after other options; inspect the record and report that tests were not rerun. A matching editable record is not proof tests ran.
+Creation commands run configured tests by default. Only when the user explicitly chooses to reuse a saved test record, append `--test-evidence <evidence.md>` after other options; inspect the record and report that tests were not rerun. A matching editable record is not proof tests ran; GitLab, Bitbucket and Azure creation do not independently verify a tracker ticket.
 
 The creation commands ordinarily run project tests and check the plan, origin, published branch, local tracked base, and existing PRs. They do not push the branch. If the branch is not published, if checks fail, or if an existing PR is found, stop and report the result. If a request fails ambiguously, inspect the provider before retrying; never automatically retry a create. Checks are not atomic and local tracking refs can be stale.
 

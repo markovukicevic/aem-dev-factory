@@ -1,4 +1,5 @@
 import { checkBeforePullRequestWrite } from './final-pr-check.js';
+import { inspectSavedTestReadiness, recheckSavedTestEvidence } from './reused-test-readiness.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
 import { readAdoOrigin } from './ado-origin.js';
@@ -15,7 +16,7 @@ export async function createAdoPullRequest(input, dependencies = {}) {
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
   const inspectDiff = dependencies.inspectDiff ?? inspectBranchDiff;
   const makeClient = dependencies.makeClient ?? createAdoScm;
-  const first = await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
+  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
   const matches = ['organization', 'project', 'repository'].every(key => typeof input[key] === 'string' && typeof origin[key] === 'string' && origin[key].toLowerCase() === input[key].toLowerCase());
@@ -37,8 +38,14 @@ export async function createAdoPullRequest(input, dependencies = {}) {
   const client = makeClient({ organization: input.organization, project: input.project, repository: input.repository, token: input.token });
   const existing = await client.listActivePullRequests({ head, base });
   if (existing.length) return { created: false, blockers: ['An active pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.pullRequestId, url: pr.url })), warnings: current.warnings };
+  if (input.evidencePath) {
+    try {
+      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest });
+      if (!consistent) return { created: false, blockers: ['Saved test evidence changed or no longer matches the local state.'], warnings: first.warnings };
+    } catch { return { created: false, blockers: ['Unable to recheck saved test evidence.'], warnings: first.warnings }; }
+  }
   const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, inspectDiff, expectedBaseCommit: diff.baseCommit, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
   if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
   const pullRequest = await client.createPullRequest({ title: input.title, body: input.body, draft: input.draft, head, base, workItemIds: input.workItemIds });
-  return { created: true, pullRequest, warnings: final.warnings };
+  return { created: true, pullRequest, warnings: [...final.warnings, ...(input.evidencePath ? ['Tests were not run in this invocation; the selected local record is editable and can be forged.'] : [])] };
 }

@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Extended explicit saved-test-record reuse to GitLab, Bitbucket Cloud and Azure PR creation. Reuse is opt-in, records are editable, and remote tracker identity is not checked by those creation flows.
+
 - Added an explicitly invoked, preview-bound Jira remote link back to a GitHub PR, with current-source and duplicate-link checks. The write path is simulated only.
 
 - Bound newly saved test evidence to the locally observed requirements and ticket identity where available. Ticket-bound GitHub PR reuse now rejects older unbound or changed source context.
