@@ -1,5 +1,10 @@
 # Progress
 
+## 2026-11-25
+
+- Connected tracker-source checks, PR preparation observations and GitHub PR CI reading to the experimental ticket-to-PR workflow. Added a supervised walkthrough; real Jira access and GitHub PR creation remain unverified.
+- Hardened Jira and GitHub ticket collection against repeated or shifting comment pages and changed issue timestamps when available.
+
 ## 2026-11-24
 
 - Added optional full-commit pins for generated GitHub Actions dependencies and moved the current-comment recheck immediately before the selected script.
