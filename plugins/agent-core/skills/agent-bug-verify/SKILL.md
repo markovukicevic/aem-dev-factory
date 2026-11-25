@@ -10,3 +10,5 @@ Identify the target repository and selected ticket spec. Read repository instruc
 Follow reproducible steps or relevant tests and capture the actual environment, revision, commands or actions, observations and limitations. For reproduction distinguish `reproduced`, `not-reproduced` and `blocked`; for a fix distinguish `verified`, `failed` and `blocked`. An unavailable environment, missing steps or unrun checks is `blocked`, not a pass. Compare actual behavior to the ticket's explicit expected behavior. Identify checks that require a human, live AEM or other inaccessible systems; do not infer them from unit tests.
 
 Write a new `bug-reproduction.md` for reproduction or `bug-verification.md` for post-fix verification in the spec directory. Do not replace an existing report without user authorization. Cite the observed evidence and outstanding gaps. Do not change the tracker, create a PR, publish results or send messages as a side effect.
+
+For Azure DevOps bug fields and reproduction context consult `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/bug-fields.md`; do not assume other providers use the same fields or visit a reported URL without authorization.

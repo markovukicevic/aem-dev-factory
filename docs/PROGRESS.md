@@ -551,3 +551,5 @@
 - Added shared launch and handoff review guidance and clarified the scope of the local orchestration helpers.
 
 - Added the reference decision-node schema and guidance for tracing decisions from plans into pattern review.
+
+- Added reference Azure DevOps bug-field mapping for triage and reproduction handoff.

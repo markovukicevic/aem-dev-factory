@@ -630,3 +630,5 @@ The shared accessibility checklist at `plugins/agent-core/shared/accessibility-c
 The reference-style launch and handoff checklist is available at `plugins/agent-core/shared/launch-checklist.md`; it records review domains and explicitly unverified items rather than implying deployment readiness.
 
 Reference-style decision nodes and their relationship to plan decisions are described in `plugins/agent-core/shared/decision-schema.md`. Nodes are local editable records and do not establish evidence or automatic promotion.
+
+The original Azure DevOps bug-field mapping is preserved in `plugins/agent-core/shared/bug-fields.md` as a provider-specific reference; reported reproduction URLs do not authorize live access.
