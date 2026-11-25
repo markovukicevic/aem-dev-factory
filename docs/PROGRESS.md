@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added optional comparison of observed GitHub PR checks against an explicit user-supplied list; this does not read branch protection or establish merge readiness.
+
 - Added an optional origin base and feature-branch collision check when previewing or creating a local ticket branch; remote state can change afterward.
 
 - Added explicit, preview-bound acceptance of a reviewed current ticket export while preserving the prior local source; subsequent plan and verification evidence must be reinspected.

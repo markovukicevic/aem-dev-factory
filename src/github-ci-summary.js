@@ -15,10 +15,17 @@ export function summarizeGitHubCi(checks, statuses) {
     observations.push(state);
     checkResults.push({ name: typeof run?.name === 'string' ? run.name : null, status: typeof run?.status === 'string' ? run.status : null, conclusion: typeof run?.conclusion === 'string' ? run.conclusion : null, state });
   }
+  const classic = Array.isArray(statuses.statuses) ? statuses.statuses : [];
+  if (classic.length > statuses.total_count || classic.length > 1000) throw new Error('Invalid GitHub classic statuses');
+  const classicResults = classic.map(item => ({
+    name: typeof item?.context === 'string' && item.context.trim() && item.context === item.context.trim() && item.context.length <= 512 && !/[\u0000-\u001f\u007f]/.test(item.context) ? item.context : null,
+    state: item?.state === 'success' ? 'success' : ['failure', 'error'].includes(item?.state) ? 'failure' : item?.state === 'pending' ? 'pending' : 'unknown',
+  }));
+  const classicComplete = classic.length === statuses.total_count && classicResults.every(item => item.name !== null);
   const complete = checks.check_runs.length === checks.total_count;
   if (!complete) observations.push('unknown');
   const state = observations.includes('failure') ? 'failure' : observations.includes('pending') ? 'pending' : observations.length && observations.every(item => item === 'success') ? 'success' : 'unknown';
-  return { state, complete, checkRunsReturned: checks.check_runs.length, checkRunsTotal: checks.total_count, classicStatusesTotal: statuses.total_count, classicStatus: statuses.total_count > 0 ? statuses.state ?? null : null, checkResults, scope: 'Observed results only; required branch protection checks are not evaluated.' };
+  return { state, complete, checkRunsReturned: checks.check_runs.length, checkRunsTotal: checks.total_count, classicStatusesTotal: statuses.total_count, classicStatus: statuses.total_count > 0 ? statuses.state ?? null : null, classicComplete, classicResults, checkResults, scope: 'Observed results only; required branch protection checks are not evaluated.' };
 }
 
 export async function readGitHubCiSummary(ci, sha) {
