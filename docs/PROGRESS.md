@@ -545,3 +545,5 @@
 6. Extend plan formats and legacy YAML compatibility where the reference workflow requires them. Preserve existing behavior and document unsupported cases.
 
 - Added shared reference-style error classification and bounded recovery guidance for implementation workflows.
+
+- Added a shared reference-style accessibility checklist for AEM and frontend verification.

@@ -624,3 +624,5 @@ Workers require the appropriate provider API token to re-read the selected comme
 `github-actions-template-check <config.json> <workflow.yml>` compares an existing local workflow with the currently generated template and rechecks both files around the comparison. A match only means the editable local bytes match; it does not establish authenticity, deployment to GitHub or workflow behavior. The generated recheck script lives in `templates/github-actions-recheck.sh` in this checkout and is included in the reviewed template digest.
 
 The shared reference-style error handling guidance is in `plugins/agent-core/shared/error-handling.md`. It distinguishes transient, validation and permanent failures, and avoids blind retries of remote writes with uncertain outcomes.
+
+The shared accessibility checklist at `plugins/agent-core/shared/accessibility-checklist.md` supports AEM and frontend reviews. It is guidance, not a conformance assessment or evidence that checks were run.
