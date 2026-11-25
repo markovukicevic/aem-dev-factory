@@ -35,7 +35,7 @@ export function planReviewDigest(markdown) {
     if (fenced) continue;
     const heading = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (heading) {
-      const step = /^Step\s+((?:[1-9][0-9]*[a-z]?|R[1-9][0-9]*)):\s+(.+)$/.exec(heading[2]);
+      const step = /^Step\s+((?:[1-9][0-9]*(?:[a-z](?:[1-9][0-9]*)?)?|R[1-9][0-9]*[a-z]?)):\s+(.+)$/.exec(heading[2]);
       if (step) current = { level: heading[1].length };
       else if (current && heading[1].length <= current.level) current = null;
       continue;

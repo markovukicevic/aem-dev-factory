@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { isCorrectiveForStep } from './plan-step-id.js';
+import { canRunCorrectiveStep } from './plan-step-id.js';
 import { inspectTicketDirectory } from './ticket-status.js';
 import { checkPlanReview } from './plan-review.js';
 import { checkLocalRequirements } from './requirements-import.js';
@@ -22,10 +22,9 @@ export async function inspectWorkflowStatus({ path }) {
     catch { sourceConsistency = 'unavailable'; }
   }
   let corrective = null;
-  if (ticket.plan?.counts.blocked === 1 && ticket.plan.counts['in-progress'] === 0) {
-    const blocked = ticket.plan.steps.find(step => step.status === 'blocked');
+  if (ticket.plan?.counts.blocked > 0 && ticket.plan.counts['in-progress'] === 0) {
     const candidate = ticket.plan.steps.find(step => step.status === 'pending');
-    if (candidate && isCorrectiveForStep(candidate.number, blocked.number) && ticket.plan.steps.indexOf(blocked) < ticket.plan.steps.indexOf(candidate)) corrective = candidate;
+    if (candidate && canRunCorrectiveStep(ticket.plan.steps, candidate.number)) corrective = candidate;
   }
   let phase, nextStep = null;
   if (unsafe.length) phase = 'inspect-unreadable-artifacts';

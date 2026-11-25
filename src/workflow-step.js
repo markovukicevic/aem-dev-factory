@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { isPlanStepId, isCorrectiveForStep } from './plan-step-id.js';
+import { isPlanStepId, canRunCorrectiveStep } from './plan-step-id.js';
 import { lstat, writeFile } from 'node:fs/promises';
 import { readLimitedFile } from './read-limited.js';
 import { inspectWorkflowStatus } from './workflow-status.js';
@@ -66,7 +66,7 @@ export async function finishWorkflowStep({ path, step, outcome, inputPath, outpu
   const plan = await readPlanStatus(planPath);
   const active = plan.steps.filter(item => item.status === 'in-progress');
   const blocked = plan.steps.filter(item => item.status === 'blocked');
-  const repairsBlockedParent = blocked.length === 1 && isCorrectiveForStep(step, blocked[0].number) && plan.steps.indexOf(blocked[0]) < plan.steps.findIndex(item => item.number === step);
+  const repairsBlockedParent = canRunCorrectiveStep(plan.steps, step);
   if (plan.digest !== expectedDigest || active.length !== 1 || active[0].number !== step || (outcome === 'done' && blocked.length > 0 && !repairsBlockedParent)) return { recorded: false, transitioned: false, reason: 'plan-state-or-digest-changed' };
   const review = outcome === 'done' ? await currentReview(planPath, reportPath) : null;
   if (outcome === 'done' && !review) return { recorded: false, transitioned: false, reason: 'plan-review-not-current' };

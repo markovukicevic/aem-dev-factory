@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, open, rename, unlink } from 'node:fs/promises';
 import { dirname, basename, join } from 'node:path';
 import { parseImplementationPlan } from './plan-parser.js';
-import { isPlanStepId, normalizePlanStepId, isCorrectiveForStep } from './plan-step-id.js';
+import { isPlanStepId, normalizePlanStepId, canRunCorrectiveStep } from './plan-step-id.js';
 import { readLimitedFile } from './read-limited.js';
 
 const transitions = { pending: ['in-progress'], 'in-progress': ['done', 'blocked'], blocked: ['pending'], done: [] };
@@ -17,7 +17,7 @@ export function transitionPlanText({ text, step, from, to }) {
   if (!target || target.status !== from) throw new Error('Step status does not match');
   if (to === 'in-progress') {
     const blocked = parsed.steps.filter(item => item.status === 'blocked'), targetIndex = parsed.steps.indexOf(target);
-    const repairsBlockedParent = blocked.length === 1 && isCorrectiveForStep(step, blocked[0].number) && parsed.steps.indexOf(blocked[0]) < targetIndex;
+    const repairsBlockedParent = canRunCorrectiveStep(parsed.steps, step);
     const earlierPending = parsed.steps.slice(0, targetIndex).some(item => item.status === 'pending');
     if (parsed.steps.some(item => item.status === 'in-progress') || earlierPending || (blocked.length && !repairsBlockedParent)) throw new Error('Another step blocks execution or is earlier in the plan');
   }
@@ -35,7 +35,7 @@ export function transitionPlanText({ text, step, from, to }) {
     if (inFence) continue;
     const heading = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (heading) {
-      const match = /^Step\s+((?:[1-9][0-9]*[a-z]?|R[1-9][0-9]*)):\s+(.+)$/.exec(heading[2]);
+      const match = /^Step\s+((?:[1-9][0-9]*(?:[a-z](?:[1-9][0-9]*)?)?|R[1-9][0-9]*[a-z]?)):\s+(.+)$/.exec(heading[2]);
       if (match) current = { number: normalizePlanStepId(match[1]), level: heading[1].length };
       else if (current && heading[1].length <= current.level) current = null;
       continue;

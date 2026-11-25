@@ -44,7 +44,7 @@ export function parseImplementationPlan(markdown) {
     if (fenced) continue;
     const heading = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (heading) {
-      const step = /^Step\s+((?:[1-9][0-9]*[a-z]?|R[1-9][0-9]*)):\s+(.+)$/.exec(heading[2]);
+      const step = /^Step\s+((?:[1-9][0-9]*(?:[a-z](?:[1-9][0-9]*)?)?|R[1-9][0-9]*[a-z]?)):\s+(.+)$/.exec(heading[2]);
       if (step) {
         let id; try { id = normalizePlanStepId(step[1]); } catch { throw new Error(INVALID); }
         if (/\[(pending|in-progress|done|blocked|skipped)\]\s*$/.test(step[2])) throw new Error(INVALID);

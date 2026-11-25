@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added preview-bound insertion of explicitly supplied `Nh`/`Nh2` healing proposals with a retained prior plan; diagnosis, code changes and fresh review remain separate.
+
 - Added reference-style corrective step identifiers to plan parsing, review fingerprints and status transitions. A corrective step can proceed for its blocked numbered parent after plan review; automatic insertion remains unimplemented.
 
 - Added compact reference-style plan metadata, including readable corrective labels; subsequent work added status support for those labels.

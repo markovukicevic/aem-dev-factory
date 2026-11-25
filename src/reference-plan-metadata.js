@@ -1,7 +1,7 @@
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
-import { isCorrectiveForStep } from './plan-step-id.js';
+import { canRunCorrectiveStep, normalizePlanStepId } from './plan-step-id.js';
 
 /** Read reference-style numbered and corrective step labels without loading step bodies into output. */
 export function parseReferencePlanMetadata(markdown) {
@@ -26,7 +26,7 @@ export function parseReferencePlanMetadata(markdown) {
     if (fenced) continue;
     const heading = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (heading) {
-      const step = /^Step\s+((?:[1-9][0-9]*[a-z]?|R[1-9][0-9]*)):\s+(.+)$/.exec(heading[2]);
+      const step = /^Step\s+((?:[1-9][0-9]*(?:[a-z](?:[1-9][0-9]*)?)?|R[1-9][0-9]*[a-z]?)):\s+(.+)$/.exec(heading[2]);
       if (step) {
         if (step[1].length > 32 || ids.has(step[1]) || step[2].length > 1024 || /[\u0000-\u001f\u007f]/.test(step[2])) throw new Error('Invalid or duplicate plan step');
         current = { id: step[1], title: step[2], status: null, level: heading[1].length };
@@ -48,9 +48,8 @@ export function parseReferencePlanMetadata(markdown) {
   for (const step of steps) counts[step.status]++;
   const native = steps.every(step => /^[1-9][0-9]*$/.test(step.id) && Number.isSafeInteger(Number(step.id)));
   const pending = steps.find(step => step.status === 'pending');
-  const blocked = steps.filter(step => step.status === 'blocked');
-  const parent = blocked.length === 1 && /^[1-9][0-9]*$/.test(blocked[0].id) ? Number(blocked[0].id) : null;
-  const corrective = pending && Number.isSafeInteger(parent) && isCorrectiveForStep(pending.id, parent) && steps.indexOf(blocked[0]) < steps.indexOf(pending);
+  const normalized = steps.map(step => ({ ...step, number: normalizePlanStepId(step.id) }));
+  const corrective = pending && canRunCorrectiveStep(normalized, normalizePlanStepId(pending.id));
   const next = counts['in-progress'] || (counts.blocked && !corrective) ? null : pending?.id ?? null;
   return { total: steps.length, counts, steps: steps.map(({ id, title, status }) => ({ id, title, status })), next, executionSupport: native ? 'numbered-labels' : 'reference-labels', scope: 'Declared plan metadata only. Statuses are declarations; corrective step insertion and execution must be reviewed, and no work or checks are proven.' };
 }
