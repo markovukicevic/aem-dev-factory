@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Extended GitHub PR CI observations to explicitly selected independent GitHub Actions, GitLab CI, Bitbucket Pipelines or Azure Pipelines sources; cross-provider repository identity remains unverified. PR creation also checks any configured SCM against the requested GitHub target.
+
 - Added explicit GitHub PR reuse of a matching saved test record, with an editable-evidence warning and a pre-write recheck. The default still runs the configured tests.
 
 - Added optional structured plan-review consistency checks before GitHub PR tests and immediately before creation; editable records are not proof of review.
