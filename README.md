@@ -73,6 +73,8 @@ From the target repository, after publishing the branch, supply a reviewed descr
 node /path/to/aem-dev-flow-max/bin/aem-devflow.js github-pr-create OWNER REPOSITORY /path/to/config.yaml /path/to/implement.md "PR title" --body-file /path/to/pr-description.md --draft
 ```
 
+For a Jira or GitHub Issues ticket, append `--ticket /path/to/providers.json TICKET-ID` after the optional `--draft`. The plan must be in the same spec directory as `source-identity.json` and `raw-story.md`. The command fetches the configured ticket and compares it with the local source before running tests and again before creating the PR. A mismatch, unavailable tracker, or changed local source blocks creation. Jira requires `JIRA_EMAIL` and `JIRA_API_TOKEN`; GitHub Issues uses `GITHUB_TOKEN`. The check does not authenticate editable local files, guarantee ticket completeness, or prevent changes after the final fetch. Tracker and GitHub repository configuration may be different.
+
 Remove `--draft` for a non-draft PR. This is an explicit GitHub write operation. The command runs the configured tests and checks the plan, Git state, origin identity, published branch, locally tracked base, and existing PRs. It never pushes the branch. It prints a JSON result and does not automatically retry a failed or ambiguous create request. Check GitHub before retrying after a network failure. The existing client and this command have not been tested by creating an actual GitHub PR.
 
 ## Export a GitHub issue

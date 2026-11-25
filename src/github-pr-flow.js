@@ -16,6 +16,14 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
   const makeClient = dependencies.makeClient ?? createGitHubClient;
   const inspectDiff = dependencies.inspectDiff ?? inspectBranchDiff;
+  let ticketDigest;
+  if (input.ticketCheck) {
+    try {
+      const ticket = await input.ticketCheck();
+      if (!ticket?.matches || !/^[a-f0-9]{64}$/.test(ticket.localDigest ?? '')) return { created: false, blockers: ['The tracker ticket does not match the local source.'], warnings: [] };
+      ticketDigest = ticket.localDigest;
+    } catch { return { created: false, blockers: ['Unable to verify the tracker ticket against the local source.'], warnings: [] }; }
+  }
   const first = await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
@@ -39,6 +47,12 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
   const existing = await client.listOpenPullRequests({ owner: input.owner, head, base: current.readiness.branch.base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitHub pull request response');
   if (existing.length) return { created: false, blockers: ['An open pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.number, url: pr.html_url })), warnings: current.warnings };
+  if (input.ticketCheck) {
+    try {
+      const ticket = await input.ticketCheck();
+      if (!ticket?.matches || ticket.localDigest !== ticketDigest) return { created: false, blockers: ['The tracker ticket or local source changed during PR preparation.'], warnings: current.warnings };
+    } catch { return { created: false, blockers: ['Unable to recheck the tracker ticket before PR creation.'], warnings: current.warnings }; }
+  }
   const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, inspectDiff, expectedBaseCommit: diff.baseCommit, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
   if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
   return createReadyPullRequest({ provider: client, readiness: final.readiness, title: input.title, body: input.body, draft: input.draft });

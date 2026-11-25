@@ -128,3 +128,33 @@ test('refuses to write if the tracked base changes during remote lookup', async 
   assert.equal(writes, 0);
   assert.match(result.blockers.join(' '), /tracked base changed/);
 });
+
+
+test('CLI connects a Jira source to the GitHub write and blocks a ticket change', async t => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { initializeTicket } = await import('../src/ticket-init.js');
+  const { runCli } = await import('../src/cli.js');
+  const dir = await mkdtemp(join(tmpdir(), 'devflow-ticket-pr-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const trackerConfig = { provider: 'jira', baseUrl: 'https://example.atlassian.net' };
+  const ticket = { provider: 'jira', key: 'DEMO-7', title: 'Ticket title', comments: [], labels: [], body: null };
+  const spec = await initializeTicket({ cwd: dir, config: trackerConfig, ticket });
+  const planPath = join(spec.path, 'implement.md');
+  const providersPath = join(dir, 'providers.json');
+  const bodyPath = join(dir, 'pr.md');
+  await writeFile(planPath, '### Step 1: Work\n**Status:** done\n');
+  await writeFile(providersPath, JSON.stringify({ tracker: trackerConfig }));
+  await writeFile(bodyPath, 'Reviewed description');
+  let reads = 0, writes = 0, changeOnSecondRead = false, result;
+  const tracker = { getTicket: async key => { assert.equal(key, 'DEMO-7'); reads++; return changeOnSecondRead && reads === 2 ? { ...ticket, title: 'Changed' } : ticket; } };
+  const flowDeps = { ...deps(), makeClient: () => ({ listOpenPullRequests: async () => [], createPullRequest: async () => { writes++; return { number: 1 }; } }) };
+  const options = { env: { GITHUB_TOKEN: 'example', JIRA_EMAIL: 'example', JIRA_API_TOKEN: 'example' }, cwd: dir, output: { log: text => { result = JSON.parse(text); }, error: () => {} }, makeTracker: () => tracker, createPullRequest: input => createGitHubPullRequest(input, flowDeps) };
+  const args = ['github-pr-create', 'team', 'site', '/config', planPath, 'Title', '--body-file', bodyPath, '--draft', '--ticket', providersPath, 'DEMO-7'];
+  assert.equal(await runCli(args, options), 0);
+  assert.equal(reads, 2); assert.equal(writes, 1); assert.equal(result.created, true);
+  reads = 0; changeOnSecondRead = true;
+  assert.equal(await runCli(args, options), 1);
+  assert.equal(reads, 2); assert.equal(writes, 1); assert.match(result.blockers.join(' '), /changed/);
+});
