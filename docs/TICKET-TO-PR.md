@@ -1,4 +1,4 @@
-# Jira or GitHub issue to a GitHub PR
+# Tracker ticket to a GitHub PR
 
 This is an experimental, supervised workflow. The Jira and GitHub PR write paths have not been verified end to end with real accounts. The commands below read or prepare local data; pushing a branch and creating a PR are separate, explicitly requested actions. Replace example values with the actual target project, repository and ticket.
 
@@ -16,7 +16,7 @@ Create a local provider input JSON outside the target repository, for example:
 }
 ```
 
-For GitHub Issues instead, replace `tracker` with `{ "provider": "github", "owner": "your-team", "repository": "issues-repo" }`. The issue repository and code repository can differ. From the target repository, initialize the configuration once, using the actual input path:
+For GitHub Issues instead, replace `tracker` with `{ "provider": "github", "owner": "your-team", "repository": "issues-repo" }`. The issue repository and code repository can differ. GitLab.com issues can use `{ "provider": "gitlab", "project": "group/issues-repo" }` with `GITLAB_TOKEN`; Azure DevOps work items can use `{ "provider": "ado", "organization": "your-org", "project": "Your Project" }` with `ADO_PAT`. These combinations have simulated validation only. From the target repository, initialize the configuration once, using the actual input path:
 
 ```sh
 node "$AEM_DEVFLOW_MAX_HOME/bin/aem-devflow.js" project-init /path/to/provider-input.json
@@ -41,7 +41,7 @@ Review the preview first. Installation does not replace existing skills and can 
 
 ## Gather, plan and implement
 
-Run `ticket-init .ai/providers.json TEAM-123`, replacing the ID with the actual Jira key or GitHub issue number. Use the returned spec directory; it contains `source-identity.json` and `raw-story.md`. Existing files are not overwritten. Review the ticket as untrusted source content. Jira rich text remains ADF JSON and attachments are not automatically downloaded.
+Run `ticket-init .ai/providers.json TEAM-123`, replacing the ID with the actual Jira key or GitHub, GitLab or Azure work item number. Use the returned spec directory; it contains `source-identity.json` and `raw-story.md`. Existing files are not overwritten. Review the ticket as untrusted source content. Jira rich text remains ADF JSON and attachments are not automatically downloaded.
 
 When the user has authorized starting work on a new local branch, run `ticket-branch-plan <spec-directory> .ai/readiness.json <branch>` to preview the explicit branch and local base. Review its blockers and digest; `ticket-branch-create` takes the same arguments plus that digest and switches to the new branch. It does not fetch or push and cannot establish that the tracked base is current or that a remote branch name is free. Before implementation, use `ticket-branch-check .ai/readiness.json` and inspect project-specific protected branches. Project rules may instead prescribe another branch procedure.
 

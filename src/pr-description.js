@@ -87,6 +87,17 @@ export function ticketReference(identity) {
     if (!source || !id || source[2] === '.' || source[2] === '..') throw new Error('Invalid GitHub issue identity');
     return `https://github.com/${source[1]}/${source[2]}/issues/${id[1]}`;
   }
+  if (identity.provider === 'gitlab') {
+    const parts = identity.source.split('/');
+    const id = /^gitlab-([1-9][0-9]*)$/.exec(identity.id);
+    if (parts.length < 2 || parts.some(part => !/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(part) || part === '.' || part === '..') || !id) throw new Error('Invalid GitLab issue identity');
+    return `https://gitlab.com/${parts.map(encodeURIComponent).join('/')}/-/issues/${id[1]}`;
+  }
+  if (identity.provider === 'ado') {
+    const parts = identity.source.split('/'), id = /^ado-([1-9][0-9]*)$/.exec(identity.id);
+    if (parts.length !== 2 || !/^[A-Za-z0-9][A-Za-z0-9-]*$/.test(parts[0]) || !parts[1].trim() || parts[1] !== parts[1].trim() || /[\\\u0000-\u001f\u007f]/.test(parts[1]) || parts[1] === '.' || parts[1] === '..' || !id || !Number.isSafeInteger(Number(id[1])) || Number(id[1]) > 2147483647) throw new Error('Invalid Azure work item identity');
+    return `https://dev.azure.com/${parts.map(encodeURIComponent).join('/')}/_workitems/edit/${id[1]}`;
+  }
   throw new Error('Unsupported ticket identity');
 }
 

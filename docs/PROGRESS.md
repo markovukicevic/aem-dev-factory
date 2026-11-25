@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Extended GitHub PR ticket links and source rechecks to GitLab.com issues and Azure DevOps work items; these cross-provider paths have simulated validation only.
+
 - Added preview-bound local ticket branch creation from the configured tracked base. No fetch, remote branch check or push is performed.
 
 - Connected tracker-source checks, PR preparation observations and GitHub PR CI reading to the experimental ticket-to-PR workflow. Added a supervised walkthrough; real Jira access and GitHub PR creation remain unverified.

@@ -187,6 +187,18 @@ async function readBitbucketPrStatuses(scm, number) {
   return { provider: 'bitbucket-cloud', pullRequest: number, statuses: await scm.getPullRequestStatuses(number), scope: 'Returned PR statuses only; required checks and branch protection are not evaluated.' };
 }
 
+function ticketForGitHubFlow(config, id, env, makeTracker) {
+  const provider = config?.tracker?.provider;
+  if (!['jira', 'github', 'gitlab', 'ado'].includes(provider)) throw new Error('Unsupported tracker');
+  const credentials = { github: env.GITHUB_TOKEN, gitlab: env.GITLAB_TOKEN, ado: env.ADO_PAT, jira: env.JIRA_EMAIL && env.JIRA_API_TOKEN };
+  if (!credentials[provider]) throw new Error('Tracker credentials unavailable');
+  const numeric = provider !== 'jira';
+  if (numeric && (!/^[1-9][0-9]*$/.test(id) || !Number.isSafeInteger(Number(id)) || (provider === 'ado' && Number(id) > 2147483647))) throw new Error('Invalid tracker ticket number');
+  if (!numeric && (typeof id !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(id))) throw new Error('Invalid Jira issue key');
+  const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN, jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN, gitlabToken: env.GITLAB_TOKEN, adoToken: env.ADO_PAT });
+  return { tracker, id: numeric ? Number(id) : id };
+}
+
 /** Execute an explicitly requested CLI command; dependencies are injectable for tests. */
 export async function runCli(args, { env = process.env, output = console, makeClient = createGitHubClient, inspect = inspectConfiguredReadiness, createPullRequest = createGitHubPullRequest, createAzurePullRequest = createAdoPullRequest, createBitbucketPr = createBitbucketPullRequest, createGitlabMr = createGitLabMergeRequest, makeTracker = createTrackerProvider, makeScm = createScmProvider, makeCi = createCiProvider, makeDocumentation = createDocumentationProvider, readBody = readFile, startWebhook = startLocalGitHubWebhookListener, cwd = process.cwd() } = {}) {
   if (args.length === 1 && ['help', '--help', '-h'].includes(args[0])) { output.log(usage); return 0; }
@@ -1903,14 +1915,9 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     if (!(args.length === 5 || (args.length === 7 && args[5] === '--evidence' && args[6]?.trim())) || args.slice(1).some(value => typeof value !== 'string' || !value.trim())) { output.error(usage); return 2; }
     try {
       const config = JSON.parse((await readLimitedFile(args[1], 262144)).toString('utf8'));
-      const provider = config.tracker?.provider;
-      if (!['jira', 'github'].includes(provider)) throw new Error('Jira or GitHub tracker required');
-      if (provider === 'jira' && (!env.JIRA_EMAIL || !env.JIRA_API_TOKEN)) { output.error('Set JIRA_EMAIL and JIRA_API_TOKEN in the environment.'); return 2; }
-      if (provider === 'github' && !env.GITHUB_TOKEN) { output.error('Set GITHUB_TOKEN in the environment.'); return 2; }
-      if (provider === 'github' && (!/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])))) { output.error(usage); return 2; }
-      const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN, jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN });
+      const selected = ticketForGitHubFlow(config, args[2], env, makeTracker);
       let ticket;
-      try { ticket = await tracker.getTicket(provider === 'github' ? Number(args[2]) : args[2]); } catch { /* Other local observations remain useful. */ }
+      try { ticket = await selected.tracker.getTicket(selected.id); } catch { /* Other local observations remain useful. */ }
       const result = await inspectGitHubTicketPreflight({ cwd, path: args[3], configPath: args[4], config, ticket, ...(args.length === 7 ? { evidencePath: args[6] } : {}) });
       output.log(JSON.stringify(result, null, 2)); return 0;
     } catch { output.error('Unable to inspect ticket and PR preparation. Check tracker access and provider settings.'); return 1; }
@@ -1927,12 +1934,8 @@ export async function runCli(args, { env = process.env, output = console, makeCl
       const body = await readBody(args[7], 'utf8');
       const ticketCheck = ticketConfigPath ? async () => {
         const config = JSON.parse((await readLimitedFile(ticketConfigPath, 262144)).toString('utf8'));
-        const provider = config.tracker?.provider;
-        if (!['jira', 'github'].includes(provider)) throw new Error('Unsupported tracker');
-        if (provider === 'jira' && (!env.JIRA_EMAIL || !env.JIRA_API_TOKEN)) throw new Error('Jira credentials required');
-        if (provider === 'github' && (!/^[1-9][0-9]*$/.test(ticketId) || !Number.isSafeInteger(Number(ticketId)))) throw new Error('Invalid issue number');
-        const tracker = makeTracker(config.tracker, { token: env.GITHUB_TOKEN, jiraEmail: env.JIRA_EMAIL, jiraToken: env.JIRA_API_TOKEN });
-        const ticket = await tracker.getTicket(provider === 'github' ? Number(ticketId) : ticketId);
+        const selected = ticketForGitHubFlow(config, ticketId, env, makeTracker);
+        const ticket = await selected.tracker.getTicket(selected.id);
         return compareTicketSource({ path: dirname(args[4]), config: config.tracker, ticket });
       } : undefined;
       const result = await createPullRequest({ cwd, owner: args[1], repository: args[2], configPath: args[3], planPath: args[4], title: args[5], token: env.GITHUB_TOKEN, body, draft, ...(ticketCheck ? { ticketCheck } : {}) });
