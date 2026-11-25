@@ -1,37 +1,37 @@
 # AEM Dev Factory
 
-An AI-assisted development workflow for AEM projects, from a ticket and implementation plan to a pull request and CI checks.
+AEM Dev Factory brings design, development and delivery workflows together for Adobe Experience Manager projects. Configure your team's ticketing, repository and CI services, then use the bundled AI workflows to take work from a design or ticket through implementation and delivery.
 
-AEM Dev Factory is inspired by [AEM DevFlow](https://github.com/markovukicevic/aem-dev-flow). It extends the workflow toward projects that use different systems for tickets, source control and CI. Choose the tools your team uses for each part of the work.
+## From design to delivery
 
-> **Early development:** The project is experimental and does not yet match the original AEM DevFlow feature for feature. Selected GitHub read operations have been exercised against public repositories. PR creation and most other provider integrations have been checked with simulated responses, not verified end to end with real accounts.
+AEM Dev Factory is designed to connect the stages of an AEM development pipeline:
 
-## From ticket to pull request
+1. **Design handoff** — work from Figma designs and extract the details needed for implementation.
+2. **Requirements** — gather a Jira issue, Azure DevOps work item, GitHub issue or GitLab issue and connect it to the project context.
+3. **Planning** — research the existing codebase and prepare an implementation plan.
+4. **Development** — implement the changes using the project's AEM components, conventions and configuration.
+5. **Review and verification** — review the change and capture available build, accessibility and verification results.
+6. **Delivery** — prepare a pull request or merge request and inspect the configured CI pipeline.
 
-A typical workflow starts with a Jira ticket or GitHub issue and a target repository. The project helps an AI assistant and developer work through the task in stages:
+The workflows are intended to coordinate these stages as a continuous pipeline. The available automation and provider operations depend on the configuration and the workflow; some actions require explicit authorization. End-to-end execution across live services has not yet been verified.
 
-1. **Understand the work** — retrieve the ticket, preserve its source and prepare requirements and repository research.
-2. **Plan and implement** — create and review a plan, work on a feature branch, and record the checks actually performed.
-3. **Prepare a pull request** — review the description, check the ticket and plan for changes, and publish the branch and PR when explicitly requested.
-4. **Inspect CI** — see checks for the current PR commit and compare them with an explicitly supplied list of expected checks.
+## Connect your tools
 
-The workflow keeps source material, plans and review records available for inspection. Remote writes such as publishing a branch, creating a PR or linking it back to Jira are explicit actions.
+Choose the services your project uses for each part of the workflow:
 
-## Tools and integrations
-
-| Area | Current direction |
+| Area | Supported services and workflows |
 | --- | --- |
-| Tickets | Jira Cloud, GitHub Issues, GitLab.com issues and Azure DevOps work items |
-| Code and reviews | GitHub, GitLab.com, Bitbucket Cloud and Azure Repos |
-| CI | GitHub Actions, GitLab CI, Bitbucket Pipelines and Azure Pipelines |
-| AEM | Component and dialog inspection, local diagnostics and initial live-instance workflows |
-| Supporting workflows | Confluence, Figma, accessibility checks and multi-repository coordination |
+| Tickets | Jira Cloud, Azure DevOps work items, GitHub Issues, GitLab.com issues |
+| Code and reviews | GitHub, Azure Repos, GitLab.com, Bitbucket Cloud |
+| CI | GitHub Actions, Azure Pipelines, GitLab CI, Bitbucket Pipelines |
+| Design and AEM | Figma workflows, AEM component and dialog inspection |
+| Additional workflows | Confluence, accessibility and multi-repository coordination |
 
-Provider support varies by operation. In particular, GitLab self-managed, Bitbucket Data Center and GitHub Enterprise Server are not covered by the current cloud adapters. Live AEM, Figma and several provider write paths still need validation. See the [developer reference](DEVELOPMENT.md) for details and limitations.
+Configure each provider independently, so a team can use, for example, Jira for tickets, GitHub for code and GitHub Actions for CI. Provider support varies by operation; see the [developer reference](DEVELOPMENT.md) for configuration and current capabilities.
 
-## Getting started
+## Get started
 
-Use Node.js 18 or newer. Clone this repository and install its dependencies:
+Install Node.js 18 or newer, then clone the repository and install its dependencies:
 
 ```sh
 git clone https://github.com/markovukicevic/aem-dev-factory.git
@@ -39,20 +39,18 @@ cd aem-dev-factory
 npm ci --ignore-scripts
 ```
 
-Explore the CLI and bundled skills:
+Explore the available commands and skills:
 
 ```sh
 node bin/aem-devflow.js --help
 node bin/aem-devflow.js list-skills
 ```
 
-For public GitHub repositories, append `--public` to `github-issue-context`, `github-pr`, or `github-pr-ci` to read without a token. Public requests are read-only and subject to GitHub’s unauthenticated rate limits; private repositories require credentials.
+Follow the [ticket-to-PR guide](docs/TICKET-TO-PR.md) to configure your project, credentials and selected services, install the core skills and start a workflow.
 
-For an example of setting up a target project and working from a tracker ticket to a GitHub PR, follow the [ticket-to-PR guide](docs/TICKET-TO-PR.md). It covers configuration, credentials, local branches, review and the limits of the current implementation.
+## Documentation
 
-## Project documentation
-
-- [Developer reference](DEVELOPMENT.md) — detailed commands, configuration and integration notes.
+- [Developer reference](DEVELOPMENT.md) — configuration, commands and integrations.
 - [Development plan](docs/PLAN.md) — project goals and milestones.
-- [Progress](docs/PROGRESS.md) — implemented work and verification notes.
-- [Reference inventory](docs/REFERENCE-INVENTORY.md) — comparison with the original AEM DevFlow.
+- [Progress](docs/PROGRESS.md) — implementation and verification notes.
+- [Reference inventory](docs/REFERENCE-INVENTORY.md) — workflow comparison with AEM DevFlow.
