@@ -10,13 +10,15 @@ import { loadReadinessConfig } from './config.js';
 import { readinessConfigDigest } from './configured-readiness.js';
 import { resolveBaseBranch } from './base-branch.js';
 import { readGitState } from './git-state.js';
+import { inspectPublishedBranch } from './published-branch.js';
 
 const run = promisify(execFile);
 const sha = value => createHash('sha256').update(value).digest('hex');
 
 /** Preview or create one explicit local feature branch from the current tracked base. */
-export async function processTicketBranch({ cwd, spec, configPath, branch, expectedDigest }) {
+export async function processTicketBranch({ cwd, spec, configPath, branch, expectedDigest, checkRemote = false }) {
   const ref = branchRef(branch);
+  if (typeof checkRemote !== 'boolean') throw new TypeError('Invalid remote check');
   if (expectedDigest !== undefined && !/^[a-f0-9]{64}$/.test(expectedDigest)) throw new TypeError('Invalid preview digest');
   const root = await realpath(cwd), specPath = await realpath(spec);
   const ticket = await inspectTicketDirectory(specPath);
@@ -38,9 +40,30 @@ export async function processTicketBranch({ cwd, spec, configPath, branch, expec
   if (git.commit !== baseCommit) blockers.push('Current commit does not match the local origin base reference.');
   if (exists) blockers.push('The requested local branch already exists.');
   if (branch === base) blockers.push('The feature branch must differ from the base.');
-  const snapshot = { root, specPath, identityDigest, configDigest: readinessConfigDigest(config), base, baseCommit, head: git.head, commit: git.commit, clean: git.workingTreeClean, branch, exists };
+  let remoteBase = 'not-requested', remoteFeature = 'not-requested';
+  if (checkRemote) {
+    if (git.head !== base) { remoteBase = 'unknown'; blockers.push('Remote base cannot be checked from a different current branch.'); }
+    else {
+      try {
+        const published = await inspectPublishedBranch({ cwd: root, head: base });
+        remoteBase = published.published && published.commit === git.commit ? 'match' : 'different-or-missing';
+        if (remoteBase !== 'match') blockers.push('Remote base does not match the local commit.');
+      } catch { remoteBase = 'unknown'; blockers.push('Remote base could not be checked.'); }
+    }
+  }
+  if (checkRemote) {
+    try {
+      const { stdout: listed } = await run('git', ['ls-remote', '--refs', 'origin', ref], options);
+      const lines = listed.trim() ? listed.trim().split('\n') : [];
+      const match = lines.length === 1 ? /^([a-f0-9]{40,64})\t(.+)$/i.exec(lines[0]) : null;
+      if (lines.length > 1 || (lines.length === 1 && (!match || match[2] !== ref))) throw new Error('Invalid remote branch response');
+      remoteFeature = lines.length ? 'exists' : 'missing';
+      if (lines.length) blockers.push('The requested feature branch already exists on origin.');
+    } catch { remoteFeature = 'unknown'; blockers.push('Remote feature branch could not be checked.'); }
+  }
+  const snapshot = { root, specPath, identityDigest, configDigest: readinessConfigDigest(config), base, baseCommit, head: git.head, commit: git.commit, clean: git.workingTreeClean, branch, exists, checkRemote, remoteBase, remoteFeature };
   const digest = sha(JSON.stringify(snapshot));
-  const result = { created: false, allowed: blockers.length === 0, branch, base, commit: git.commit, ticket: { provider: ticket.identity.provider, id: ticket.identity.id }, blockers, digest, scope: 'Local Git and editable ticket identity only. The tracked base may be stale; remote branches and ticket authenticity are not checked. No push or remote write occurs.' };
+  const result = { created: false, allowed: blockers.length === 0, branch, base, commit: git.commit, remoteBase, remoteFeature, ticket: { provider: ticket.identity.provider, id: ticket.identity.id }, blockers, digest, scope: 'Local Git and editable ticket identity only. The tracked base may be stale when the remote check is not requested; ticket authenticity is not verified; remote observations can become stale. No push or remote write occurs.' };
   if (expectedDigest === undefined) return result;
   if (!result.allowed || expectedDigest !== digest) return { ...result, allowed: false, blockers: [...blockers, ...(expectedDigest !== digest ? ['The preview changed.'] : [])] };
   await run('git', ['switch', '--no-track', '-c', branch], options);

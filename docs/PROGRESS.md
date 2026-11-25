@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added an optional origin base and feature-branch collision check when previewing or creating a local ticket branch; remote state can change afterward.
+
 - Added explicit, preview-bound acceptance of a reviewed current ticket export while preserving the prior local source; subsequent plan and verification evidence must be reinspected.
 
 - Added preview-bound, explicitly invoked non-force publishing of a ticket branch to the configured GitHub origin, with fetch/push destination and remote ancestry checks. Only a local bare remote was exercised.
