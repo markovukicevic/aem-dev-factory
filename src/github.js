@@ -175,9 +175,10 @@ export function createGitHubClient({ owner, repository, token, fetchImpl = globa
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');
       return request('GET', `/commits/${sha}/check-runs${pageQuery(page, perPage)}`);
     },
-    getCommitStatus(sha) {
+    getCommitStatus(sha, options) {
       if (typeof sha !== 'string' || !/^[a-f0-9]{7,64}$/i.test(sha)) throw new TypeError('sha must be a hexadecimal commit SHA');
-      return request('GET', `/commits/${sha}/status`);
+      const query = options === undefined ? '' : pageQuery(options.page ?? 1, options.perPage ?? 100);
+      return request('GET', `/commits/${sha}/status${query}`);
     },
     listPullRequestsPage() { return request('GET', '/pulls?state=open&per_page=20&page=1'); },
     listOpenPullRequests({ owner: headOwner, head, base }) {

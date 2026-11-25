@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added bounded pagination for GitHub classic commit status contexts used by PR CI observations; incomplete or shifting results are not reported as complete.
+
 - Added a bounded local history inspection for retained source and review records; matching hashes do not authenticate the records.
 
 - Extended optional tracker-source and structured-review rechecks to GitLab, Bitbucket Cloud and Azure PR creation. These cross-provider write flows remain simulated.

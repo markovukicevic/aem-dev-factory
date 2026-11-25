@@ -29,7 +29,7 @@ export function summarizeGitHubCi(checks, statuses) {
 }
 
 export async function readGitHubCiSummary(ci, sha) {
-  const [first, statuses] = await Promise.all([ci.listCheckRuns(sha, { page: 1, perPage: 100 }), ci.getCommitStatus(sha)]);
+  const [first, statusPage] = await Promise.all([ci.listCheckRuns(sha, { page: 1, perPage: 100 }), ci.getCommitStatus(sha, { page: 1, perPage: 100 })]);
   if (!first || !Number.isSafeInteger(first.total_count) || first.total_count < 0 || !Array.isArray(first.check_runs) || first.check_runs.length > 100 || first.check_runs.length > first.total_count) throw new Error('Invalid GitHub check runs response');
   const checks = { total_count: first.total_count, check_runs: [...first.check_runs] };
   const seen = new Set();
@@ -49,6 +49,26 @@ export async function readGitHubCiSummary(ci, sha) {
       addIds(next.check_runs);
       checks.check_runs.push(...next.check_runs);
       if (checks.check_runs.length < checks.total_count && next.check_runs.length !== 100) throw new Error('Incomplete GitHub check runs page');
+    }
+  }
+  if (!statusPage || !Number.isSafeInteger(statusPage.total_count) || statusPage.total_count < 0 || (statusPage.statuses !== undefined && (!Array.isArray(statusPage.statuses) || statusPage.statuses.length > 100 || statusPage.statuses.length > statusPage.total_count))) throw new Error('Invalid GitHub combined status response');
+  if (statusPage.sha !== undefined && (typeof statusPage.sha !== 'string' || !/^[a-f0-9]{40,64}$/i.test(statusPage.sha) || !statusPage.sha.toLowerCase().startsWith(sha.toLowerCase()))) throw new Error('GitHub status commit does not match');
+  const statuses = { ...statusPage, ...(Array.isArray(statusPage.statuses) ? { statuses: [...statusPage.statuses] } : {}) };
+  if (Array.isArray(statuses.statuses) && statuses.statuses.length < statuses.total_count && statuses.statuses.length === 100) {
+    const seenContexts = new Set();
+    const addContexts = items => {
+      for (const item of items) {
+        if (typeof item?.context !== 'string' || !item.context || seenContexts.has(item.context)) throw new Error('Invalid or repeated GitHub status context');
+        seenContexts.add(item.context);
+      }
+    };
+    addContexts(statuses.statuses);
+    for (let page = 2; page <= 10 && statuses.statuses.length < statuses.total_count; page++) {
+      const next = await ci.getCommitStatus(sha, { page, perPage: 100 });
+      if (!next || next.total_count !== statuses.total_count || next.state !== statuses.state || (statusPage.sha !== undefined && next.sha !== statusPage.sha) || !Array.isArray(next.statuses) || !next.statuses.length || next.statuses.length > 100 || statuses.statuses.length + next.statuses.length > statuses.total_count) throw new Error('Inconsistent GitHub status pages');
+      addContexts(next.statuses);
+      statuses.statuses.push(...next.statuses);
+      if (statuses.statuses.length < statuses.total_count && next.statuses.length !== 100) throw new Error('Incomplete GitHub status page');
     }
   }
   return summarizeGitHubCi(checks, statuses);
