@@ -20,3 +20,5 @@ The branch workflow records the selected branch in the ticket’s `.branch` file
 When all steps are done, follow `agent-step-verify`: run the whole-change checks, review against requirements and record actual evidence. All steps marked done do not themselves prove verification. Preserve existing verification artifacts unless the user requests revision. Report completed steps, checks, blockers and remaining risks.
 
 Respect the user's instructions on commit size and timing. Only commit when authorized; do not automatically push, create or merge a PR, update external tickets, or send messages. This initial workflow does not implement the original skill's autonomous healing, shared progress-file protocol, or internal commits. Behavior in AI clients has not yet been verified.
+
+When called as a sub-workflow, inspect `workflow-context-status <project-directory>`. A fresh marker can be used to keep the returned summary compact, as in the reference workflow; marker freshness alone does not prove a live orchestrator or authorize actions. Preserve detailed local evidence regardless of summary length.

@@ -32,3 +32,5 @@ provenance:
 ```
 
 Use a single unquoted, whitespace-free model/client identifier and an ISO UTC timestamp in frontmatter so the plan parser can read them. Use only the statuses `pending`, `in-progress`, `done`, and `blocked`, with exactly one `**Status:**` line under each numbered step. Use lower confidence when evidence is incomplete. Do not fabricate a model name, timestamp, test result, or completed verification. Summarize scope, tests, and open questions to the user.
+
+When called as a sub-workflow, inspect `workflow-context-status <project-directory>`. A fresh marker can be used to keep the returned summary compact, as in the reference workflow; marker freshness alone does not prove a live orchestrator or authorize actions. Preserve detailed local evidence regardless of summary length.

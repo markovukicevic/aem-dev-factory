@@ -49,3 +49,5 @@ If the user explicitly requests a GitLab issue comment, use `gitlab-issue-commen
 For an explicitly requested Jira comment, provide the exact ADF JSON document and use `jira-comment-plan` followed by `jira-comment-send` with its digest. Inspect Jira before retrying an unclear result. This path has only simulated validation.
 
 For an explicitly requested Azure work item comment, use `ado-work-item-comment-plan` followed by `ado-work-item-comment-send` with its digest. Inspect Azure before retrying an unclear result. This path has only simulated validation.
+
+When called as a sub-workflow, inspect `workflow-context-status <project-directory>`. A fresh marker can be used to keep the returned summary compact, as in the reference workflow; marker freshness alone does not prove a live orchestrator or authorize actions. Preserve detailed local evidence regardless of summary length.

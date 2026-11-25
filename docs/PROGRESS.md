@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added reference-style local orchestration marker lifecycle and compact sub-workflow guidance; markers do not dispatch agents or prove liveness.
+
 - Added reviewed, preview-bound promotion of a repeated fix pattern into the reference-style Claude rules directory; client discovery remains unverified.
 
 - Added preview-bound insertion of explicitly supplied `Nh`/`Nh2` healing proposals with a retained prior plan; diagnosis, code changes and fresh review remain separate.
