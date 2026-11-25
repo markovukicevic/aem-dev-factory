@@ -632,3 +632,7 @@ The reference-style launch and handoff checklist is available at `plugins/agent-
 Reference-style decision nodes and their relationship to plan decisions are described in `plugins/agent-core/shared/decision-schema.md`. Nodes are local editable records and do not establish evidence or automatic promotion.
 
 The original Azure DevOps bug-field mapping is preserved in `plugins/agent-core/shared/bug-fields.md` as a provider-specific reference; reported reproduction URLs do not authorize live access.
+
+## Original workflows and inline execution
+
+The skill instructions and supporting assets from the original AEM DevFlow checkout have been brought into the bundled plugins. Original fork metadata is removed; run the skill instructions in the current agent context. Factory-specific provider guidance takes precedence where the original assumes Azure DevOps or conflicts with the configured provider. The restored text may reference tools and behaviors that are unavailable in a given client; copying it does not establish feature parity or live integration behavior.

@@ -553,3 +553,5 @@
 - Added the reference decision-node schema and guidance for tracing decisions from plans into pattern review.
 
 - Added reference Azure DevOps bug-field mapping for triage and reproduction handoff.
+
+- Restored 77 original skill workflows and their available supporting assets; kept Factory provider extensions and configured skill execution to remain inline. Original instructions may still mention tools or features that require adaptation; runtime parity and live services are unverified.

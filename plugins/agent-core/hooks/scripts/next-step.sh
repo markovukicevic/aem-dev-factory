@@ -1,0 +1,26 @@
+#!/bin/bash
+# SessionStart hook: suggest next skill based on spec directory state
+# Reads most recent spec dir, checks which files exist, suggests next step
+
+# Profile gate — informational hook, skip in minimal mode
+source "$(dirname "$0")/hook-profile.sh"
+require_profile "standard" || exit 0
+
+SPEC_BASE=".ai/specs"
+if [ ! -d "$SPEC_BASE" ]; then exit 0; fi
+
+# Find most recent spec directory
+LATEST=$(ls -td "$SPEC_BASE"/*/ 2>/dev/null | head -1)
+if [ -z "$LATEST" ]; then exit 0; fi
+
+SLUG=$(basename "$LATEST")
+
+if [ -f "$LATEST/raw-story.md" ] && [ ! -f "$LATEST/explain.md" ]; then
+  echo "💡 Story fetched but not processed. Continue with: /agent-req $SLUG"
+elif [ -f "$LATEST/explain.md" ] && [ ! -f "$LATEST/implement.md" ]; then
+  echo "💡 Requirements ready. Next: /agent-plan $SLUG"
+elif [ -f "$LATEST/implement.md" ] && grep -q "^\- \[ \]" "$LATEST/implement.md" 2>/dev/null; then
+  echo "💡 Plan has pending steps. Continue with: /agent-step-all $SLUG"
+elif [ -f "$LATEST/implement.md" ] && ! grep -q "^\- \[ \]" "$LATEST/implement.md" 2>/dev/null; then
+  echo "💡 All steps done. Ready for: /agent-pr $SLUG"
+fi

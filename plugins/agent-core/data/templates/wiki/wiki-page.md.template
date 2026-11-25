@@ -1,0 +1,42 @@
+# <Title> (ADO #<id>)
+
+**Sprint:** <sprint name>
+**ADO:** [#<id>](<work item URL>)
+**Branch:** `<branch from .branch file>`
+**PR:** [#<pr-number>](<pr-url>) _(if available from .pr file or implement.md)_
+
+## Summary
+
+<!-- 3-5 bullet points from explain.md. Format: "- <what> — <why>"
+Reader should understand full scope in 15 seconds. -->
+
+## What Changed and Why
+
+<!-- From share-plan.md + implement.md. Group by area (FE/BE/Config).
+Include technique used and WHY chosen over alternatives. -->
+
+### Architecture Decisions
+
+<!-- OMIT if none. Trade-offs and alternatives considered. -->
+
+### API Changes
+
+<!-- OMIT if none. New/modified endpoints, parameters, data models. -->
+
+### Configuration
+
+<!-- OMIT if none. New config values, env vars, feature flags. -->
+
+## Usage
+
+<!-- How to use the feature. Prerequisites, steps, expected behavior. -->
+
+## Files Changed
+
+<!-- Grouped by area (FE/BE/Tests/Config) from implement.md. Short relative paths. -->
+
+## Related
+
+- ADO: [#<id>](<work item URL from config>)
+- Branch: `<branch>`
+- PR: [#<pr-number>](<pr-url>) _(if available)_

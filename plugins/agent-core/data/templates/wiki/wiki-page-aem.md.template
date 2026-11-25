@@ -1,0 +1,139 @@
+# <Title> (ADO #<id>)
+
+**Sprint:** <sprint name>
+**ADO:** [#<id>](<work item URL>)
+**Branch:** `<branch from .branch file>`
+**PR:** [#<pr-number>](<pr-url>) _(if available from .pr file or implement.md)_
+
+## Summary
+
+<!-- 3-5 bullet points from explain.md. Format: "- <what> — <why>"
+Reader should understand full scope in 15 seconds. -->
+
+## Design Reference
+
+<!-- ONLY if figma-extract.md or prototype/ exists in spec dir. OMIT entirely if no Figma.
+
+Link to the Figma file and show the reference screenshot. -->
+
+**Figma:** [Open in Figma](<figma URL from raw-story.md or figma-extract.md>)
+
+![Figma Design](<repo-relative-path>/prototype/figma-reference.png)
+<!-- Multi-viewport: use figma-reference-desktop.png and figma-reference-mobile.png -->
+
+<!-- Screenshot location: .ai/specs/<id>-<slug>/prototype/figma-reference.png
+Commit with: git add .ai/specs/<id>-<slug>/prototype/figma-reference*.png -->
+
+## What Changed and Why
+
+<!-- From share-plan.md + implement.md. Group by area (FE/BE/Config).
+Include technique used and WHY chosen over alternatives. -->
+
+### Architecture Decisions
+
+<!-- OMIT if none. Trade-offs and alternatives considered. -->
+
+### API Changes
+
+<!-- OMIT if none. New/modified endpoints, parameters, data models. -->
+
+### Configuration
+
+<!-- OMIT if none. Non-dialog config only: env vars, OSGi configs, feature flags.
+Dialog/component authoring changes go in the Authoring section below. -->
+
+## QA Verification
+
+<!-- MANDATORY for AEM projects. AEM pages are the deliverable — this is what the customer sees.
+URLs from authoring-guide.md, aem-after.md, or qa-handoff.md. QA URLs from config.yaml. -->
+
+<!-- For EACH affected component/page. If multiple components need different pages, repeat the table.
+If all components can be demoed on one page, one table is enough. -->
+
+| Environment | URL |
+|-------------|-----|
+| QA Author (Edit) | `<author-url-qa>/editor.html<demo-page-path>.html` |
+| QA Author (Preview) | `<author-url-qa><demo-page-path>.html?wcmmode=disabled` |
+| QA Publisher | `<publish-url-qa><demo-page-path>` |
+
+<!-- QA Author Edit = dialog configuration view (for authors)
+     QA Author Preview = frontend rendering without editor chrome (for FE demo, wcmmode=disabled)
+     QA Publisher = end-user view -->
+
+<!-- If new component was created but not yet on a QA page:
+"⚠️ Component <name> needs to be added to a QA page and configured for demo." -->
+
+<!-- If component only exists on production pages:
+"Component exists on production pages — no dedicated QA demo page." with page paths if known. -->
+
+## Authoring
+
+<!-- From authoring-guide.md. This is the CORE demo section — every action MUST have a clickable link.
+The presenter follows this to configure and demo the component live. -->
+
+<!-- Repeat this block for EACH component that needs configuration.
+Component names MUST be real AEM component names (from authoring-guide.md or aem-after.md).
+Page URL MUST be a real AEM Author Edit URL where the component exists. -->
+
+### <Component Name>
+
+**Page:** [`<demo-page-path>`](<author-url-qa>/editor.html<demo-page-path>.html)
+**Component:** <Real AEM Component Name — must exist on the page above>
+
+Open the page, find **<Component Name>**, open the component dialog, and change:
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| <field name> | <new value or setting> | <conditional visibility, default, purpose> |
+
+<!-- Add all NEW or CHANGED fields from authoring-guide.md. Skip unchanged fields. -->
+
+#### Dialog Screenshot
+
+![Dialog](<repo-relative-path>/demo/dialog-<component>.png)
+
+<!-- Screenshot location: .ai/specs/<id>-<slug>/demo/dialog-<component>.png
+Commit with: git add .ai/specs/<id>-<slug>/demo/dialog-*.png -->
+
+### Tips
+
+<!-- Conditional visibility, gotchas, recommendations from authoring-guide.md. -->
+
+### Existing Pages
+
+<!-- OMIT if none. Table from authoring-guide.md — other pages using this component. -->
+
+## Frontend Preview
+
+![Rendered Component](<repo-relative-path>/demo/rendered-<component>.png)
+
+<!-- Screenshot location: .ai/specs/<id>-<slug>/demo/rendered-<component>.png
+Commit with: git add .ai/specs/<id>-<slug>/demo/rendered-*.png -->
+
+## Figma Comparison
+
+<!-- OMIT entirely if no Figma. Gap analysis from aem-fe-verify.md if available. -->
+
+| Figma Design | Implementation |
+|:---:|:---:|
+| ![Figma](<repo-relative-path>/prototype/figma-reference.png) | ![AEM](<repo-relative-path>/demo/rendered-<component>.png) |
+
+<!-- If aem-fe-verify.md exists, summarize the verdict:
+- PASS: "Implementation matches Figma design."
+- PASS WITH MINOR GAPS: list the minor gaps.
+- NEEDS ATTENTION: list the issues. -->
+
+<!-- If fe-verify screenshots exist in screenshots/ dir, use those instead:
+.ai/specs/<id>-<slug>/screenshots/component-rendered.png -->
+
+## Files Changed
+
+<!-- Grouped by area (FE/BE/Tests/Config) from implement.md. Short relative paths. -->
+
+## Related
+
+- ADO: [#<id>](<work item URL from config>)
+- Branch: `<branch>`
+- PR: [#<pr-number>](<pr-url>) _(if available)_
+- Figma: [Open in Figma](<figma URL>) _(if available)_
+- QA Page: `<demo-page-path>` _(if created)_

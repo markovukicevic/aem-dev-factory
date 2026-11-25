@@ -1,0 +1,113 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.sh\"",
+            "statusMessage": "Validating environment..."
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/context-loader.sh\"",
+            "statusMessage": "Loading ticket context..."
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/next-step.sh\"",
+            "statusMessage": "Checking workflow state..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'BRANCH=$(git branch --show-current 2>/dev/null); if [ \"$BRANCH\" = \"main\" ] || [ \"$BRANCH\" = \"master\" ] || [ \"$BRANCH\" = \"development\" ] || [ \"$BRANCH\" = \"develop\" ]; then echo \"BLOCKED: Do not commit on $BRANCH. Create a feature/* or bugfix/* branch first.\" >&2; exit 2; fi'",
+            "statusMessage": "Checking branch protection..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-guard.sh\" ] && bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-guard.sh\" || true",
+            "statusMessage": "Running completion checks..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__plugin_agent-core_figma__get_screenshot",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"${CLAUDE_TOOL_NAME:-}\" = \"mcp__plugin_agent-core_figma__get_screenshot\" ] && [ -f \"$CLAUDE_PROJECT_DIR/.ai/lib/figma-screenshot-hook.sh\" ] && bash \"$CLAUDE_PROJECT_DIR/.ai/lib/figma-screenshot-hook.sh\" || true",
+            "statusMessage": "Saving Figma screenshot..."
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__plugin_agent-core_figma__get_design_context",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"${CLAUDE_TOOL_NAME:-}\" = \"mcp__plugin_agent-core_figma__get_design_context\" ] && [ -f \"$CLAUDE_PROJECT_DIR/.ai/lib/figma-screenshot-hook.sh\" ] && bash \"$CLAUDE_PROJECT_DIR/.ai/lib/figma-screenshot-hook.sh\" || true",
+            "statusMessage": "Saving Figma design context..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Edit(**/.claude-plugin/**)",
+            "command": "if [ \"${CLAUDE_TOOL_NAME:-}\" = \"Edit\" ] && [ -n \"${CLAUDE_TOOL_ARG_file_path:-}\" ]; then bash \"${CLAUDE_PLUGIN_ROOT}/data/lib/validate-plugin-edit.sh\" \"$CLAUDE_TOOL_ARG_file_path\"; fi",
+            "statusMessage": "Validating plugin edit..."
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"${CLAUDE_TOOL_NAME:-}\" = \"Task\" ] && mkdir -p \"$CLAUDE_PROJECT_DIR/.claude\" && echo \"[$(date '+%H:%M:%S')] Subagent completed\" >> \"$CLAUDE_PROJECT_DIR/.claude/subagent-log.txt\" || true",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compaction-reminder.sh\"",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

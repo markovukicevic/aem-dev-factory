@@ -1,0 +1,44 @@
+**`/agent-simple` could not figure out where to make a change from this story.**
+
+Add the change request as a small block in the story description. Only the
+**page URL** is required — leave the rest blank and the agent will read the
+story prose to figure them out. `platform`/`brand` are only needed in
+multi-platform/multi-brand projects — single-repo projects can omit them.
+
+```simple
+page-url:   https://qa-author.example.com/editor.html/content/example/en/home.html
+platform:   alpha         # required only if your project spans >1 platform
+brand:      brand-a        # required only for split platforms with >1 brand frontend
+scope:      fe             # optional: fe | be | both — which side(s) the change touches
+element:    "Get started today" heading
+            # any of: visible text, button label, image alt, dialog title,
+            # or paste a JCR path like /content/example/en/home/jcr:content/root/hero
+what:       Rename the call-to-action to "Begin now" and trap focus inside
+            the modal until the user presses Escape.
+            # plain English — what should the agent change? More than one
+            # thing is fine: the agent decides what's content, what's code,
+            # and runs them in parallel where it can.
+why:        Match the new marketing copy (optional, helps the reviewer)
+activate:   true   # optional; defaults to true; set false to skip auto-activation
+```
+
+That's it. The agent reads `what` to decide whether each piece is a content
+edit (handled directly in AEM) or a code change (a small pull request) — or
+both, in the same ticket. It enforces a hard limit of 5 files / 50 lines /
+10 content writes — anything larger is rejected with a clear message in the
+story comments.
+
+### How to write the `what` field
+
+Write it the way you would describe the change to a developer:
+
+- "Change the button label from 'Submit' to 'Send'"
+- "Make the heading say 'Welcome back' instead of 'Hello'"
+- "Trap keyboard focus inside the modal until the user presses Escape"
+- "Hide the icon on mobile, keep it on desktop"
+- "Rename the heading **and** trap focus inside the modal" (two things at once
+  is fine)
+
+Avoid technical jargon — the agent figures out the right kind of change.
+
+After updating the story, re-tag with `AEM-SIMPLE-AUTOMATION` to retry.

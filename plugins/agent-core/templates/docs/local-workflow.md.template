@@ -1,0 +1,196 @@
+# Local Workflow — CLI Commands
+
+> **Visual flow diagrams:** [Local Dev Flow](agent-dev-local-flow.md) | [Automation Flow](agent-automation-flow.md) — mermaid diagrams showing the complete pipeline end-to-end.
+
+All commands run in Claude Code (terminal) or as `@Agent` in VS Code Copilot chat.
+
+## Quick Start
+
+```
+/agent-req <ID>    # Fetch ADO story, explain, research codebase
+/agent-plan            # Generate step-by-step implementation plan
+/agent-step-all        # Execute all steps (test + review + commit loop)
+/agent-step-build      # Build & deploy
+/agent-step-verify     # 6-phase verification
+/agent-pr              # Create pull request
+```
+
+## All Commands
+
+### Requirements
+
+| Command | What it does | Output |
+|---------|-------------|--------|
+| `/agent-req <ID>` | Full pipeline: fetch, dor, explain, research, share approach | All spec files + ADO comments |
+| `/agent-req <ID>` | Full requirements pipeline — fetch, DoR, explain, research, share (5 phases) | All spec files + ADO comments |
+| `/agent-req-dod` | Validate Definition of Done and auto-fix gaps — tests, PR, docs, build | `dod.md` + fixes |
+| `/agent-req-tasks <ID>` | Create child Task work items with hour estimates | ADO tasks |
+| `/agent-estimate <ID>` | Estimate story complexity and effort | Estimate output |
+
+### Planning
+
+| Command | What it does | Output |
+|---------|-------------|--------|
+| `/agent-plan` | Generate step-by-step implementation plan | `implement.md` |
+| `/agent-plan-validate` | Verify plan covers all requirements, no extras | Warnings/OK |
+| `/agent-plan-resolve` | Research and fix risks flagged by validation | Updated `implement.md` |
+
+### Execution
+
+| Command | What it does |
+|---------|-------------|
+| `/agent-step-all` | Execute all plan steps autonomously (step loop with fix) |
+| `/agent-step` | Execute next pending step — implement, test, review, commit |
+| `/agent-step-fix` | Diagnose and fix a blocked step — direct fix or corrective steps |
+| `/agent-step-build` | Build and deploy, auto-fix errors iteratively |
+
+### Review & Ship
+
+| Command | What it does |
+|---------|-------------|
+| `/agent-step-verify` | 6-phase verification: compile, lint, test, secret scan, architecture, code review |
+| `/agent-pr` | Create pull request via ADO |
+| `/agent-pr-review <PR>` | Review a PR — analyze diff, post comments |
+| `/agent-pr-answer` | Answer open PR comments with codebase context |
+| `/agent-pr-commit` | Commit with ADO work item linking |
+| `/agent-pr-review-report <PR>` | Generate categorized report from PR review findings, post to wiki |
+| `/agent-pr-reviews-report [N]` | Batch-generate reports for last N PRs you reviewed (parallel). `--any` for all PRs |
+
+### Documentation
+
+| Command | What it does |
+|---------|-------------|
+| `/agent-doc-gen` | Generate wiki documentation from completed spec files |
+| `/agent-doc-retro` | Generate docs retroactively for completed stories |
+
+### Bug Fix
+
+| Command | What it does |
+|---------|-------------|
+| `/agent-bug-all <ID>` | Full bug workflow: triage, verify, fix |
+| `/agent-bug-triage <ID>` | Fetch bug from ADO, find affected component |
+| `/agent-bug-verify` | Reproduce bug via Playwright |
+| `/agent-bug-fix` | Generate fix plan from triage, execute, create PR |
+
+### Figma Design-to-Code
+
+| Command | What it does | Output |
+|---------|-------------|--------|
+| `/agent-figma-extract` | Extract design context, tokens, screenshots from Figma URL | `figma-extract.md`, `prototype/figma-reference.png` |
+| `/agent-figma-prototype` | Generate HTML/CSS prototype from extraction data | `figma-conventions.md`, `prototype/index.html` |
+| `/agent-figma-verify` | Visually verify prototype against Figma screenshot (Playwright) | `figma-gaps.md`, `prototype/prototype-screenshot.png` |
+
+### Recon & Setup
+
+| Command | What it does |
+|---------|-------------|
+| `/agent-ticket-analyze <ID>` | Research ADO ticket, find all relevant source files |
+| `/agent-help <question>` | Answer architecture questions from local docs |
+| `/agent-init` | Set up dx workflow for a new project |
+| `/agent-doctor` | Check health of all workflow files |
+| `/agent-upgrade` | Upgrade to latest plugin versions |
+| `/agent-eject` | Eject plugin assets into consumer repo (standalone mode) |
+
+### Autonomous Agents
+
+| Command | What it does |
+|---------|-------------|
+| `/agent-agent-all <ID>` | Full autonomous pipeline: requirements → plan → execute → PR |
+| `/agent-agent-re <ID>` | RE Agent: fetch, analyze, produce structured spec |
+| `/agent-agent-dev <ID>` | Dev Agent: implement from spec, self-check, commit |
+
+## Workflow Recipes
+
+**"Just give me the requirements, I'll code myself"**
+```
+/agent-req <ID>
+# Review .ai/specs/<id>-*/explain.md, then code manually
+```
+
+**"Generate a plan, then execute it"**
+```
+/agent-req <ID>
+/agent-plan
+/agent-plan-validate
+/agent-step-all
+/agent-step-build
+/agent-pr
+```
+
+**"Step through manually, review each step"**
+```
+/agent-step        # Execute one step (includes test, review, commit)
+# Repeat for each step
+```
+
+**"Answer and fix PR review comments"**
+```
+/agent-pr-answer   # Research + draft answers, apply agree-will-fix changes
+```
+
+**"Full requirements pipeline"**
+```
+/agent-req <ID>                  # Full pipeline: fetch → dor → explain → research → share
+```
+
+Each step is idempotent — already-completed steps are skipped. Dependency chain:
+```
+fetch → dor → explain → research → share
+              ↻ BA checkbox loop
+```
+
+**"Full pipeline start to finish"**
+```
+/agent-agent-all <ID>
+```
+
+## Cross-Repo Tickets
+
+Some tickets require changes in multiple repos. Run the workflow in each repo independently:
+
+```
+# In first repo:
+/agent-req <ID>   # research.md lists other repos involved
+/agent-plan           # plans only the changes for THIS repo
+/agent-step-all
+
+# Switch to second repo, run same workflow
+/agent-req <ID>
+/agent-plan
+/agent-step-all
+```
+
+## Copilot Support
+
+All skills also work in VS Code Copilot chat via `@AgentName`:
+
+| Agent | Same as | Handoffs to |
+|-------|---------|-------------|
+| `@MvReqAll` | `/agent-req` | `@MvPlanExecutor`, `@MvFigma` |
+| `@MvStepAll` | `/agent-step-all` | `@MvCodeReview`, `@MvCommit` |
+| `@MvBugAll` | `/agent-bug-all` | `@MvCodeReview`, `@MvCommit` |
+| `@MvAgentAll` | `/agent-agent-all` | `@MvCodeReview`, `@MvCommit` |
+| `@MvFigma` | `/agent-figma-extract` → `/agent-figma-prototype` → `/agent-figma-verify` | `@MvPlanExecutor`, `@MvReqAll` |
+| `@MvPlanExecutor` | `/agent-step` (single step) | `@MvCodeReview`, `@MvCommit` |
+| `@MvCodeReview` | `/agent-step-verify` | `@MvCommit` |
+| `@MvPRReview` | `/agent-pr-review` | `@MvCodeReview`, `@MvDebug` |
+| `@MvPRAnswer` | `/agent-pr-answer` | `@MvPRFix` |
+| `@MvPRFix` | `/agent-pr-answer` (fix) | `@MvPRAnswer`, `@MvCommit` |
+| `@MvCommit` | `/agent-pr-commit` | `@MvPRReview`, `@MvCodeReview` |
+| `@MvTicket` | `/agent-ticket-analyze` | — |
+| `@MvHelp` | `/agent-help` | — |
+
+## Output Structure
+
+All per-ticket output goes to `.ai/specs/<id>-<slug>/`:
+
+```
+.ai/specs/2440808-enhance-email-verification/
+├── raw-story.md     # Faithful ADO dump
+├── explain.md       # Developer-focused requirements
+├── research.md      # Codebase research findings
+├── implement.md     # Step-by-step plan with status tracking
+├── share-plan.md    # Non-technical summary for Teams/ADO
+├── dor-report.md    # DoR scorecard + open questions (checkbox loop with BA via ADO)
+└── dod.md           # Definition of Done validation report
+```

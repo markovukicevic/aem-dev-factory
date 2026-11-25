@@ -1,0 +1,27 @@
+### [QAHandoff] Ready for QA — <story-title>
+
+**PR:** <pr-url>
+**Branch:** `<branch-name>`
+**Wiki:** [Technical Documentation](<wiki-url>) — full details, screenshots, authoring guide
+
+#### QA Pages
+
+| Environment | URL |
+|-------------|-----|
+| QA Author (Edit) | <qa-author-url>/editor.html<test-page-path>.html |
+| QA Author (Preview) | <qa-author-url><test-page-path>.html?wcmmode=disabled |
+| QA Publisher | <qa-publish-url><test-page-path> |
+
+#### Prerequisites
+
+<!-- OMIT if none. Only hard dependencies that block QA.
+- <dependency PR or deployment that must be live first>
+-->
+
+#### What Changed
+
+<!-- 3-5 bullets max. Same as wiki Summary — what was done, not how to test it.
+QA has test plans for detailed verification. -->
+
+---
+_[QAHandoff] | <ISO timestamp> · See wiki page for dialog screenshots, authoring guide, and implementation details._
