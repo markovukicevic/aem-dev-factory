@@ -421,6 +421,10 @@ For a same-repository GitHub Actions source, `github-pr-ci <providers.json> <num
 
 `github-review-context /path/to/providers.json <number>` gathers GitHub PR discussion, changed-file metadata, bounded commit metadata and a CI summary for the PR head in the configured SCM repository. It stops if the PR head, base, file count or commit count changes during collection. Commit lists are limited to 250 entries. It does not fetch a complete diff or review threads, evaluate branch protection, or guarantee that fork CI results are visible in the base repository. Discussion and checks can also change independently.
 
+### Local fix learning
+
+`learning-fix-record <project-directory> <observation.json>` appends a supplied fix observation to `.ai/learning/raw/fixes.jsonl`, following the reference project's local format. The JSON input contains `ticket`, `step` (number or a reference-style corrective ID such as `3a`), `error_type` (lowercase hyphenated name), `fix_description`, and `result` (`success` or `failed`). Record only observed outcomes and inspect the file before retrying an unclear append. `learning-fix-patterns <project-directory>` groups the records by error type and fix description and identifies the reference threshold of at least three successes and no failures. Records are editable and may contain project details; matching observations do not prove a fix is correct. Rule promotion remains a separate review decision.
+
 ### Plan execution progress
 
 The initial bug workflow provides `agent-bug-triage`, `agent-bug-verify`, `agent-bug-fix` and `agent-bug-all` for ticket investigation, reproduction, fixes and verification. `ticket-status` lists their local reports. These are instructional workflows, not automatic execution or proof of reproduction, and AI-client behavior and live integrations remain unverified.

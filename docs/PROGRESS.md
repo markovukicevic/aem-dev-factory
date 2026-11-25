@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added reference-style local fix observation history and repeated-pattern summaries. Records are supplied, editable and not automatically promoted to rules.
+
 - Brought ticket branch suggestions and protected-branch checks closer to the reference workflow, including ticket-aware feature/bugfix branch matching.
 
 - Added explicit anonymous read-only GitHub access for public issue, PR and PR CI commands. Verified a public Microsoft VS Code issue and PR with real GitHub responses; no authentication or write was used.
