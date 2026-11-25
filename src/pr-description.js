@@ -1,4 +1,5 @@
 import { open, writeFile } from 'node:fs/promises';
+import { readLimitedFile } from './read-limited.js';
 import { parseImplementationPlan } from './plan-parser.js';
 
 /** Extract a named level-two section while ignoring fenced code and HTML comments. */
@@ -72,15 +73,36 @@ async function readSource(path) {
   } finally { await file.close(); }
 }
 
+/** Render a link from a locally recorded tracker identity, without closing the ticket. */
+export function ticketReference(identity) {
+  if (!identity || identity.version !== 1 || typeof identity.source !== 'string' || typeof identity.id !== 'string') throw new Error('Invalid ticket identity');
+  if (identity.provider === 'jira') {
+    const source = new URL(identity.source);
+    if (source.protocol !== 'https:' || source.origin !== identity.source || source.username || source.password || !/^[A-Z][A-Z0-9_]*-[1-9][0-9]*$/.test(identity.id)) throw new Error('Invalid Jira identity');
+    return `${source.origin}/browse/${identity.id}`;
+  }
+  if (identity.provider === 'github') {
+    const source = /^([a-z0-9](?:[a-z0-9-]{0,38}))\/([a-z0-9_.-]+)$/.exec(identity.source);
+    const id = /^github-([1-9][0-9]*)$/.exec(identity.id);
+    if (!source || !id || source[2] === '.' || source[2] === '..') throw new Error('Invalid GitHub issue identity');
+    return `https://github.com/${source[1]}/${source[2]}/issues/${id[1]}`;
+  }
+  throw new Error('Unsupported ticket identity');
+}
+
 /** Write a new reviewable PR description without changing remote state. */
-export async function savePullRequestDescription({ sharePlanPath, explanationPath, planPath, verificationPath, outputPath }) {
+export async function savePullRequestDescription({ sharePlanPath, explanationPath, planPath, verificationPath, outputPath, ticketIdentityPath }) {
   if ([planPath, verificationPath, outputPath].some(path => typeof path !== 'string' || !path.trim()) || (!sharePlanPath && !explanationPath)) throw new TypeError('PR description source paths are required');
   const [sharePlan, explanation, plan, verification] = await Promise.all([
     sharePlanPath ? readSource(sharePlanPath) : null,
     explanationPath ? readSource(explanationPath) : null,
     readSource(planPath), readSource(verificationPath),
   ]);
-  const description = buildPullRequestDescription({ sharePlan, explanation, plan, verification });
+  let description = buildPullRequestDescription({ sharePlan, explanation, plan, verification });
+  if (ticketIdentityPath) {
+    const identity = JSON.parse((await readLimitedFile(ticketIdentityPath, 16384)).toString('utf8'));
+    description += `\n## Ticket\n${ticketReference(identity)}\n`;
+  }
   await writeFile(outputPath, description, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
   return { path: outputPath };
 }

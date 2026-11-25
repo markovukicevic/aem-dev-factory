@@ -1443,9 +1443,9 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     catch (error) { output.error(error?.code === 'EEXIST' ? 'Draft already exists; it was not overwritten.' : 'Unable to create a PR response workspace. Check the saved context and output path.'); return 1; }
   }
   if (args[0] === 'pr-description') {
-    if (args.length !== 6 || args.slice(1).some(value => typeof value !== 'string' || !value.trim()) || (args[1] === '-' && args[2] === '-')) { output.error(usage); return 2; }
+    if (![6, 8].includes(args.length) || (args.length === 8 && args[6] !== '--ticket-identity') || args.slice(1).some(value => typeof value !== 'string' || !value.trim()) || (args[1] === '-' && args[2] === '-')) { output.error(usage); return 2; }
     try {
-      const result = await savePullRequestDescription({ sharePlanPath: args[1] === '-' ? null : args[1], explanationPath: args[2] === '-' ? null : args[2], planPath: args[3], verificationPath: args[4], outputPath: args[5] });
+      const result = await savePullRequestDescription({ sharePlanPath: args[1] === '-' ? null : args[1], explanationPath: args[2] === '-' ? null : args[2], planPath: args[3], verificationPath: args[4], outputPath: args[5], ...(args.length === 8 ? { ticketIdentityPath: args[7] } : {}) });
       output.log(JSON.stringify(result, null, 2));
       return 0;
     } catch (error) {

@@ -260,7 +260,9 @@ Set `documentation` in `providers.json` to `{"provider":"confluence","baseUrl":"
 
 ### Prepare a PR description
 
-`pr-description <share-plan-or-dash> <explain-or-dash> <implement.md> <verification.md> <new-output.md>` assembles a description from an existing summary, completed plan steps, and supplied verification evidence. Use `-` for an unavailable optional source. The command does not run tests or validate the truth of the supplied evidence; review its output before creating a PR. It refuses to overwrite an existing file.
+`pr-description <share-plan-or-dash> <explain-or-dash> <implement.md> <verification.md> <new-output.md> [--ticket-identity <source-identity.json>]` assembles a description from an existing summary, completed plan steps, and supplied verification evidence. Use `-` for an unavailable optional source. The command does not run tests or validate the truth of the supplied evidence; review its output before creating a PR. It refuses to overwrite an existing file.
+
+For Jira or GitHub Issues, pass the ticket directory’s `source-identity.json` with `--ticket-identity` to include a direct ticket link in the draft. This uses the editable local record, does not verify the current ticket or automatically close it, and does not validate the supplied verification evidence. Compare the ticket source separately and review the draft before creating a PR.
 
 ### Offline GitHub webhook inspection
 
