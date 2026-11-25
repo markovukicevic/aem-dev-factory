@@ -12,3 +12,5 @@ Run the applicable project build, lint, tests, and security or secret checks req
 Only when every required check passes and the actual review supports the change may `provenance.verified` be changed to `true`. Preserve all other frontmatter and plan content. If the plan has no provenance, report that it is a legacy plan; do not silently claim a provenance verification. Report the evidence and remaining risks to the user. Do not push, create a PR, or send messages as a side effect.
 
 For applicable frontend work, consult `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/accessibility-checklist.md`; distinguish observations from items not checked. Follow the user’s instructions about running checks.
+
+For a handoff or launch assessment, use the applicable domains in `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/launch-checklist.md` and report unverified items. Do not treat the checklist as permission to run checks, deploy or alter external systems.

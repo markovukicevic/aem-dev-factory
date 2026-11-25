@@ -547,3 +547,5 @@
 - Added shared reference-style error classification and bounded recovery guidance for implementation workflows.
 
 - Added a shared reference-style accessibility checklist for AEM and frontend verification.
+
+- Added shared launch and handoff review guidance and clarified the scope of the local orchestration helpers.
