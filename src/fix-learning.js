@@ -1,5 +1,6 @@
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, realpath } from 'node:fs/promises';
+import { lstat, mkdir, open, realpath, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 
@@ -61,4 +62,32 @@ export async function summarizeFixPatterns({ cwd }) {
   }
   const patterns = [...groups.values()].map(group => ({ ...group, tickets: [...group.tickets].sort(), eligible: invalid === 0 && group.successes >= 3 && group.failures === 0 })).sort((a, b) => b.successes - a.successes || a.errorType.localeCompare(b.errorType));
   return { patterns, invalid, complete: invalid === 0, history: 'present', scope: 'Editable supplied observations grouped by error type and fix description. The reference threshold is three successes and no failures; observations and future applicability are not independently verified.' };
+}
+
+/** Preview or explicitly promote one repeated fix pattern into a reference-style local rule. */
+export async function promoteFixPattern({ cwd, index, expectedDigest }) {
+  if (!Number.isSafeInteger(index) || index < 1 || (expectedDigest !== undefined && !/^[a-f0-9]{64}$/.test(expectedDigest))) throw new TypeError('Invalid promotion request');
+  const root = await realpath(cwd), summary = await summarizeFixPatterns({ cwd: root });
+  if (!summary.complete || !summary.patterns[index - 1]?.eligible) throw new Error('A complete eligible pattern is required');
+  const pattern = summary.patterns[index - 1], slug = pattern.errorType;
+  const body = `# Learned Fix: ${pattern.errorType}\n\nWhen encountering: ${pattern.errorType}\nApply this fix: ${pattern.fixDescription}\n\nEvidence: ${pattern.successes} reported successful applications across ${pattern.tickets.join(', ')}.\n`;
+  const digest = createHash('sha256').update(JSON.stringify({ root, pattern, body })).digest('hex');
+  const rulesPath = join(root, '.claude', 'rules'), path = join(rulesPath, `learned-fix-${slug}.md`);
+  let exists = false;
+  try { await lstat(path); exists = true; } catch (error) { if (error?.code !== 'ENOENT') throw error; }
+  const result = { promoted: false, allowed: !exists, path, pattern, body, digest, scope: 'Editable local observations and a proposed rule only. The fix and outcomes are not independently verified; review the exact rule before promotion.' };
+  if (expectedDigest === undefined) return result;
+  if (exists) return { ...result, reason: 'rule-exists' };
+  if (expectedDigest !== digest) return { ...result, reason: 'preview-changed' };
+  let current = root;
+  for (const name of ['.claude', 'rules']) {
+    current = join(current, name);
+    try { await mkdir(current, { mode: 0o700 }); } catch (error) { if (error?.code !== 'EEXIST') throw error; }
+    const stat = await lstat(current);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Invalid rules directory');
+  }
+  const latest = await summarizeFixPatterns({ cwd: root });
+  if (!latest.complete || JSON.stringify(latest.patterns[index - 1]) !== JSON.stringify(pattern)) return { ...result, reason: 'history-changed' };
+  await writeFile(path, body, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+  return { ...result, promoted: true };
 }
