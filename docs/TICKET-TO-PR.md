@@ -47,7 +47,7 @@ Before preparing a branch, keep the local worktree clean using the project’s a
 
 Follow `agent-req`, `agent-plan` and `agent-plan-validate` to prepare the requirements, research, plan and structured plan review. Then use `agent-step-all` and `agent-step-verify` for the authorized implementation and actual verification. The skills are instructions for a compatible AI client, not an automatically running program, and client behavior has not yet been verified. The plan's declared statuses and editable review record do not themselves prove the work or checks occurred.
 
-For continuing work, `workflow-status <spec-directory>` suggests a phase from local records. `ticket-source-compare .ai/providers.json TEAM-123 <spec-directory>` fetches the ticket again and compares it with the local source. Investigate changes or unavailable access instead of assuming the original requirements remain current.
+For continuing work, `workflow-status <spec-directory>` suggests a phase from local records. `ticket-source-compare .ai/providers.json TEAM-123 <spec-directory>` fetches the ticket again and compares it with the local source. Investigate changes or unavailable access instead of assuming the original requirements remain current. If the source changed, `ticket-source-stage` saves the current export separately; after explicitly reviewing it, `ticket-source-accept-plan` and `ticket-source-accept` can preserve the old source and adopt that reviewed export. Revisit the requirements, plan, review and verification before proceeding.
 
 ## Prepare the PR
 
