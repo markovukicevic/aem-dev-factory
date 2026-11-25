@@ -69,7 +69,7 @@ This compares the ticket source, summarizes local workflow and Git observations,
 
 ## Publish and inspect
 
-If explicitly authorized, publish the intended feature branch to the target repository using the project's normal process. Then explicitly request PR creation with a reviewed title and description:
+If explicitly authorized, publish the intended feature branch using the project's normal process or run `github-branch-publish-plan <spec-directory> .ai/readiness.json .ai/providers.json`, review its output, and pass its digest to `github-branch-publish` with the same arguments. The command checks the GitHub origin and remote branch, does not force push and does not rerun tests. Inspect GitHub before retrying an unclear push. Then explicitly request PR creation with a reviewed title and description:
 
 ```sh
 node "$AEM_DEVFLOW_MAX_HOME/bin/aem-devflow.js" github-pr-create your-team your-repo .ai/readiness.json "<spec-directory>/implement.md" "Reviewed PR title" --body-file /path/to/new-pr-description.md --draft --ticket .ai/providers.json TEAM-123 --plan-review "<spec-directory>/validation-report.md"
