@@ -1,5 +1,7 @@
 # Reference inventory
 
+**Update:** The 77 original skill instruction files and available support assets have been restored into the Factory plugins, with inline execution guidance and existing Factory provider extensions. The following table records the earlier implementation inventory; it does not establish runtime parity. Live-service behavior remains for user verification.
+
 Based on the local AEM DevFlow checkout at `7ecd2a0` (1.1.0). This is an initial inventory, not a full parity audit. For a name-by-name comparison, see [SKILL-INVENTORY.md](SKILL-INVENTORY.md).
 
 | Area | Reference | Max status |

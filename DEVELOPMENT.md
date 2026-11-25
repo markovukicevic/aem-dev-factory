@@ -636,3 +636,5 @@ The original Azure DevOps bug-field mapping is preserved in `plugins/agent-core/
 ## Original workflows and inline execution
 
 The skill instructions and supporting assets from the original AEM DevFlow checkout have been brought into the bundled plugins. Original fork metadata is removed; run the skill instructions in the current agent context. Factory-specific provider guidance takes precedence where the original assumes Azure DevOps or conflicts with the configured provider. The restored text may reference tools and behaviors that are unavailable in a given client; copying it does not establish feature parity or live integration behavior.
+
+Restored skills use `AEM_DEVFLOW_MAX_HOME` for plugin-level shared resources and retain skill-local references within each installed skill directory. Original directions to fork or dispatch agents are interpreted as sequential inline work. Factory provider guidance takes precedence over original provider-specific instructions; operations without an implementation remain explicit gaps.

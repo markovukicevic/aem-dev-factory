@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build AEM DevFlow Max from the ground up, using AEM DevFlow as a functional reference while keeping ticket tracking, source control, and CI independently configurable. Preserve a record of which capabilities are implemented and verified; do not claim parity until tested.
+Restore AEM DevFlow workflows and extend them in AEM Dev Factory while keeping ticket tracking, source control, and CI independently configurable. Preserve a record of which capabilities are implemented and verified; do not claim parity until tested.
 
 ## Milestones
 
@@ -13,4 +13,4 @@ Build AEM DevFlow Max from the ground up, using AEM DevFlow as a functional refe
 5. Improve Jira attachments and Confluence support; add optional Slack or Teams notifications.
 6. Recreate and verify the reference project's AEM tools, multi-repository orchestration, supported client integrations, and automation; maintain backward-compatible behavior where practical.
 
-Each milestone needs documentation, focused automated tests, and explicit evidence of any real-service verification. Keep commits small and meaningful. Never commit credentials or run external write operations without an explicit user request.
+Preserve original behavior and provider extensions, respect the user’s decision to conduct functional and real-service testing, and make one meaningful commit per completed feature or coherent batch. Never commit credentials or run external write operations without an explicit user request.
