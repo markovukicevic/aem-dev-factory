@@ -1,6 +1,6 @@
 # Tracker ticket to a GitHub PR
 
-This is an experimental, supervised workflow. The Jira and GitHub PR write paths have not been verified end to end with real accounts. The commands below read or prepare local data; pushing a branch and creating a PR are separate, explicitly requested actions. Replace example values with the actual target project, repository and ticket.
+This is an experimental, supervised workflow. `npm run verify:ticket-flow` in the Max checkout runs one focused offline integration scenario with a temporary local Git remote and simulated Jira, GitHub and CI responses. It does not validate real provider access or create a real PR. The Jira and GitHub PR write paths have not been verified end to end with real accounts. The commands below read or prepare local data; pushing a branch and creating a PR are separate, explicitly requested actions. Replace example values with the actual target project, repository and ticket.
 
 ## Configure the target project
 

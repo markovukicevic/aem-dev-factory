@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Verified one complete ticket-to-PR-to-CI scenario using a temporary local Git remote and simulated Jira/GitHub APIs; no real provider PR was created. The focused scenario is available as `npm run verify:ticket-flow`.
+
 - Added explicit acceptance of a revised, source-bound structured plan review while preserving the previous report; actual review remains a human or agent responsibility.
 
 - Added optional comparison of observed GitHub PR checks against an explicit user-supplied list; this does not read branch protection or establish merge readiness.

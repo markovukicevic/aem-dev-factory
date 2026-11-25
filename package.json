@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "validate:plugins": "node scripts/validate-plugins.js"
+    "validate:plugins": "node scripts/validate-plugins.js",
+    "verify:ticket-flow": "node --test --test-name-pattern=\"runs a ticket through a local branch\" test/github-pr-flow.test.js"
   },
   "engines": {
     "node": ">=18"
