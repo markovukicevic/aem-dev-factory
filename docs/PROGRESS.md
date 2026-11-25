@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added explicit GitHub PR reuse of a matching saved test record, with an editable-evidence warning and a pre-write recheck. The default still runs the configured tests.
+
 - Added optional structured plan-review consistency checks before GitHub PR tests and immediately before creation; editable records are not proof of review.
 
 - Extended GitHub PR ticket links and source rechecks to GitLab.com issues and Azure DevOps work items; these cross-provider paths have simulated validation only.

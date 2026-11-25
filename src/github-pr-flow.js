@@ -1,4 +1,5 @@
 import { checkBeforePullRequestWrite } from './final-pr-check.js';
+import { inspectSavedTestReadiness, recheckSavedTestEvidence } from './reused-test-readiness.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
 import { readGitHubOrigin } from './github-origin.js';
@@ -32,7 +33,7 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
       ticketDigest = ticket.localDigest;
     } catch { return { created: false, blockers: ['Unable to verify the tracker ticket against the local source.'], warnings: [] }; }
   }
-  const first = await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
+  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
   if (typeof input.owner !== 'string' || typeof input.repository !== 'string' || origin.owner.toLowerCase() !== input.owner.toLowerCase() || origin.repository.toLowerCase() !== input.repository.toLowerCase()) {
@@ -67,7 +68,15 @@ export async function createGitHubPullRequest(input, dependencies = {}) {
       if (review?.verdict !== 'ready' || review.planMatches !== true || review.contextMatches !== true || review.identityMatches !== true || review.reviewDigest !== reviewDigest) return { created: false, blockers: ['The plan review or its context changed during PR preparation.'], warnings: current.warnings };
     } catch { return { created: false, blockers: ['Unable to recheck the plan review before PR creation.'], warnings: current.warnings }; }
   }
+  if (input.evidencePath) {
+    try {
+      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest });
+      if (!consistent) return { created: false, blockers: ['Saved test evidence changed or no longer matches the local state.'], warnings: first.warnings };
+    } catch { return { created: false, blockers: ['Unable to recheck saved test evidence.'], warnings: first.warnings }; }
+  }
   const final = await checkBeforePullRequestWrite({ refresh, configDigest, publishedReader, inspectDiff, expectedBaseCommit: diff.baseCommit, cwd: input.cwd, planPath: input.planPath, configPath: input.configPath, head, base: current.readiness.branch.base, commit: published.commit, expectedPlan: first.readiness.planDigest, expectedConfig: first.readiness.configDigest });
   if (!final.ready) return { created: false, blockers: final.blockers, warnings: final.warnings };
-  return createReadyPullRequest({ provider: client, readiness: final.readiness, title: input.title, body: input.body, draft: input.draft });
+  const result = await createReadyPullRequest({ provider: client, readiness: final.readiness, title: input.title, body: input.body, draft: input.draft });
+  if (input.evidencePath) result.warnings.push('Tests were not run in this invocation; the selected local record is editable and can be forged.');
+  return result;
 }

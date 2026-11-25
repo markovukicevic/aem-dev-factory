@@ -83,7 +83,9 @@ For a Jira, GitHub Issues, GitLab.com or Azure DevOps ticket, append `--ticket /
 
 When a structured `plan-review-record` is available, append `--plan-review /path/to/validation-report.md` after the other optional arguments. PR creation checks that its verdict is ready and its plan, requirements and ticket identity still match before tests and before the write. It blocks a missing, changed, unstructured or unavailable record. Editable review records do not prove that a review was performed or that the requirements are correct.
 
-Remove `--draft` for a non-draft PR. This is an explicit GitHub write operation. The command runs the configured tests and checks the plan, Git state, origin identity, published branch, locally tracked base, and existing PRs. It never pushes the branch. It prints a JSON result and does not automatically retry a failed or ambiguous create request. Check GitHub before retrying after a network failure. The existing client and this command have not been tested by creating an actual GitHub PR.
+By default the GitHub PR command runs the configured tests. If the user explicitly chooses to reuse a previously saved `verification-run` record instead, append `--test-evidence /path/to/test-evidence.md` after the other options. The command compares the record with the current plan, normalized configuration, branch, commit and clean worktree, checks it again before writing, and does not rerun tests. The record is editable and can be forged; this is a deliberate trust tradeoff, not proof that tests ran. Any stale, failed or unavailable record blocks creation. The other PR checks still run.
+
+Remove `--draft` for a non-draft PR. This is an explicit GitHub write operation. By default the command runs the configured tests and checks the plan, Git state, origin identity, published branch, locally tracked base, and existing PRs. It never pushes the branch. It prints a JSON result and does not automatically retry a failed or ambiguous create request. Check GitHub before retrying after a network failure. The existing client and this command have not been tested by creating an actual GitHub PR.
 
 ## Export a GitHub issue
 
