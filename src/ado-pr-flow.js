@@ -1,4 +1,5 @@
 import { checkBeforePullRequestWrite } from './final-pr-check.js';
+import { inspectPrContextChecks } from './pr-context-checks.js';
 import { inspectSavedTestReadiness, recheckSavedTestEvidence } from './reused-test-readiness.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
@@ -16,7 +17,9 @@ export async function createAdoPullRequest(input, dependencies = {}) {
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
   const inspectDiff = dependencies.inspectDiff ?? inspectBranchDiff;
   const makeClient = dependencies.makeClient ?? createAdoScm;
-  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
+  const context = await inspectPrContextChecks(input);
+  if (!context.allowed) return { created: false, blockers: [context.blocker], warnings: [] };
+  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, requireTicketBinding: !!input.ticketCheck }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
   const matches = ['organization', 'project', 'repository'].every(key => typeof input[key] === 'string' && typeof origin[key] === 'string' && origin[key].toLowerCase() === input[key].toLowerCase());
@@ -38,9 +41,11 @@ export async function createAdoPullRequest(input, dependencies = {}) {
   const client = makeClient({ organization: input.organization, project: input.project, repository: input.repository, token: input.token });
   const existing = await client.listActivePullRequests({ head, base });
   if (existing.length) return { created: false, blockers: ['An active pull request already exists for this branch and base.'], existingPullRequests: existing.map(pr => ({ number: pr.pullRequestId, url: pr.url })), warnings: current.warnings };
+  const recheckedContext = await inspectPrContextChecks(input, context.fingerprints);
+  if (!recheckedContext.allowed) return { created: false, blockers: [recheckedContext.blocker], warnings: current.warnings };
   if (input.evidencePath) {
     try {
-      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest });
+      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest, requireTicketBinding: !!input.ticketCheck });
       if (!consistent) return { created: false, blockers: ['Saved test evidence changed or no longer matches the local state.'], warnings: first.warnings };
     } catch { return { created: false, blockers: ['Unable to recheck saved test evidence.'], warnings: first.warnings }; }
   }

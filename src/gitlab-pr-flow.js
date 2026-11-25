@@ -1,4 +1,5 @@
 import { checkBeforePullRequestWrite } from './final-pr-check.js';
+import { inspectPrContextChecks } from './pr-context-checks.js';
 import { inspectSavedTestReadiness, recheckSavedTestEvidence } from './reused-test-readiness.js';
 import { inspectConfiguredReadiness, readReadinessConfigDigest } from './configured-readiness.js';
 import { inspectPlanReadiness } from './inspect-readiness.js';
@@ -16,7 +17,9 @@ export async function createGitLabMergeRequest(input, dependencies = {}) {
   const publishedReader = dependencies.publishedReader ?? inspectPublishedBranch;
   const inspectDiff = dependencies.inspectDiff ?? inspectBranchDiff;
   const makeClient = dependencies.makeClient ?? createGitLabClient;
-  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
+  const context = await inspectPrContextChecks(input);
+  if (!context.allowed) return { created: false, blockers: [context.blocker], warnings: [] };
+  const first = input.evidencePath ? await (dependencies.inspectSaved ?? inspectSavedTestReadiness)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, requireTicketBinding: !!input.ticketCheck }) : await inspect({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath });
   if (!first.ready) return { created: false, blockers: first.blockers, warnings: first.warnings };
   const origin = await originReader(input.cwd);
   if (typeof input.project !== 'string' || origin.project.toLowerCase() !== input.project.toLowerCase()) return { created: false, blockers: ['GitLab project does not match origin.'], warnings: first.warnings };
@@ -38,9 +41,11 @@ export async function createGitLabMergeRequest(input, dependencies = {}) {
   const existing = await client.listOpenPullRequests({ head, base });
   if (!Array.isArray(existing)) throw new Error('Invalid GitLab merge request response');
   if (existing.length) return { created: false, blockers: ['An open merge request already exists for this branch and base.'], existingPullRequests: existing.map(mr => ({ number: mr.iid, url: mr.web_url })), warnings: current.warnings };
+  const recheckedContext = await inspectPrContextChecks(input, context.fingerprints);
+  if (!recheckedContext.allowed) return { created: false, blockers: [recheckedContext.blocker], warnings: current.warnings };
   if (input.evidencePath) {
     try {
-      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest });
+      const consistent = await (dependencies.recheckSaved ?? recheckSavedTestEvidence)({ cwd: input.cwd, configPath: input.configPath, planPath: input.planPath, evidencePath: input.evidencePath, expectedDigest: first.evidenceDigest, requireTicketBinding: !!input.ticketCheck });
       if (!consistent) return { created: false, blockers: ['Saved test evidence changed or no longer matches the local state.'], warnings: first.warnings };
     } catch { return { created: false, blockers: ['Unable to recheck saved test evidence.'], warnings: first.warnings }; }
   }

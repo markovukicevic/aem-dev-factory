@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Extended optional tracker-source and structured-review rechecks to GitLab, Bitbucket Cloud and Azure PR creation. These cross-provider write flows remain simulated.
+
 - Extended explicit saved-test-record reuse to GitLab, Bitbucket Cloud and Azure PR creation. Reuse is opt-in, records are editable, and remote tracker identity is not checked by those creation flows.
 
 - Added an explicitly invoked, preview-bound Jira remote link back to a GitHub PR, with current-source and duplicate-link checks. The write path is simulated only.
