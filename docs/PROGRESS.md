@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+- Added an explicitly invoked, preview-bound Jira remote link back to a GitHub PR, with current-source and duplicate-link checks. The write path is simulated only.
+
 - Bound newly saved test evidence to the locally observed requirements and ticket identity where available. Ticket-bound GitHub PR reuse now rejects older unbound or changed source context.
 
 - Verified one complete ticket-to-PR-to-CI scenario using a temporary local Git remote and simulated Jira/GitHub APIs; no real provider PR was created. The focused scenario is available as `npm run verify:ticket-flow`.

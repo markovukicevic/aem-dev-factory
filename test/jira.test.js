@@ -98,3 +98,27 @@ test('rejects an incomplete unencoded response but does not compare compressed w
   await assert.rejects(make(null).downloadAttachment('42'), /length does not match/);
   assert.deepEqual(await make('gzip').downloadAttachment('42'), Buffer.from([1, 2, 3]));
 });
+
+test('links a reviewed GitHub PR once and blocks a stale or duplicate preview', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { initializeTicket } = await import('../src/ticket-init.js');
+  const { processJiraGitHubPrLink } = await import('../src/jira-github-pr-link.js');
+  const cwd = await mkdtemp(join(tmpdir(), 'jira-github-link-'));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const trackerConfig = { provider: 'jira', baseUrl: 'https://example.atlassian.net' };
+  const ticket = { provider: 'jira', key: 'ABC-1', title: 'Story', body: null, comments: [], labels: [] };
+  const spec = await initializeTicket({ cwd, config: trackerConfig, ticket });
+  const config = { tracker: trackerConfig, scm: { provider: 'github', owner: 'team', repository: 'site' } };
+  let links = [], writes = 0;
+  const tracker = { getTicket: async () => ticket, listRemoteIssueLinks: async () => links, createRemoteIssueLink: async ({ url }) => { writes++; links = [{ url }]; return { created: true, id: 123 }; } };
+  const scm = { provider: 'github', getPullRequest: async () => ({ number: 7, state: 'open', html_url: 'https://github.com/team/site/pull/7', head: { sha: 'a'.repeat(40) }, base: { sha: 'b'.repeat(40), repo: { full_name: 'team/site' } } }) };
+  const input = { path: spec.path, config, key: 'ABC-1', number: 7, tracker, scm };
+  const preview = await processJiraGitHubPrLink(input);
+  assert.equal(preview.allowed, true);
+  assert.equal((await processJiraGitHubPrLink({ ...input, expectedDigest: 'c'.repeat(64) })).created, false);
+  assert.equal((await processJiraGitHubPrLink({ ...input, expectedDigest: preview.digest })).created, true);
+  assert.equal((await processJiraGitHubPrLink(input)).allowed, false);
+  assert.equal(writes, 1);
+});

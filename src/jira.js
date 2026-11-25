@@ -60,6 +60,20 @@ export function createJiraTracker({ baseUrl, email, token, fetchImpl = globalThi
   }
   return {
     provider: 'jira',
+    async listRemoteIssueLinks(key) {
+      if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key)) throw new TypeError('Invalid Jira issue key');
+      const links = await get(`/rest/api/3/issue/${encodeURIComponent(key)}/remotelink`);
+      if (!Array.isArray(links) || links.length > 1000 || links.some(link => !link || typeof link.object?.url !== 'string')) throw new Error('Invalid or oversized remote link response');
+      return links.map(link => ({ id: link.id, url: link.object.url }));
+    },
+    async createRemoteIssueLink({ key, url, title }) {
+      if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key) || typeof url !== 'string' || !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[1-9][0-9]*$/.test(url) || typeof title !== 'string' || !/^GitHub PR #[1-9][0-9]*$/.test(title)) throw new TypeError('Invalid GitHub PR link');
+      const response = await fetchImpl(`${origin}/rest/api/3/issue/${encodeURIComponent(key)}/remotelink`, { method: 'POST', headers: { Accept: 'application/json', Authorization: authorization, 'Content-Type': 'application/json' }, body: JSON.stringify({ object: { url, title } }), redirect: 'error' });
+      if (!response.ok || response.status !== 201) throw new Error('Remote link result unclear; inspect Jira before retrying');
+      const result = await response.json();
+      if (!(Number.isSafeInteger(result?.id) && result.id > 0) && !(typeof result?.id === 'string' && /^[1-9][0-9]*$/.test(result.id))) throw new Error('Remote link result unclear; inspect Jira before retrying');
+      return { created: true, id: result.id };
+    },
     async getIssueState(key) {
       if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$/.test(key)) throw new TypeError('Invalid Jira issue key');
       return get(`/rest/api/3/issue/${encodeURIComponent(key)}?fields=status,updated`);

@@ -89,6 +89,8 @@ By default the GitHub PR command runs the configured tests. If the user explicit
 
 Remove `--draft` for a non-draft PR. This is an explicit GitHub write operation. By default the command runs the configured tests and checks the plan, Git state, origin identity, published branch, locally tracked base, and existing PRs. It never pushes the branch. It prints a JSON result and does not automatically retry a failed or ambiguous create request. Check GitHub before retrying after a network failure. The existing client and this command have not been tested by creating an actual GitHub PR.
 
+For an explicitly requested Jira link back to a GitHub PR, `jira-pr-link-plan <providers.json> <spec-directory> <issue-key> <pr-number>` previews the URL and checks the source ticket, configured GitHub repository, PR revisions and existing Jira remote links. `jira-pr-link` takes the same arguments plus the preview digest, rechecks and makes one remote-link creation request. It does not comment or transition the issue. Duplicate checks and creation are not atomic; inspect Jira before retrying an unclear request. It requires Jira issue-linking permissions and GitHub PR read access and has only simulated validation. See [Jira remote issue links](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-remote-links/).
+
 ## Export a GitHub issue
 
 ```sh
