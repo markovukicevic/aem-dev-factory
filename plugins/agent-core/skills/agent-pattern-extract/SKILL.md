@@ -10,3 +10,5 @@ Identify the target project and the user's requested area. Read repository instr
 Describe useful patterns with precise source paths, when each applies, important constraints, and where the evidence is incomplete. Distinguish observed conventions from recommendations; a name or single example does not prove a project-wide rule. Do not copy credentials, private content or large source excerpts into a report. If the user requested a local artifact, create it at the requested location without replacing existing content unless authorized. Otherwise present the findings in chat.
 
 Do not rewrite rules, change application code, contact external services or publish a report as a side effect. This initial workflow does not automatically generate templates or prove that a pattern is safe to reuse; client behavior remains unverified.
+
+When available, inspect structured decision nodes described in `$AEM_DEVFLOW_MAX_HOME/plugins/agent-core/shared/decision-schema.md`, alongside plan decisions and actual implementations. Three distinct tickets may suggest a candidate pattern, but similarity and safe reuse require review. Do not automatically promote or rewrite records.

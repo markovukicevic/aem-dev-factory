@@ -628,3 +628,5 @@ The shared reference-style error handling guidance is in `plugins/agent-core/sha
 The shared accessibility checklist at `plugins/agent-core/shared/accessibility-checklist.md` supports AEM and frontend reviews. It is guidance, not a conformance assessment or evidence that checks were run.
 
 The reference-style launch and handoff checklist is available at `plugins/agent-core/shared/launch-checklist.md`; it records review domains and explicitly unverified items rather than implying deployment readiness.
+
+Reference-style decision nodes and their relationship to plan decisions are described in `plugins/agent-core/shared/decision-schema.md`. Nodes are local editable records and do not establish evidence or automatic promotion.

@@ -549,3 +549,5 @@
 - Added a shared reference-style accessibility checklist for AEM and frontend verification.
 
 - Added shared launch and handoff review guidance and clarified the scope of the local orchestration helpers.
+
+- Added the reference decision-node schema and guidance for tracing decisions from plans into pattern review.
