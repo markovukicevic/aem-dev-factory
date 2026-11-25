@@ -425,7 +425,7 @@ For a same-repository GitHub Actions source, `github-pr-ci <providers.json> <num
 
 `learning-fix-record <project-directory> <observation.json>` appends a supplied fix observation to `.ai/learning/raw/fixes.jsonl`, following the reference project's local format. The JSON input contains `ticket`, `step` (number or a reference-style corrective ID such as `3a`), `error_type` (lowercase hyphenated name), `fix_description`, and `result` (`success` or `failed`). Record only observed outcomes and inspect the file before retrying an unclear append. `learning-fix-patterns <project-directory>` groups the records by error type and fix description and identifies the reference threshold of at least three successes and no failures. Records are editable and may contain project details; matching observations do not prove a fix is correct. Rule promotion remains a separate review decision.
 
-`plan-metadata <spec-directory>` reads a compact overview of reference-style plan steps, including corrective IDs such as `3a` or `R1`, without outputting step bodies. Corrective steps are reported but cannot yet be executed by the current workflow. Plan statuses are declarations and do not prove work or checks.
+`plan-metadata <spec-directory>` reads a compact overview of reference-style plan steps, including corrective IDs such as `3a` or `R1`, without outputting step bodies. Reference-style corrective step IDs such as `3a` and `R1` are accepted by the plan parser and status workflow. A corrective step such as `3a` may proceed while its numbered parent is blocked, after the revised plan is reviewed; automatic corrective-step insertion remains unimplemented. Plan statuses are declarations and do not prove work or checks.
 
 ### Plan execution progress
 

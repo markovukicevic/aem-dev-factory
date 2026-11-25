@@ -2,7 +2,9 @@
 
 ## 2026-11-25
 
-- Added compact reference-style plan metadata, including readable corrective labels; execution of those corrective labels remains unsupported.
+- Added reference-style corrective step identifiers to plan parsing, review fingerprints and status transitions. A corrective step can proceed for its blocked numbered parent after plan review; automatic insertion remains unimplemented.
+
+- Added compact reference-style plan metadata, including readable corrective labels; subsequent work added status support for those labels.
 
 - Added reference-style local fix observation history and repeated-pattern summaries. Records are supplied, editable and not automatically promoted to rules.
 

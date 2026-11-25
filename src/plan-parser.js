@@ -1,3 +1,5 @@
+import { normalizePlanStepId } from './plan-step-id.js';
+
 const INVALID = 'Unsupported or malformed implementation plan';
 
 /** Parse the restricted reference implement.md format; ambiguous inputs fail closed. */
@@ -42,11 +44,12 @@ export function parseImplementationPlan(markdown) {
     if (fenced) continue;
     const heading = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (heading) {
-      const step = /^Step\s+(\d+):\s+(.+)$/.exec(heading[2]);
+      const step = /^Step\s+((?:[1-9][0-9]*[a-z]?|R[1-9][0-9]*)):\s+(.+)$/.exec(heading[2]);
       if (step) {
-        if (!Number.isSafeInteger(Number(step[1])) || Number(step[1]) < 1 || /\[(pending|in-progress|done|blocked|skipped)\]\s*$/.test(step[2])) throw new Error(INVALID);
-        if (steps.some(item => item.number === Number(step[1]))) throw new Error(INVALID);
-        current = { number: Number(step[1]), title: step[2], status: null, level: heading[1].length };
+        let id; try { id = normalizePlanStepId(step[1]); } catch { throw new Error(INVALID); }
+        if (/\[(pending|in-progress|done|blocked|skipped)\]\s*$/.test(step[2])) throw new Error(INVALID);
+        if (steps.some(item => item.number === id)) throw new Error(INVALID);
+        current = { number: id, title: step[2], status: null, level: heading[1].length };
         steps.push(current);
       } else {
         if (/^Step\b/i.test(heading[2])) throw new Error(INVALID);

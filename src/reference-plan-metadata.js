@@ -1,6 +1,7 @@
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
+import { isCorrectiveForStep } from './plan-step-id.js';
 
 /** Read reference-style numbered and corrective step labels without loading step bodies into output. */
 export function parseReferencePlanMetadata(markdown) {
@@ -46,8 +47,12 @@ export function parseReferencePlanMetadata(markdown) {
   const counts = { pending: 0, 'in-progress': 0, done: 0, blocked: 0 };
   for (const step of steps) counts[step.status]++;
   const native = steps.every(step => /^[1-9][0-9]*$/.test(step.id) && Number.isSafeInteger(Number(step.id)));
-  const next = counts.blocked || counts['in-progress'] ? null : steps.find(step => step.status === 'pending')?.id ?? null;
-  return { total: steps.length, counts, steps: steps.map(({ id, title, status }) => ({ id, title, status })), next, executionSupport: native ? 'numbered-labels-only' : 'corrective-steps-require-manual-inspection', scope: 'Declared plan metadata only. Corrective labels are readable but are not yet executable by the current workflow; statuses do not prove work or checks.' };
+  const pending = steps.find(step => step.status === 'pending');
+  const blocked = steps.filter(step => step.status === 'blocked');
+  const parent = blocked.length === 1 && /^[1-9][0-9]*$/.test(blocked[0].id) ? Number(blocked[0].id) : null;
+  const corrective = pending && Number.isSafeInteger(parent) && isCorrectiveForStep(pending.id, parent) && steps.indexOf(blocked[0]) < steps.indexOf(pending);
+  const next = counts['in-progress'] || (counts.blocked && !corrective) ? null : pending?.id ?? null;
+  return { total: steps.length, counts, steps: steps.map(({ id, title, status }) => ({ id, title, status })), next, executionSupport: native ? 'numbered-labels' : 'reference-labels', scope: 'Declared plan metadata only. Statuses are declarations; corrective step insertion and execution must be reviewed, and no work or checks are proven.' };
 }
 
 export async function readReferencePlanMetadata(path) {

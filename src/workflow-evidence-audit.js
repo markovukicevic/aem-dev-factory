@@ -1,4 +1,5 @@
 import { lstat } from 'node:fs/promises';
+import { isPlanStepId } from './plan-step-id.js';
 import { join } from 'node:path';
 import { readLimitedFile } from './read-limited.js';
 import { readPlanStatus } from './plan-status.js';
@@ -12,7 +13,7 @@ export async function auditWorkflowEvidence({ path, indexPath }) {
   if (!index || index.version !== 1 || !Array.isArray(index.records) || index.records.length > 200) throw new Error('Invalid evidence index');
   const seenSteps = new Set(), seenPaths = new Set();
   for (const item of index.records) {
-    if (!item || !Number.isSafeInteger(item.step) || item.step < 1 || typeof item.path !== 'string' || item.path.length > 1024 || !item.path || item.path.includes('\\') || item.path.split('/').some(part => !part || part === '.' || part === '..' || /[\u0000-\u001f\u007f]/.test(part)) || seenSteps.has(item.step) || seenPaths.has(item.path)) throw new Error('Invalid evidence index entry');
+    if (!item || !isPlanStepId(item.step) || typeof item.path !== 'string' || item.path.length > 1024 || !item.path || item.path.includes('\\') || item.path.split('/').some(part => !part || part === '.' || part === '..' || /[\u0000-\u001f\u007f]/.test(part)) || seenSteps.has(item.step) || seenPaths.has(item.path)) throw new Error('Invalid evidence index entry');
     seenSteps.add(item.step); seenPaths.add(item.path);
   }
   const planPath = join(path, 'implement.md');

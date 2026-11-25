@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { isCorrectiveForStep } from './plan-step-id.js';
 import { inspectTicketDirectory } from './ticket-status.js';
 import { checkPlanReview } from './plan-review.js';
 import { checkLocalRequirements } from './requirements-import.js';
@@ -20,6 +21,12 @@ export async function inspectWorkflowStatus({ path }) {
     try { sourceConsistency = (await checkLocalRequirements({ path })).matches ? 'matches' : 'changed'; }
     catch { sourceConsistency = 'unavailable'; }
   }
+  let corrective = null;
+  if (ticket.plan?.counts.blocked === 1 && ticket.plan.counts['in-progress'] === 0) {
+    const blocked = ticket.plan.steps.find(step => step.status === 'blocked');
+    const candidate = ticket.plan.steps.find(step => step.status === 'pending');
+    if (candidate && isCorrectiveForStep(candidate.number, blocked.number) && ticket.plan.steps.indexOf(blocked) < ticket.plan.steps.indexOf(candidate)) corrective = candidate;
+  }
   let phase, nextStep = null;
   if (unsafe.length) phase = 'inspect-unreadable-artifacts';
   else if (status('raw-story.md') === 'missing') phase = 'collect-source';
@@ -28,12 +35,13 @@ export async function inspectWorkflowStatus({ path }) {
   else if (status('implement.md') === 'missing') phase = 'prepare-plan';
   else if (status('validation-report.md') === 'missing') phase = 'review-plan';
   else if (!ticket.plan) phase = 'inspect-plan';
-  else if (ticket.plan.counts.blocked > 0) phase = 'inspect-blocked-step';
   else if (ticket.plan.counts['in-progress'] > 0) phase = 'inspect-in-progress-step';
+  else if (ticket.plan.counts.blocked > 0 && !corrective) phase = 'inspect-blocked-step';
   else if (review?.format !== 'structured') phase = 'inspect-plan-review';
   else if (!review.planMatches || review.contextMatches === false || review.identityMatches === false) phase = 'review-plan';
   else if (review.contextMatches !== true || review.identityMatches !== true) phase = 'inspect-plan-review';
   else if (review.verdict !== 'ready') phase = 'resolve-plan-review';
+  else if (corrective) { phase = 'execute-next-step'; nextStep = corrective; }
   else if (ticket.plan.next) { phase = 'execute-next-step'; nextStep = ticket.plan.next; }
   else if (status('verification.md') === 'missing') phase = 'verify-change';
   else if (status('dod.md') === 'missing') phase = 'review-definition-of-done';

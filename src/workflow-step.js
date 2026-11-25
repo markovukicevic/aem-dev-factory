@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { isPlanStepId, isCorrectiveForStep } from './plan-step-id.js';
 import { lstat, writeFile } from 'node:fs/promises';
 import { readLimitedFile } from './read-limited.js';
 import { inspectWorkflowStatus } from './workflow-status.js';
@@ -8,7 +9,7 @@ import { checkPlanReview, readPlanReviewDigest } from './plan-review.js';
 
 /** Preview a step start using local, editable review records and plan status. */
 export async function previewWorkflowStep({ path, step }) {
-  if (!Number.isSafeInteger(step) || step < 1) throw new TypeError('Invalid plan step');
+  if (!isPlanStepId(step)) throw new TypeError('Invalid plan step');
   const workflow = await inspectWorkflowStatus({ path });
   return { step, allowed: workflow.phase === 'execute-next-step' && workflow.nextStep?.number === step, phase: workflow.phase, planDigest: workflow.plan?.digest ?? null, review: workflow.review, scope: 'Local declared status and editable review records only; actual review, source authenticity and requirements are not verified.' };
 }
@@ -54,7 +55,7 @@ async function currentReview(planPath, reportPath) {
 
 /** Record supplied step evidence and transition an explicit in-progress step. */
 export async function finishWorkflowStep({ path, step, outcome, inputPath, outputPath, expectedDigest }) {
-  if (typeof path !== 'string' || !path.trim() || !Number.isSafeInteger(step) || step < 1 || !['done', 'blocked'].includes(outcome) || typeof outputPath !== 'string' || !outputPath.trim() || typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest)) throw new TypeError('Invalid step finish request');
+  if (typeof path !== 'string' || !path.trim() || !isPlanStepId(step) || !['done', 'blocked'].includes(outcome) || typeof outputPath !== 'string' || !outputPath.trim() || typeof expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(expectedDigest)) throw new TypeError('Invalid step finish request');
   const directory = await lstat(path), planPath = join(path, 'implement.md'), reportPath = join(path, 'validation-report.md');
   if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error('Invalid spec directory');
   const planInfo = await lstat(planPath);
@@ -64,7 +65,9 @@ export async function finishWorkflowStep({ path, step, outcome, inputPath, outpu
   const evidence = parseStepEvidence(JSON.parse((await readLimitedFile(inputPath, 262144)).toString('utf8')), outcome);
   const plan = await readPlanStatus(planPath);
   const active = plan.steps.filter(item => item.status === 'in-progress');
-  if (plan.digest !== expectedDigest || active.length !== 1 || active[0].number !== step || (outcome === 'done' && plan.counts.blocked > 0)) return { recorded: false, transitioned: false, reason: 'plan-state-or-digest-changed' };
+  const blocked = plan.steps.filter(item => item.status === 'blocked');
+  const repairsBlockedParent = blocked.length === 1 && isCorrectiveForStep(step, blocked[0].number) && plan.steps.indexOf(blocked[0]) < plan.steps.findIndex(item => item.number === step);
+  if (plan.digest !== expectedDigest || active.length !== 1 || active[0].number !== step || (outcome === 'done' && blocked.length > 0 && !repairsBlockedParent)) return { recorded: false, transitioned: false, reason: 'plan-state-or-digest-changed' };
   const review = outcome === 'done' ? await currentReview(planPath, reportPath) : null;
   if (outcome === 'done' && !review) return { recorded: false, transitioned: false, reason: 'plan-review-not-current' };
   const planContentDigest = await readPlanReviewDigest(planPath);
@@ -91,7 +94,7 @@ export async function finishWorkflowStep({ path, step, outcome, inputPath, outpu
 
 /** Compare an editable step record with declared status, plan content and review. */
 export async function checkWorkflowStepEvidence({ path, step, evidencePath }) {
-  if (typeof path !== 'string' || !path.trim() || !Number.isSafeInteger(step) || step < 1) throw new TypeError('Invalid step evidence check');
+  if (typeof path !== 'string' || !path.trim() || !isPlanStepId(step)) throw new TypeError('Invalid step evidence check');
   const directory = await lstat(path);
   if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error('Invalid spec directory');
   const record = JSON.parse((await readLimitedFile(evidencePath, 262144)).toString('utf8'));

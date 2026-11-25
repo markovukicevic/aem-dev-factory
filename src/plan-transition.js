@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, open, rename, unlink } from 'node:fs/promises';
 import { dirname, basename, join } from 'node:path';
 import { parseImplementationPlan } from './plan-parser.js';
+import { isPlanStepId, normalizePlanStepId, isCorrectiveForStep } from './plan-step-id.js';
 import { readLimitedFile } from './read-limited.js';
 
 const transitions = { pending: ['in-progress'], 'in-progress': ['done', 'blocked'], blocked: ['pending'], done: [] };
@@ -10,11 +11,16 @@ const digest = text => createHash('sha256').update(text, 'utf8').digest('hex');
 /** Prepare a restricted one-step status change without altering unrelated plan text. */
 export function transitionPlanText({ text, step, from, to }) {
   if (typeof text !== 'string' || text.includes('<!--') || text.includes('-->')) throw new Error('Plan comments require manual editing');
-  if (!Number.isSafeInteger(step) || step < 1 || !Object.hasOwn(transitions, from) || !transitions[from].includes(to)) throw new TypeError('Invalid status transition');
+  if (!isPlanStepId(step) || !Object.hasOwn(transitions, from) || !transitions[from].includes(to)) throw new TypeError('Invalid status transition');
   const parsed = parseImplementationPlan(text);
   const target = parsed.steps.find(item => item.number === step);
   if (!target || target.status !== from) throw new Error('Step status does not match');
-  if (to === 'in-progress' && (parsed.steps.some(item => item.status === 'blocked' || item.status === 'in-progress') || parsed.steps.find(item => item.status === 'pending')?.number !== step)) throw new Error('Another step blocks execution or is earlier in the plan');
+  if (to === 'in-progress') {
+    const blocked = parsed.steps.filter(item => item.status === 'blocked'), targetIndex = parsed.steps.indexOf(target);
+    const repairsBlockedParent = blocked.length === 1 && isCorrectiveForStep(step, blocked[0].number) && parsed.steps.indexOf(blocked[0]) < targetIndex;
+    const earlierPending = parsed.steps.slice(0, targetIndex).some(item => item.status === 'pending');
+    if (parsed.steps.some(item => item.status === 'in-progress') || earlierPending || (blocked.length && !repairsBlockedParent)) throw new Error('Another step blocks execution or is earlier in the plan');
+  }
   const lines = text.split('\n');
   let inFence = false;
   let fenceChar, fenceLength, current = null, edits = 0;
@@ -29,8 +35,8 @@ export function transitionPlanText({ text, step, from, to }) {
     if (inFence) continue;
     const heading = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (heading) {
-      const match = /^Step\s+(\d+):\s+(.+)$/.exec(heading[2]);
-      if (match) current = { number: Number(match[1]), level: heading[1].length };
+      const match = /^Step\s+((?:[1-9][0-9]*[a-z]?|R[1-9][0-9]*)):\s+(.+)$/.exec(heading[2]);
+      if (match) current = { number: normalizePlanStepId(match[1]), level: heading[1].length };
       else if (current && heading[1].length <= current.level) current = null;
       continue;
     }

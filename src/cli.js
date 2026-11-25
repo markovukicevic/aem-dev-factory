@@ -50,6 +50,7 @@ import { readGitLabMergeRequestDiffs } from './gitlab-mr-diffs.js';
 import { readGitLabMergeRequestCommits } from './gitlab-mr-commits.js';
 import { readGitHubReviewContext } from './github-review-context.js';
 import { readPlanStatus } from './plan-status.js';
+import { normalizePlanStepId } from './plan-step-id.js';
 import { readReferencePlanMetadata } from './reference-plan-metadata.js';
 import { readBitbucketPrDiffstat } from './bitbucket-pr-diffstat.js';
 import { readBitbucketPrCommits } from './bitbucket-pr-commits.js';
@@ -194,6 +195,8 @@ async function readBitbucketPrStatuses(scm, number) {
   if (scm?.provider !== 'bitbucket-cloud') throw new Error('Bitbucket Cloud configuration required');
   return { provider: 'bitbucket-cloud', pullRequest: number, statuses: await scm.getPullRequestStatuses(number), scope: 'Returned PR statuses only; required checks and branch protection are not evaluated.' };
 }
+
+function validPlanStepArg(value) { try { normalizePlanStepId(value); return true; } catch { return false; } }
 
 function ticketForPrFlow(config, id, env, makeTracker) {
   const provider = config?.tracker?.provider;
@@ -1164,22 +1167,22 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     catch { output.error('Unable to audit workflow evidence. Check the plan and evidence index.'); return 1; }
   }
   if (args[0] === 'workflow-step-evidence-check') {
-    if (args.length !== 4 || !args[1]?.trim() || !/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])) || !args[3]?.trim()) { output.error(usage); return 2; }
-    try { const result = await checkWorkflowStepEvidence({ path: args[1], step: Number(args[2]), evidencePath: args[3] }); output.log(JSON.stringify(result, null, 2)); return result.consistent ? 0 : 1; }
+    if (args.length !== 4 || !args[1]?.trim() || !validPlanStepArg(args[2]) || !args[3]?.trim()) { output.error(usage); return 2; }
+    try { const result = await checkWorkflowStepEvidence({ path: args[1], step: normalizePlanStepId(args[2]), evidencePath: args[3] }); output.log(JSON.stringify(result, null, 2)); return result.consistent ? 0 : 1; }
     catch { output.error('Unable to check workflow step evidence. Check the plan and record.'); return 1; }
   }
   if (args[0] === 'workflow-step-finish') {
-    if (args.length !== 7 || !args[1]?.trim() || !/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])) || !['done', 'blocked'].includes(args[3]) || !args[4]?.trim() || !args[5]?.trim() || !/^[a-f0-9]{64}$/.test(args[6])) { output.error(usage); return 2; }
+    if (args.length !== 7 || !args[1]?.trim() || !validPlanStepArg(args[2]) || !['done', 'blocked'].includes(args[3]) || !args[4]?.trim() || !args[5]?.trim() || !/^[a-f0-9]{64}$/.test(args[6])) { output.error(usage); return 2; }
     try {
-      const result = await finishWorkflowStep({ path: args[1], step: Number(args[2]), outcome: args[3], inputPath: args[4], outputPath: args[5], expectedDigest: args[6] });
+      const result = await finishWorkflowStep({ path: args[1], step: normalizePlanStepId(args[2]), outcome: args[3], inputPath: args[4], outputPath: args[5], expectedDigest: args[6] });
       output.log(JSON.stringify(result, null, 2)); return result.transitioned && (args[3] === 'blocked' || result.evidenceCurrent === true) ? 0 : 1;
     } catch (error) { output.error(error?.code === 'EEXIST' ? 'Step evidence already exists; it was not overwritten.' : 'Unable to record or finish the workflow step. Check the plan, evidence and paths.'); return 1; }
   }
   if (args[0] === 'workflow-step-plan' || args[0] === 'workflow-step-start') {
     const starting = args[0] === 'workflow-step-start';
-    if (args.length !== (starting ? 4 : 3) || !args[1]?.trim() || !/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])) || (starting && !/^[a-f0-9]{64}$/.test(args[3]))) { output.error(usage); return 2; }
+    if (args.length !== (starting ? 4 : 3) || !args[1]?.trim() || !validPlanStepArg(args[2]) || (starting && !/^[a-f0-9]{64}$/.test(args[3]))) { output.error(usage); return 2; }
     try {
-      const result = starting ? await startWorkflowStep({ path: args[1], step: Number(args[2]), expectedDigest: args[3] }) : await previewWorkflowStep({ path: args[1], step: Number(args[2]) });
+      const result = starting ? await startWorkflowStep({ path: args[1], step: normalizePlanStepId(args[2]), expectedDigest: args[3] }) : await previewWorkflowStep({ path: args[1], step: normalizePlanStepId(args[2]) });
       output.log(JSON.stringify(result, null, 2)); return (starting ? result.started && result.evidenceCurrent : result.allowed) ? 0 : 1;
     } catch { output.error('Unable to start or preview the workflow step. Check the plan, review and paths.'); return 1; }
   }
@@ -1231,8 +1234,8 @@ export async function runCli(args, { env = process.env, output = console, makeCl
     } catch (error) { output.error(error?.code === 'EEXIST' ? 'Plan review already exists; it was not overwritten.' : 'Unable to record or check the plan review. Check the plan, review and paths.'); return 1; }
   }
   if (args[0] === 'plan-transition') {
-    if (args.length !== 6 || !args[1]?.trim() || !/^[1-9][0-9]*$/.test(args[2]) || !Number.isSafeInteger(Number(args[2])) || !/^[a-f0-9]{64}$/.test(args[5])) { output.error(usage); return 2; }
-    try { output.log(JSON.stringify(await transitionPlanFile({ path: args[1], step: Number(args[2]), from: args[3], to: args[4], expectedDigest: args[5] }), null, 2)); return 0; }
+    if (args.length !== 6 || !args[1]?.trim() || !validPlanStepArg(args[2]) || !/^[a-f0-9]{64}$/.test(args[5])) { output.error(usage); return 2; }
+    try { output.log(JSON.stringify(await transitionPlanFile({ path: args[1], step: normalizePlanStepId(args[2]), from: args[3], to: args[4], expectedDigest: args[5] }), null, 2)); return 0; }
     catch { output.error('Unable to update plan. Check its digest, status, format and lock.'); return 1; }
   }
   if (args[0] === 'plan-status') {
