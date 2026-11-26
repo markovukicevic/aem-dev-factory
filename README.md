@@ -13,7 +13,7 @@ AEM Dev Factory is designed to connect the stages of an AEM development pipeline
 5. **Review and verification** — review the change and capture available build, accessibility and verification results.
 6. **Delivery** — prepare a pull request or merge request and inspect the configured CI pipeline.
 
-The workflows are intended to coordinate these stages as a continuous pipeline. The available automation and provider operations depend on the configuration and the workflow; some actions require explicit authorization. End-to-end execution across live services has not yet been verified.
+The workflows are intended to coordinate these stages as a continuous pipeline. The available automation and provider operations depend on the configuration and the workflow; some actions require explicit authorization.
 
 ## Connect your tools
 
